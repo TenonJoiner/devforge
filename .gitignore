@@ -1,0 +1,17 @@
+# 参考仓库（不上传 Git）
+reference/
+
+# 系统文件
+.DS_Store
+*.swp
+*.swo
+*~
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# 日志
+*.log
+
