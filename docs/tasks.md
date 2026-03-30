@@ -85,11 +85,11 @@
 
 ## Phase 2：产品级核心 + 分发基础设施
 
-**目标**：建立产品级文档生产能力、骨架工作流规范、多仓分发基础，为后续代码级能力提供上层约束。
+**目标**：建立产品级文档生产能力、骨架工作流规范，为后续代码级能力提供上层约束。
 
 **前置依赖**：Phase 1（schema 可用）
 
-> **为什么产品级先于代码级？** spec-driven-enhanced schema 的 instruction 依赖产品级文档（proposal 需追溯 iteration-plan、spec 需追溯 requirements、design 需参考 architecture）。R1 workflow 是整个四层体系的骨架规则，代码级 skill 应在其约束下开发。install.sh 是多仓分发基础，代码级能力需要在子仓库中验证。
+> **为什么产品级先于代码级？** spec-driven-enhanced schema 的 instruction 依赖产品级文档（proposal 需追溯 iteration-plan、spec 需追溯 requirements、design 需参考 architecture）。R1 workflow 是整个四层体系的骨架规则，代码级 skill 应在其约束下开发。
 
 **交付物**：
 
@@ -127,13 +127,10 @@ Rule（1 个骨架规则）：
 |---|--------|---------|
 | 2.9 | 产品级参考模板（5 个） | `templates/product/{vision,architecture,requirements,interface,iteration-plan}.md` |
 | 2.10 | 产品级交付物目录骨架 | `docs/{vision.md, architecture/, requirements/, interfaces/, adr.md, iteration-plan.md}` |
-| 2.11 | 子系统代码仓集成脚本 | `scripts/install.sh`（相对路径 symlink + 版本感知） |
-| 2.12 | 版本漂移检查脚本 | `scripts/check-version.sh` |
 
 **验证**：
 - `/ky:explore` 执行一轮架构探索，启发式思考引导有效，输出 ADR 和架构文档
-- 在子系统代码仓执行 `scripts/install.sh`，验证 symlink 正确创建
-- 验证 Claude Code 通过 symlink 正确识别并加载 skills/agents/commands/rules
+- 验证 Claude Code 正确识别并加载 skills/agents/commands/rules
 
 ---
 
@@ -141,7 +138,7 @@ Rule（1 个骨架规则）：
 
 **目标**：建立完整的日常开发循环——TDD + 重构 + 代码评审 + 静态分析 + worktree 隔离 + 自动化守护，此时已有产品级文档支撑和 R1 约束。
 
-**前置依赖**：Phase 2（R1 workflow 规范已建立、install.sh 可用于子仓库验证）
+**前置依赖**：Phase 2（R1 workflow 规范已建立）
 
 > **为什么 S4 code-refactor 在 Phase 3 而非 Phase 4？** 每个 TDD 循环的步骤 N.M.5 调用 `/ky:refactor` 进行代码简化重构，S4 是日常开发循环的必需组件，不是补充能力。
 
@@ -290,7 +287,7 @@ Commands（3 个产品级质量命令）：
 | 6.1 | 闭环 A 外层脚本 | `scripts/feedback-loop.sh` | 编译+测试反馈循环（时间守护、flock 防重入、git 分支管理、归档） |
 | 6.2 | 闭环 B 设计预埋 | — | 代码分析闭环，具体实现后续完善 |
 | 6.3 | 跨会话学习机制 | `feedback-runs/<scenario>/error-learning.jsonl` | Reflexion 模式，错误学习与预防 |
-| 6.4 | 夜间 CI 仓库列表 | `scripts/repos.yaml` | 子系统仓库列表，各场景独立运行 |
+| 6.4 | 夜间 CI 场景列表 | `scripts/scenarios.yaml` | 子系统场景列表，各场景独立运行 |
 
 **验证**：
 - 手动触发闭环 A 外层脚本，编译+测试反馈循环正常收敛

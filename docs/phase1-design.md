@@ -107,7 +107,7 @@ apply:
 
 其余部分（Why / What Changes / Capabilities / Impact）保持默认。
 
-> **设计决策**：不在 proposal 中声明涉及的子系统代码仓。跨子系统的协调是产品级 plan 的职责，接口变更在 design 模板中声明（见 1.5 节）。proposal 聚焦于当前子代码仓的特性范围。
+> **设计决策**：不在 proposal 中声明涉及的子系统模块。跨子系统的协调是产品级 plan 的职责，接口变更在 design 模板中声明（见 1.5 节）。proposal 聚焦于当前子系统模块的特性范围。
 
 **instruction 设计**（schema.yaml 中 proposal artifact 的 instruction 字段）：
 
@@ -452,7 +452,7 @@ instruction: |
 
 **文件**：`openspec/config.yaml.template`
 
-**设计思路**：提供团队统一的 OpenSpec 配置模板，各子系统代码仓复制后按需修改。`schema: spec-driven-enhanced` 设为默认，`/opsx:propose` 时无需指定 `--schema` 参数：
+**设计思路**：提供团队统一的 OpenSpec 配置模板，各子系统模块复制后按需修改。`schema: spec-driven-enhanced` 设为默认，`/opsx:propose` 时无需指定 `--schema` 参数：
 
 ```yaml
 schema: spec-driven-enhanced

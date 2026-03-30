@@ -10,7 +10,7 @@
       │               │              │
       ▼               ▼              ▼
   vision.md    requirements/    iteration-plan.md
-  architecture/  interfaces/    （含测试代码仓 proposal）
+  architecture/  interfaces/    （含测试相关 proposal）
       │
       │ /ky:test-design（测试策略 + 各级测试方案）
       │ /ky:product-review（多维评审 + 红旗检测）
@@ -29,8 +29,8 @@
           │                                          │
           │ 单元测试通过                                │ 触发测试验证级
           ▼                                          ▼
-测试验证级（独立测试仓 workflow（待定义）+ 脚本执行）─────────────
-  测试用例开发（独立测试仓走专用 workflow）
+测试验证级（独立测试目录 workflow（待定义）+ 脚本执行）─────────────
+  测试用例开发（独立测试目录走专用 workflow）
   → 脚本执行（集成测试 + 性能测试）→ merge
           │                                           │
           │ 测试失败反馈代码级                             │ 测试通过
@@ -56,7 +56,7 @@
 2. `/ky:define` → 定义需求、接口契约、验收标准
    - 输出：docs/requirements/、docs/interfaces/
    - 铁律：每个 Scenario 可独立验收，每个接口有错误处理契约
-3. `/ky:plan` → 制定迭代计划和 proposal 清单（含测试代码仓 proposal）
+3. `/ky:plan` → 制定迭代计划和 proposal 清单（含测试相关 proposal）
    - 输出：docs/iteration-plan.md
    - MVP 优先 → 依赖分析 → 最大化并行（Wave 分组）
 4. `/ky:test-design` → 制定测试策略和具体测试方案
@@ -72,7 +72,7 @@
 
 **可反复迭代**：愿景可以回来改，架构可以反复迭代，需求可以随时调整。没有"完成"状态，只有"当前最佳版本"。评审发现问题后回到对应 skill 修正。
 
-产品级文档就绪后，团队根据 iteration-plan.md 中各子系统的 proposal 清单和并行分组，人工逐个通过 `/opsx:propose <name> ` 启动特性级开发。
+产品级文档就绪后，团队根据 iteration-plan.md 中的 proposal 清单和并行分组，人工逐个通过 `/opsx:propose <name> ` 启动特性级开发。
 
 ### 10.3 特性级流程
 
@@ -91,7 +91,7 @@ OpenSpec 引擎按 spec-driven-enhanced schema 的依赖图推进：
      - 评审维度：完整性、正确性、一致性、安全性、性能影响、可维护性
      - 自动修复 CRITICAL/HIGH 问题，重复直到清零或达到 5 轮上限
    - **第二阶段：人员交叉评审**（AI 评审达标后）
-     - 评审人员：本子系统技术 leader（必须）+ 其他子系统开发人员（≥1 人）
+     - 评审人员：本模块技术 leader（必须）+ 其他模块开发人员（≥1 人）
      - 聚焦：领域知识判断、跨子系统影响、可落地性、历史踩坑经验
    - **技术 leader 签字**：
      - APPROVED → 继续进入 tasks
@@ -111,7 +111,7 @@ OpenSpec 引擎按 spec-driven-enhanced schema 的依赖图推进：
 | **检查范围** | 单个 artifact（当前阶段的 proposal/spec/design/tasks） | proposal + specs + design 三者整体 |
 | **检查深度** | 快速质检：格式完整性、产品级追溯、明显缺漏 | 六维深度评审：完整性/正确性/一致性/安全性/性能/可维护性 |
 | **阻塞能力** | 不阻塞，仅建议修改 | CRITICAL/HIGH 问题硬阻塞进入 tasks |
-| **人员参与** | 无 | 技术 leader 签字 + 跨子系统评审 |
+| **人员参与** | 无 | 技术 leader 签字 + 跨模块评审 |
 | **适用场景** | 快速确认当前 artifact 质量再推进 | design 完成后的正式评审门禁 |
 
 ### 10.4 代码级流程（每个 task 的执行循环）
@@ -161,25 +161,25 @@ OpenSpec 引擎按 spec-driven-enhanced schema 的依赖图推进：
 
 ### 10.5 测试验证级流程（代码合并前的验证关卡）
 
-> 测试验证级不设 `/ky:*` 命令。测试用例开发在独立测试仓中走 OpenSpec workflow，测试执行通过脚本触发。
+> 测试验证级不设 `/ky:*` 命令。测试用例开发在独立测试目录中走 OpenSpec workflow，测试执行通过脚本触发。
 
 **测试方案来源**：
 
 - 产品级 `/ky:test-design`（PS5）统一定义测试策略和测试方案（集成测试 + 性能测试）
-- `/ky:plan`（PS3）在 iteration-plan.md 中生成测试代码仓的 proposal 条目
+- `/ky:plan`（PS3）在 iteration-plan.md 中生成测试相关的 proposal 条目
 - `/ky:product-review`（PS4）对 test-strategy.md 和各级测试方案进行评审
 
 **测试用例开发**：
 
-在独立测试仓中走 OpenSpec workflow（测试仓专用 schema 待定义，不复用功能代码仓的 spec-driven-enhanced）：
-1. 测试仓的 proposal 追溯到产品级 iteration-plan.md 中的测试 proposal 条目
-2. 测试仓的 workflow 需要单独设计，因为集成测试的关注点（测试拓扑、环境管理、故障注入、数据策略）与功能开发（架构设计、TDD、代码实现）本质不同
+在 `tests/` 目录下走 OpenSpec workflow（测试专用 schema 待定义，不复用功能代码的 spec-driven-enhanced）：
+1. 测试 proposal 追溯到产品级 iteration-plan.md 中的测试条目
+2. 测试 workflow 需要单独设计，因为集成测试的关注点（测试拓扑、环境管理、故障注入、数据策略）与功能开发（架构设计、TDD、代码实现）本质不同
 
 **测试执行**：
 
 通过脚本触发：
 
-1. **集成测试**：跨子系统交互验证（接口契约 + 故障注入 + 数据一致性 + 多节点故障恢复）
+1. **集成测试**：跨模块交互验证（接口契约 + 故障注入 + 数据一致性 + 多节点故障恢复）
 2. **性能测试**（按需）：吞吐量/延迟基准测试，对比历史数据检测性能回归
 3. 全部测试通过 → 允许合并
 4. 测试失败 → 反馈代码级修复

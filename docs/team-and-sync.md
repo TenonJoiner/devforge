@@ -2,11 +2,11 @@
 
 ## 十一、团队协作机制
 
-### 11.1 多仓模型
+### 11.1 Monorepo 模式
 
-团队采用多代码仓组织形式，每个子系统一个独立仓库。teamskills 作为产品级统一仓库，各子系统代码仓通过 `scripts/install.sh` 引用本仓的 skill/agent/command/rule/hook。
+团队采用单一代码仓（Monorepo）组织形式，所有子系统代码位于同一仓库中。teamskills 提供统一的 skill/agent/command/rule/hook，通过 `.claude/` 目录直接使用，无需额外安装。
 
-子系统间的接口定义维护在产品级 `docs/interfaces/` 目录中，团队成员与子系统的对应关系由团队日常协作工具（飞书/Wiki 等）维护。
+子系统间的接口定义维护在产品级 `docs/interfaces/` 目录中，所有团队成员共享同一套 skills 和规则。
 
 ### 11.2 并行开发模式
 
@@ -15,92 +15,30 @@
 - **冲突检测**：同文件修改标记为不可并行
 - **git worktree 隔离**：每个并行 agent 使用独立 worktree（worktree skill 由 `/opsx:apply` 内部调度，`/ky:switch-worktree` 供手动切换）
 
-### 11.3 安装机制
+### 11.3 使用方式
 
-各子系统代码仓通过 `scripts/install.sh` 集成 teamskills：
+teamskills 的 `.claude/` 目录直接位于仓库根目录，Claude Code 自动发现并加载其中的 skills、agents、commands、rules 和 hooks。
 
-```bash
-#!/bin/bash
-# scripts/install.sh — 在子系统代码仓中执行
-# 用法: /path/to/teamskills/scripts/install.sh
-set -euo pipefail
-
-TEAMSKILLS_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-TARGET_DIR="$(pwd)"
-
-# === 辅助函数：创建相对路径 symlink ===
-# 使用 realpath --relative-to 计算相对路径，确保跨机器可移植
-make_rel_link() {
-  local target="$1"  # symlink 指向的真实目标
-  local link="$2"    # symlink 自身的路径
-  local link_dir
-  link_dir="$(dirname "$link")"
-  local rel_path
-  rel_path="$(realpath --relative-to="$link_dir" "$target")"
-  ln -sfn "$rel_path" "$link"
-}
-
-# 0. 前置检查
-if [ ! -d "$TEAMSKILLS_DIR/.claude" ]; then
-  echo "错误：未找到 teamskills/.claude 目录" >&2
-  exit 1
-fi
-
-# 1. Claude Code 扩展：相对路径 symlink（跨机器可移植）
-mkdir -p "$TARGET_DIR/.claude"
-make_rel_link "$TEAMSKILLS_DIR/.claude/skills"    "$TARGET_DIR/.claude/skills"
-make_rel_link "$TEAMSKILLS_DIR/.claude/agents"    "$TARGET_DIR/.claude/agents"
-make_rel_link "$TEAMSKILLS_DIR/.claude/commands"  "$TARGET_DIR/.claude/commands"
-make_rel_link "$TEAMSKILLS_DIR/.claude/rules"     "$TARGET_DIR/.claude/rules"
-make_rel_link "$TEAMSKILLS_DIR/.claude/hooks.json" "$TARGET_DIR/.claude/hooks.json"
-
-# 2. OpenSpec schema：相对路径 symlink
-mkdir -p "$TARGET_DIR/openspec/schemas"
-make_rel_link "$TEAMSKILLS_DIR/openspec/schemas/spec-driven-enhanced" \
-              "$TARGET_DIR/openspec/schemas/spec-driven-enhanced"
-
-# 3. OpenSpec config：从模板复制（子仓库需自定义 context）
-if [ ! -f "$TARGET_DIR/openspec/config.yaml" ]; then
-  cp "$TEAMSKILLS_DIR/openspec/config.yaml.template" "$TARGET_DIR/openspec/config.yaml"
-  echo "已创建 openspec/config.yaml，请修改 context 部分以匹配子系统特性"
-fi
-
-# 4. 版本感知：记录 teamskills 版本，用于检测版本漂移
-TEAMSKILLS_VERSION="$(cd "$TEAMSKILLS_DIR" && git rev-parse --short HEAD 2>/dev/null || echo 'unknown')"
-echo "$TEAMSKILLS_VERSION" > "$TARGET_DIR/.claude/.teamskills-version"
-
-echo "安装完成（teamskills@$TEAMSKILLS_VERSION）。"
-echo "子仓库不自行定义扩展，所有增强统一修改 teamskills。"
-echo "运行 scripts/check-version.sh 可检测 teamskills 版本是否需要更新。"
+```
+teamskills/
+├── .claude/              # Claude Code 扩展目录，直接使用
+│   ├── skills/
+│   ├── agents/
+│   ├── commands/
+│   ├── rules/
+│   └── hooks.json
+├── docs/                 # 产品级文档
+├── openspec/             # OpenSpec 扩展
+│   ├── schemas/
+│   └── config.yaml       # C 语言 + 分布式存储上下文
+├── src/                  # 源代码目录
+├── tests/                # 测试代码目录
+└── ...
 ```
 
-**版本漂移检查**（`scripts/check-version.sh`，子仓库中执行）：
-
-```bash
-#!/bin/bash
-# scripts/check-version.sh — 检查子仓库引用的 teamskills 版本是否过时
-# 用法: 在子仓库中执行
-
-VERSION_FILE=".claude/.teamskills-version"
-if [ ! -f "$VERSION_FILE" ]; then
-  echo "未找到 .claude/.teamskills-version，请先执行 install.sh" >&2
-  exit 1
-fi
-
-INSTALLED_VERSION="$(cat "$VERSION_FILE")"
-# 通过 symlink 反向追溯 teamskills 目录
-TEAMSKILLS_DIR="$(realpath .claude/skills/../..)"
-CURRENT_VERSION="$(cd "$TEAMSKILLS_DIR" && git rev-parse --short HEAD 2>/dev/null || echo 'unknown')"
-
-if [ "$INSTALLED_VERSION" = "$CURRENT_VERSION" ]; then
-  echo "teamskills 版本一致：$CURRENT_VERSION"
-else
-  echo "⚠ teamskills 版本不一致！已安装: $INSTALLED_VERSION，当前: $CURRENT_VERSION"
-  echo "请重新执行: $TEAMSKILLS_DIR/scripts/install.sh"
-fi
-```
-
-各仓独立维护 `openspec/config.yaml`，注入子系统特定上下文（如存储引擎关注 IO 路径和数据结构，元数据服务关注一致性协议和缓存）。
+**配置说明**：
+- `openspec/config.yaml` 位于仓库根目录，包含 C 语言和分布式存储的上下文配置
+- 所有团队成员使用同一套配置，无需单独设置
 
 ---
 

@@ -402,12 +402,12 @@ history:
 
 ### 8.1 场景（Scenario）定义
 
-每次反馈闭环运行对应一个场景，场景按**子系统代码仓名称**划分（如 `storage-engine`、`metadata-service`）。场景决定：
+每次反馈闭环运行对应一个场景，场景按**子系统模块名称**划分（如 `storage-engine`、`metadata-service`）。场景决定：
 - 运行数据存储路径：`feedback-runs/<scenario>/<run_id>/`
 - flock 锁文件：`/tmp/feedback-loop-<scenario>.lock`（各场景独立，可并行运行不同场景）
 - error-learning.jsonl 文件：`feedback-runs/<scenario>/error-learning.jsonl`（各场景独立积累经验）
 
-外层脚本通过 `repos.yaml` 遍历子系统仓库列表，每个仓库名称即为 scenario。
+外层脚本通过遍历 `src/` 目录下的子系统模块列表，每个模块名称即为 scenario。
 
 ## 9. 安全机制
 
@@ -514,7 +514,7 @@ history:
 
 - [ ] 闭环 B（L3 分析反馈）的具体检测手段和修复策略——初步方向：Agent 阅读分析 + clang-tidy（代码度量）混合模式，阈值复用 R3 coding-style 中的标准（函数 >50 行、文件 >800 行、圈复杂度 >10）
 - [x] ~~配置参数的完整定义~~ → 已在第 8 章定义默认值
-- [ ] 外层脚本的具体实现——存放路径：`scripts/feedback-loop.sh`，通过 `repos.yaml` 遍历子系统仓库，各 scenario 独立运行
+- [ ] 外层脚本的具体实现——存放路径：`scripts/feedback-loop.sh`，遍历 `src/` 目录下的子系统模块，各 scenario 独立运行
 - [ ] 闭环 A 和闭环 B 的触发策略——初步方案：闭环 A 由 CI 在 merge to main 后触发，闭环 B 每周定期触发（或迭代结束时手动触发）
 - [x] ~~项目经理 Agent（A10）的完整角色定义~~ → 已收录到 extensions-catalog.md Agents 清单（A10），完整 Agent 文件在实施阶段创建
 - [x] ~~场景（scenario）定义~~ → 已在第 8.1 章定义

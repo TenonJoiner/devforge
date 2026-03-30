@@ -9,7 +9,7 @@
 **核心目标**：
 - 团队整体提效和高效协作，减少并行开发冲突
 - 上层约束下层，下层变更反馈上层的四层闭环
-- 多代码仓库组织的团队统一引用，避免各自维护
+- 单代码仓库（Monorepo）组织，所有子系统在同一仓库中管理
 
 ## 设计思路
 
@@ -71,9 +71,13 @@
   - commands/ - 自定义命令
   - skills/ - 自定义 Skills
   - rules/ - 规则文件
+- docs/ - 产品级文档
+- openspec/ - OpenSpec 配置和 schema
+- src/ - 各子系统源代码
+- tests/ - 测试代码
 - reference/ - 参考仓库（不上传，见 .gitignore）
 
 ## 使用方式
 
-各子系统代码仓通过引用方式使用本仓库提供的统一 skill/agent/command/hook。
+本仓库采用 Monorepo 模式，所有子系统代码位于同一仓库中。teamskills 提供统一的 skill/agent/command/hook，通过 `.claude/` 目录直接使用。
 

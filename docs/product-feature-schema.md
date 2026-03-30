@@ -104,7 +104,7 @@
       │               │              │
       ▼               ▼              ▼
   vision.md    requirements/    iteration-plan.md
-  architecture/  interfaces/    （含测试代码仓 proposal）
+  architecture/  interfaces/    （含测试相关 proposal）
       │
       │ /ky:test-design（测试策略 + 各级测试方案）
       │ /ky:product-review（多维评审 + 红旗检测）
@@ -402,12 +402,12 @@ spec-driven:                     spec-driven-enhanced:
 > 注意：config.yaml 仅服务于特性级的 spec-driven-enhanced schema。产品级已脱离 OpenSpec，由启发式 Skills 驱动。
 
 ```yaml
-# openspec/config.yaml — 各子系统代码仓各自维护一份
+# openspec/config.yaml — 统一配置
 schema: spec-driven-enhanced    # 默认使用增强版特性工作流
 
-# 产品级文档基础路径（子仓库需修改为 teamskills 的实际路径）
+# 产品级文档基础路径
 # schema instruction 中的 docs/ 引用会被替换为此路径
-product_docs_base: docs/        # teamskills 本仓默认值；子仓库示例：../teamskills/docs/
+product_docs_base: docs/        # 产品级文档路径
 
 context: |
   技术栈：C 语言（C11/C17 标准）、Linux 系统编程
@@ -447,8 +447,6 @@ rules:
 
 ## 四、目录结构
 
-teamskills 本身的目录结构和子仓库使用后的目录结构是两件事，分开定义。
-
 ### 4.1 teamskills 仓库目录结构
 
 ```
@@ -468,7 +466,6 @@ teamskills/
 │   └── iteration-plan.md                  #   迭代计划 + proposal 清单
 │
 ├── .claude/                               # ★ Claude Code 标准扩展目录
-│   │                                      #   子仓库通过目录级 symlink 引用
 │   ├── skills/                            #   ★ 自建技能（14 个）
 │   │   ├── product/                       #     产品级（6 个）— 解决 P1+P4+P5
 │   │   │   ├── explore/SKILL.md           #       探索性思考
@@ -542,10 +539,6 @@ teamskills/
 │       ├── interface.md
 │       └── iteration-plan.md
 │
-├── scripts/                               # 辅助脚本
-│   ├── install.sh                         #   ★ 子系统代码仓集成脚本
-│   └── repos.yaml                         #   夜间 CI 子系统仓库列表
-│
 └── docs/                                  # teamskills 自身的设计文档
     ├── design-proposal.md                 #   索引文件
     ├── architecture.md                    #   架构与基础
@@ -557,39 +550,54 @@ teamskills/
     └── decisions-and-plan.md              #   决策与实施计划
 ```
 
-### 4.2 子仓库集成后的目录结构
+### 4.2 Monorepo 目录结构
 
-子仓库执行 `scripts/install.sh` 后产生的目录结构：
+团队采用单一代码仓（Monorepo）组织形式，所有子系统代码位于同一仓库中。teamskills 提供统一的 skill/agent/command/rule/hook，通过 `.claude/` 目录直接使用，无需额外安装。
 
 ```
-<sub-repo>/
-├── .claude/
-│   ├── skills   → symlink → teamskills/.claude/skills
-│   ├── agents   → symlink → teamskills/.claude/agents
-│   ├── commands → symlink → teamskills/.claude/commands
-│   ├── rules    → symlink → teamskills/.claude/rules
-│   └── hooks.json → symlink → teamskills/.claude/hooks.json
-│
-├── openspec/
+teamskills/
+├── .claude/              # Claude Code 扩展目录，直接使用
+│   ├── skills/
+│   ├── agents/
+│   ├── commands/
+│   ├── rules/
+│   └── hooks.json
+├── docs/                 # 产品级文档
+│   ├── vision.md
+│   ├── architecture/
+│   ├── requirements/
+│   ├── interfaces/
+│   └── iteration-plan.md
+├── openspec/             # OpenSpec 扩展
 │   ├── schemas/
-│   │   └── spec-driven-enhanced → symlink → teamskills/openspec/schemas/spec-driven-enhanced
-│   └── config.yaml              # 从模板复制，子仓库自行修改 context 部分
-│
-└── ... (子仓库自身代码)
+│   └── config.yaml       # C 语言 + 分布式存储上下文
+├── src/                  # 源代码目录（各子系统代码）
+│   ├── storage/
+│   ├── metadata/
+│   ├── network/
+│   └── ...
+├── tests/                # 测试代码目录
+└── ...
 ```
 
-### 4.3 分发机制
+**配置说明**：
+- `openspec/config.yaml` 位于仓库根目录，包含 C 语言和分布式存储的上下文配置
+- 所有团队成员使用同一套配置，无需单独设置
 
-统一使用**目录级 symlink**，由 `scripts/install.sh` 自动完成：
+### 4.3 使用方式
 
-| 扩展类型 | 分发方式 | 说明 |
-|---------|---------|------|
-| skills | 目录级 symlink | Claude Code 自动发现 |
-| agents | 目录级 symlink | Claude Code 自动发现 |
-| commands | 目录级 symlink | Claude Code 自动发现 |
-| rules | 目录级 symlink | Claude Code 自动发现 |
-| hooks.json | 文件级 symlink | 单文件，直接 symlink |
-| openspec schema | 目录级 symlink | OpenSpec 自有查找机制 |
-| openspec config | 复制模板 | 子仓库需自定义 context |
+teamskills 的 `.claude/` 目录直接位于仓库根目录，Claude Code 自动发现并加载其中的 skills、agents、commands、rules 和 hooks。
 
-子仓库不自行定义扩展，所有增强统一修改 teamskills。
+子系统间的接口定义维护在产品级 `docs/interfaces/` 目录中，所有团队成员共享同一套 skills 和规则。
+
+**扩展类型清单**：
+
+| 扩展类型 | 位置 | 说明 |
+|---------|------|------|
+| skills | `.claude/skills/` | Claude Code 自动发现 |
+| agents | `.claude/agents/` | Claude Code 自动发现 |
+| commands | `.claude/commands/` | Claude Code 自动发现 |
+| rules | `.claude/rules/` | Claude Code 自动发现 |
+| hooks.json | `.claude/hooks.json` | 自动化钩子配置 |
+| openspec schema | `openspec/schemas/` | OpenSpec 自有查找机制 |
+| openspec config | `openspec/config.yaml` | 全局配置，统一维护 |
