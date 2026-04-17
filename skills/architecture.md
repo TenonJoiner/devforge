@@ -10,7 +10,7 @@
 │                                                                 │
 │   产品级：6 个启发式 skill（explore/define/plan/review/              │
 │           test-design/verify）                                     │
-│           docs/ 目录，templates/product/ 参考模板                   │
+│           docs/ 目录，.claude/templates/ 参考模板                    │
 │           与 OpenSpec 彻底脱离，按思考模式辅助设计                     │
 │                                                                 │
 │   特性级：spec-driven-enhanced schema（5 个 artifact，fork spec-driven）│

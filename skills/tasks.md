@@ -125,7 +125,7 @@ Rule（1 个骨架规则）：
 
 | # | 交付物 | 文件路径 |
 |---|--------|---------|
-| 2.9 | 产品级参考模板（5 个） | `templates/product/{vision,architecture,requirements,interface,iteration-plan}.md` |
+| 2.9 | 产品级参考模板（7 个） | `.claude/templates/{ref-requirements,ref-architecture,ref-paper,arch-subsystem,arch-system,req-overview,req-feature}.md` |
 | 2.10 | 产品级交付物目录骨架 | `docs/{vision.md, architecture/, requirements/, interfaces/, adr.md, iteration-plan.md}` |
 
 **验证**：

@@ -1,0 +1,31 @@
+{
+  "hooks": [
+    {
+      "name": "pre-commit-lint",
+      "type": "PreToolUse",
+      "matcher": {
+        "tool": "Bash",
+        "pattern": "git commit"
+      },
+      "command": "bash .claude/hooks/pre-commit-lint.sh"
+    },
+    {
+      "name": "post-edit-format",
+      "type": "PostToolUse",
+      "matcher": {
+        "tool": "Edit",
+        "fileGlob": "**/*.{c,h}"
+      },
+      "command": "bash .claude/hooks/post-edit-format.sh"
+    },
+    {
+      "name": "worktree-guard",
+      "type": "PreToolUse",
+      "matcher": {
+        "tool": "Edit|Write",
+        "fileGlob": "**/*"
+      },
+      "command": "bash .claude/hooks/worktree-guard.sh"
+    }
+  ]
+}
