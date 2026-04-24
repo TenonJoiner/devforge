@@ -23,7 +23,7 @@
 2. **GREEN**：写最小实现使测试通过
 3. **REFACTOR**：在绿色下简化代码
 
-> valgrind 内存检测留在 proposal 收尾或 `/ky:lint --full` 阶段执行，不阻塞 TDD 小步循环。
+> valgrind 内存检测留在 proposal 收尾或 `/df:lint --full` 阶段执行，不阻塞 TDD 小步循环。
 
 ---
 
@@ -31,7 +31,7 @@
 
 - 每个公开的 API 函数至少有一个直接测试
 - 每个错误路径至少有一个测试
-- proposal/PR 级别通过 `/ky:lint --full` 或项目 CI 集成 valgrind
+- proposal/PR 级别通过 `/df:lint --full` 或项目 CI 集成 valgrind
 - 新增代码必须被测试覆盖
 
 ---

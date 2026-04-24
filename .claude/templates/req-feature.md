@@ -15,7 +15,7 @@ checklist-at-end: true
 
 # <特性域> 需求规格
 
-> 全局产品定义参见 [overview.md](../requirements/overview.md)。
+> 全局产品定义参见 [product-spec.md](../requirements/product-spec.md)。
 
 ---
 
@@ -37,8 +37,8 @@ checklist-at-end: true
 
 ## 涉及 Actors
 
-- [Actor-A](../requirements/overview.md#actor-actor-a)（主 Actor）
-- [Actor-B](../requirements/overview.md#actor-actor-b)（协作 Actor）
+- [Actor-A](../requirements/product-spec.md#actor-actor-a)（主 Actor）
+- [Actor-B](../requirements/product-spec.md#actor-actor-b)（协作 Actor）
 
 ---
 
@@ -188,6 +188,6 @@ checklist-at-end: true
 - [ ] 正常路径 + 至少 4 种故障模式已覆盖
 - [ ] 每个验收标准已标注可测试性等级
 - [ ] 不可直接测试的验收项已拆分或计划拆分
-- [ ] 本域 Feature 在 overview.md 中的依赖关系已确认
+- [ ] 本域 Feature 在 product-spec.md 中的依赖关系已确认
 - [ ] 非功能需求性能/可用性/一致性/安全性/可观测性/扩展性/兼容性均已评估
 - [ ] 已知待澄清问题已记录并分配跟进计划

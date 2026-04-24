@@ -21,7 +21,7 @@
 ## Review Checklist
 
 ### Product-level Consistency
-- [ ] proposal/specs/design 与产品级文档（docs/requirements/、docs/architecture/、docs/interfaces/）无矛盾
+- [ ] proposal/specs/design 与产品级文档（docs/requirements/、docs/architecture/）无矛盾
 - [ ] 涉及的需求追溯链完整（产品级需求 → proposal → specs → design）
 
 ### Requirements Quality (specs)

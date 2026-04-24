@@ -23,12 +23,12 @@ if [ -z "$CURRENT_WORKTREE" ] || [ "$CURRENT_WORKTREE" = "$(git -C "$ACTIVE_WORK
     echo "worktree 守护：当前不在活跃 worktree 内"
     echo "   当前目录：$CWD"
     echo "   活跃 worktree：$ACTIVE_WORKTREE"
-    echo "   建议执行 /ky:switch-worktree $(basename "$ACTIVE_WORKTREE" | sed 's/^wt-//') 恢复上下文"
+    echo "   建议执行 /df:switch-worktree $(basename "$ACTIVE_WORKTREE" | sed 's/^wt-//') 恢复上下文"
 else
     # 在另一个 worktree 中
     echo "worktree 守护：当前在另一个 worktree（$CURRENT_WORKTREE），但活跃 worktree 是 $ACTIVE_WORKTREE"
     echo "   建议："
-    echo "     1. 执行 /ky:switch-worktree $(basename "$ACTIVE_WORKTREE" | sed 's/^wt-//') 切换"
-    echo "     2. 若已废弃该 worktree，执行 /ky:finish-worktree 完成清理"
+    echo "     1. 执行 /df:switch-worktree $(basename "$ACTIVE_WORKTREE" | sed 's/^wt-//') 切换"
+    echo "     2. 若已废弃该 worktree，执行 /df:finish-worktree 完成清理"
 fi
 exit 1

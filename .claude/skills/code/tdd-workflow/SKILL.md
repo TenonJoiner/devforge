@@ -1,7 +1,6 @@
 ---
 name: code/tdd-workflow
 description: TDD 铁律开发工作流——RED-GREEN-REFACTOR，针对 C 语言项目
-version: 1.0.0
 allowed-tools: [Read, Write, Edit, Bash, Grep, Glob]
 ---
 
@@ -15,7 +14,7 @@ RED → GREEN → REFACTOR。没有先失败的测试，决不写生产代码。
 - **测试先行**：每个功能增量必须有测试失败作为起点
 - **最小步长**：每个步骤只解决当前测试失败，不超前实现
 - **绿色保障**：REFACTOR 阶段必须保持测试常绿
-- **内存安全**：proposal 收尾及 `/ky:lint --full` 阶段集成 valgrind，确保无泄漏、无越界
+- **内存安全**：proposal 收尾及 `/df:lint --full` 阶段集成 valgrind，确保无泄漏、无越界
 
 ## 何时使用
 
@@ -28,19 +27,19 @@ RED → GREEN → REFACTOR。没有先失败的测试，决不写生产代码。
 spec-driven-enhanced 的 tasks 模板将每个实现 task 拆为 7 步：
 
 ```
-N.M.1 TEST      → /ky:tdd 的 RED 阶段
-N.M.2 VERIFY-RED  → /ky:tdd 的 RED 阶段
-N.M.3 IMPL      → /ky:tdd 的 GREEN 阶段
-N.M.4 VERIFY-GREEN → /ky:tdd 的 GREEN 阶段
-N.M.5 REFACTOR  → /ky:refactor（本 skill 的 REFACTOR 阶段调用）
-N.M.6 REVIEW    → /ky:code-review（输出评审报告）
+N.M.1 TEST      → /df:tdd 的 RED 阶段
+N.M.2 VERIFY-RED  → /df:tdd 的 RED 阶段
+N.M.3 IMPL      → /df:tdd 的 GREEN 阶段
+N.M.4 VERIFY-GREEN → /df:tdd 的 GREEN 阶段
+N.M.5 REFACTOR  → /df:refactor（本 skill 的 REFACTOR 阶段调用）
+N.M.6 REVIEW    → /df:code-review（输出评审报告）
 N.M.7 FIX-REVIEW → developer 读取评审报告，修复 CRITICAL/HIGH 问题
 N.M.8 COMMIT    → git commit
 ```
 
-`/ky:tdd` 覆盖步骤 N.M.1 ~ N.M.4，产出测试代码和生产代码的最小实现。
+`/df:tdd` 覆盖步骤 N.M.1 ~ N.M.4，产出测试代码和生产代码的最小实现。
 
-`/ky:code-review` 输出评审报告后，由 `developer`（或 feedback-loop）在 N.M.7 阶段按 CRITICAL → HIGH 顺序修复，修复后必须通过回归测试。
+`/df:code-review` 输出评审报告后，由 `developer`（或 feedback-loop）在 N.M.7 阶段按 CRITICAL → HIGH 顺序修复，修复后必须通过回归测试。
 
 ## 核心流程
 
@@ -86,7 +85,7 @@ N.M.8 COMMIT    → git commit
 - 优化性能（留在 REFACTOR 阶段）
 - 以"GREEN 允许丑代码"为借口跳过 REFACTOR
 
-### 阶段 3：REFACTOR（调用 `/ky:refactor` 简化重构）
+### 阶段 3：REFACTOR（调用 `/df:refactor` 简化重构）
 
 **成功标准**：测试保持绿色，代码质量提升。
 
@@ -94,14 +93,14 @@ N.M.8 COMMIT    → git commit
 1. 识别代码异味：重复、过长函数、魔法数字、不清晰命名
 2. 执行安全重构（提取函数、重命名变量、消除重复）
 3. 运行测试确认绿色
-4. 如需进一步简化，调用 `/ky:refactor`
+4. 如需进一步简化，调用 `/df:refactor`
 
 **REFACTOR 期间必须检查**：
 - [ ] 所有测试通过
 - [ ] 圈复杂度未显著上升
 - [ ] 每个 C 函数返回值都被检查
 
-> valgrind 内存检测留在 proposal 收尾或 `/ky:lint --full` 阶段执行，不阻塞 TDD 小步循环。
+> valgrind 内存检测留在 proposal 收尾或 `/df:lint --full` 阶段执行，不阻塞 TDD 小步循环。
 
 ## 铁律检查
 
@@ -126,5 +125,5 @@ NO PRODUCTION CODE WITHOUT A FAILING TEST FIRST
 ## Integration
 
 - **前置 Command**: `/opsx:apply`（提供当前 task 上下文）
-- **后续 Command**: `/ky:refactor`（GREEN 后的代码简化）
+- **后续 Command**: `/df:refactor`（GREEN 后的代码简化）
 - **相关 Rules**: R3 `coding-style`, R4 `testing`

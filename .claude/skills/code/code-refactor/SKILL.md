@@ -1,7 +1,6 @@
 ---
 name: code/code-refactor
 description: 测试护航下的代码简化重构——消除重复、降低复杂度、澄清意图
-version: 1.0.0
 allowed-tools: [Read, Write, Edit, Bash, Grep, Glob]
 ---
 
@@ -35,9 +34,9 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob]
 | 成本 | 低（秒级到分钟级） | 中到高（需启动多个 subagent） |
 
 **建议配合方式**：
-- 日常 TDD 循环使用本 skill 完成快速 REFACTOR（`/ky:refactor` 的默认轻量模式）
-- 当单个 task 或一组 task 的变更较大（>200 行）时，`/ky:refactor` 会自动切换到深度模式（调用 `code/simplify` skill），或手动通过 `/ky:refactor --deep` 强制触发
-- archive 前的最终整理可调用 `/ky:refactor --deep` 确保没有遗漏的复用机会和效率问题
+- 日常 TDD 循环使用本 skill 完成快速 REFACTOR（`/df:refactor` 的默认轻量模式）
+- 当单个 task 或一组 task 的变更较大（>200 行）时，`/df:refactor` 会自动切换到深度模式（调用 `code/simplify` skill），或手动通过 `/df:refactor --deep` 强制触发
+- archive 前的最终整理可调用 `/df:refactor --deep` 确保没有遗漏的复用机会和效率问题
 
 ## 重构清单
 
@@ -72,7 +71,7 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob]
 1. **绿色确认**：运行全部测试，确认通过
 2. **选择目标**：从上述清单中挑选最显著的一个异味
 3. **执行重构**：修改代码
-4. **快速验证**：运行测试确认绿色（valgrind 留到 proposal 收尾或 `/ky:lint --full`）
+4. **快速验证**：运行测试确认绿色（valgrind 留到 proposal 收尾或 `/df:lint --full`）
 5. **循环或退出**：如还有明显异味，返回步骤 2；否则停止
 
 ## 红旗信号
@@ -83,5 +82,5 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob]
 
 ## Integration
 
-- **前置 Command**: `/ky:tdd` 或 `/ky:code-review`
+- **前置 Command**: `/df:tdd` 或 `/df:code-review`
 - **相关 Rules**: R3 `coding-style`

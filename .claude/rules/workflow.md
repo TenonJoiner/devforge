@@ -12,15 +12,14 @@
 ## 四层关系
 
 ```
-产品级（启发式 Skills + /ky:* 命令）
-  /ky:arch ←→ /ky:define ←→ /ky:plan
+产品级（启发式 Skills + /df:* 命令）
+  /df:design ←→ /df:define ←→ /df:plan
       │               │              │
       ▼               ▼              ▼
-  architecture/   requirements/   iteration-plan.md
-      adr.md       interfaces/
-     design.md
+  architecture/   requirements/   iteration-plan/
+      adr.md                        milestone-plan.md
+     design.md                      iteration-m*-i*.md
    <subsystem>/
-      │
       │ 人工决策：从 proposal 清单选择当前要实现的特性
       │
       └──▶ 特性级（OpenSpec + /opsx:* 命令）
@@ -59,15 +58,16 @@
   - `docs/architecture/design.md` — 系统架构总纲
   - `docs/architecture/<subsystem>/design.md` — 子系统架构主文档（每个子系统文档在对应 ADR 达到高置信度后产出，且需独立经过 architect 发散 → architect-reviewer 质疑 → architect 修正定稿的多 agent 协作）
 - `docs/requirements/` — 需求规格（内容结构严格遵循 `.claude/templates/*.md`，skill 文件只约束流程与质量）
-- `docs/interfaces/` — 接口规格
-- `docs/iteration-plan.md` — 迭代计划
+- `docs/iteration-plan/` — 迭代计划
+  - `milestone-plan.md` — 里程碑计划 + Backlog 清单（第 1 阶段）
+  - `iteration-m*-i*.md` — 各迭代执行计划（第 2 阶段）
 - `docs/test-strategy.md` — 测试策略
 
 **触发命令**：
-- `/ky:arch` — 架构探索（检测现有文档，支持迭代完善）
-- `/ky:define` — 需求定义（Feature-Scenario 结构）
-- `/ky:plan` — 迭代计划（里程碑 → Wave 分组 → 关键路径）
-- `/ky:test-design` — 测试策略设计（测试分层 → 覆盖率目标 → 各级方案）
+- `/df:design` — 架构探索（检测现有文档，支持迭代完善）
+- `/df:define` — 需求定义（Feature-Scenario 结构）
+- `/df:plan` — 迭代计划（两阶段：里程碑+Backlog → 迭代执行计划，每阶段三重评审）
+- `/df:test-design` — 测试策略设计（测试分层 → 覆盖率目标 → 各级方案）
 
 **使用模式**：
 1. **从零开始**：全新系统或重大架构调整
@@ -107,19 +107,19 @@
 - worktree 隔离并行开发
 
 **触发命令**：
-- `/ky:tdd` — TDD 开发
-- `/ky:review` — 代码评审
-- `/ky:refactor` — 代码重构
-- `/ky:lint` — 编译检查
-- `/ky:switch-worktree` — 切换 worktree
-- `/ky:debug` — 系统化调试
+- `/df:tdd` — TDD 开发
+- `/df:review` — 代码评审
+- `/df:refactor` — 代码重构
+- `/df:lint` — 编译检查
+- `/df:switch-worktree` — 切换 worktree
+- `/df:debug` — 系统化调试
 
 ### 测试验证级
 
 **目标**：集成测试、系统测试、性能测试
 
 **核心原则**：
-- 不设 `/ky:*` 命令
+- 不设 `/df:*` 命令
 - 测试用例开发在独立测试目录
 - 测试执行通过脚本触发
 
@@ -127,7 +127,7 @@
 
 ### 启动特性开发
 
-1. 从产品级 `docs/iteration-plan.md` 选择 proposal
+1. 从产品级 `docs/iteration-plan/milestone-plan.md` 的 Backlog 中选择 proposal
 2. 使用 `/opsx:new <proposal-name>` 启动特性级 workflow
 3. proposal.md 自动关联产品级需求文档（`docs/requirements/*.md`）
 4. design.md 自动关联产品级架构文档（`docs/architecture/design.md` 系统总纲，及 `docs/architecture/<subsystem>/design.md` 相关子系统）
@@ -137,7 +137,7 @@
 特性级开发中发现的产品级文档问题：
 - 在 spec/design 中使用 `[[发现]]` 标注
 - `/opsx:archive` 时汇总未处理发现
-- 累计超过 3 个时，提示执行 `/ky:arch` 或 `/ky:define` 更新产品级文档
+- 累计超过 3 个时，提示执行 `/df:design` 或 `/df:define` 更新产品级文档
 
 ## 文档对齐
 
@@ -145,16 +145,9 @@
 
 | 特性级文档 | 应追溯的产品级文档 |
 |-----------|------------------|
-| proposal.md | iteration-plan.md#对应 proposal |
+| proposal.md | iteration-plan/milestone-plan.md#对应 proposal |
 | specs/*.md | requirements/*.md#相关 Feature |
 | design.md | architecture/design.md（系统总纲）、architecture/<subsystem>/design.md（相关子系统） |
-| interface-def.md | interfaces/*.md#相关接口 |
-
-### 接口变更
-
-- 子系统间接口定义维护在 `docs/interfaces/`
-- 接口变更必须更新 interfaces/ 文档
-- 跨子系统特性需相关子系统评审
 
 ## 并行开发规约
 
@@ -172,8 +165,8 @@
 | Schema 自定义 | ✅ | — |
 | 模板系统 | ✅ | — |
 | 命令系统 | ✅ | — |
-| 产品级 Skills | — | ✅ `/ky:*` |
-| 代码级 Skills | — | ✅ `/ky:*` |
+| 产品级 Skills | — | ✅ `/df:*` |
+| 代码级 Skills | — | ✅ `/df:*` |
 | Agents | — | ✅ |
 | Hooks | — | ✅ |
 | Rules | — | ✅ |
@@ -183,12 +176,12 @@
 ### 产品级（数月周期）
 
 ```
-第 1-2 周：/ky:arch → 系统级架构框架
-第 2-4 周：/ky:define → 核心 Feature 需求
-第 3-5 周：/ky:test-design → 测试策略设计
-第 4-6 周：/ky:plan → 初始迭代计划
+第 1-2 周：/df:design → 系统级架构框架
+第 2-4 周：/df:define → 核心 Feature 需求
+第 3-5 周：/df:test-design → 测试策略设计
+第 4-6 周：/df:plan → 初始迭代计划
 ...
-第 N 周：/ky:arch → 基于新认知调整架构
+第 N 周：/df:design → 基于新认知调整架构
 ```
 
 ### 特性级（数周周期）

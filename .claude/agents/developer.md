@@ -34,7 +34,7 @@ tools: ["Read", "Write", "Edit", "Bash", "Grep", "Glob"]
 2. 编写最小测试用例（RED）
 3. 写最小实现使测试通过（GREEN）
 4. 执行简化重构（REFACTOR）
-5. proposal 收尾时运行 valgrind 确认内存安全（或在 `/ky:lint --full` 阶段覆盖）
+5. proposal 收尾时运行 valgrind 确认内存安全（或在 `/df:lint --full` 阶段覆盖）
 
 ### 模式 2：Task 收尾
 
@@ -43,7 +43,7 @@ tools: ["Read", "Write", "Edit", "Bash", "Grep", "Glob"]
 1. 确认所有相关测试通过
 2. 执行 `clang-format` 格式化
 3. 执行 `clang-tidy` 检查并修复问题
-4. （可选）当本次变更量较大（>200 行）或涉及多个模块时，调用 `/ky:refactor --deep` 进行复用/质量/效率三维度深度清理
+4. （可选）当本次变更量较大（>200 行）或涉及多个模块时，调用 `/df:refactor --deep` 进行复用/质量/效率三维度深度清理
 5. 清理本 proposal 的临时评审报告（如 `/tmp/devforge-code-review-*.md`）
 6. 汇总变更，准备提交
 
@@ -60,7 +60,7 @@ tools: ["Read", "Write", "Edit", "Bash", "Grep", "Glob"]
 ### 模式 4：质量收尾（Q.1–Q.4）
 
 在 `/opsx:apply` 的所有实现 task 完成后，执行 proposal 级质量收尾：
-- **Q.1**：全量 diff 代码评审收尾。若变更量较大（>200 行），调用 `/ky:refactor --deep` 进行复用/质量/效率三维度深度清理
+- **Q.1**：全量 diff 代码评审收尾。若变更量较大（>200 行），调用 `/df:refactor --deep` 进行复用/质量/效率三维度深度清理
 - **Q.2**：全量编译 + clang-tidy 静态分析
 - **Q.3**：全量单元测试（确保无回归）
 - **Q.4**：覆盖率检查（通用模块单元测试行覆盖率 ≥85%，核心模块 ≥90%，新增代码 ≥95%；100% 作为努力方向，显著低于 95% 需在 Q.4 补充说明并增加测试）
@@ -68,11 +68,11 @@ tools: ["Read", "Write", "Edit", "Bash", "Grep", "Glob"]
 ### 模式 5：Proposal 完整收尾
 
 代码实现及质量检查全部完成后：
-1. 执行 `/ky:finish-worktree` 将代码合并到 `main`
+1. 执行 `/df:finish-worktree` 将代码合并到 `main`
 2. 执行 `/opsx:verify`（如需要）
 3. 执行 `/opsx:archive` 归档 delta specs
 
-> developer 在引导用户时应确保 `/ky:finish-worktree` 完成后，再推进到 `/opsx:archive`。
+> developer 在引导用户时应确保 `/df:finish-worktree` 完成后，再推进到 `/opsx:archive`。
 
 ## 关键规则
 
@@ -93,7 +93,7 @@ tools: ["Read", "Write", "Edit", "Bash", "Grep", "Glob"]
 ## 成功指标
 
 - 测试先红后绿
-- valgrind 报告 0 错误（proposal/PR 收尾阶段通过 `/ky:lint --full` 覆盖）
+- valgrind 报告 0 错误（proposal/PR 收尾阶段通过 `/df:lint --full` 覆盖）
 - clang-tidy 无严重警告
 - 代码变更与 task 目标精确对齐（无镀金）
 - 在 feedback-loop 中：修复回归测试通过，不引入新问题

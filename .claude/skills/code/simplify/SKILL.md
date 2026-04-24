@@ -1,7 +1,6 @@
 ---
 name: code/simplify
 description: 复用/质量/效率三维度深度清理——基于 git diff 的批量 code review 与修复
-version: 1.0.0
 allowed-tools: [Read, Bash, Grep, Glob, Agent]
 ---
 
@@ -15,12 +14,12 @@ allowed-tools: [Read, Bash, Grep, Glob, Agent]
 
 - 单个 task 或一组 task 的变更量较大（>200 行）
 - archive 前最终整理
-- `/ky:refactor` 后发现仍有明显异味
+- `/df:refactor` 后发现仍有明显异味
 - 特性级 `/opsx:apply` 的 Q.4 阶段（全量 diff 评审后）
 
 ## 执行流程
 
-### Phase 1：识别变更
+### Step 1：识别变更
 
 **目标**：获取本次 proposal 的全部代码变更，而非仅最近一个 commit。
 
@@ -37,7 +36,7 @@ allowed-tools: [Read, Bash, Grep, Glob, Agent]
 
 > 避免直接使用无参数的 `git diff`——那只会看到最近一次 commit 以内的变更，前面的 tasks 会被漏掉。
 
-### Phase 2：启动三评审 Agent 并行
+### Step 2：启动三评审 Agent 并行
 
 同时启动 3 个 subagent，各获得完整 diff 和以下指令约束。
 
@@ -108,7 +107,7 @@ allowed-tools: [Read, Bash, Grep, Glob, Agent]
   - **建议**：...
 ```
 
-### Phase 3：汇总与修复
+### Step 3：汇总与修复
 
 主 Agent（`developer`）等待三个 subagent 返回后：
 1. 去重合并相同位置的问题
@@ -134,6 +133,6 @@ allowed-tools: [Read, Bash, Grep, Glob, Agent]
 
 ## Integration
 
-- **前置 Command**: `/ky:code-review` 或 `/ky:refactor`（本 Skill 由 `/ky:refactor --deep` 触发）
-- **后续 Command**: `/ky:lint`
+- **前置 Command**: `/df:code-review` 或 `/df:refactor`（本 Skill 由 `/df:refactor --deep` 触发）
+- **后续 Command**: `/df:lint`
 - **Agent**: `developer` 调度，`code-reviewer` 作为 subagent

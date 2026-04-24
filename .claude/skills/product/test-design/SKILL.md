@@ -1,7 +1,6 @@
 ---
 name: product/test-design
 description: 测试策略设计——测试分层定义、覆盖率目标分配、各级测试方案设计。可反复迭代，随架构和需求同步调整
-version: 1.0.0
 allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
 ---
 
@@ -45,7 +44,7 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
 
 **集成测试方案**（多节点真实部署，不允许 mock 跨节点交互）：
 - 组件交互验证：子系统间调用链路正确性
-- 接口契约验证：接口输入输出符合 `docs/interfaces/` 定义
+- 接口契约验证：接口输入输出符合 `docs/architecture/design.md` 中关键接口索引的定义
 - 多节点部署验证：集群组网、成员变更、负载均衡
 - 一致性协议验证：Raft/Paxos 在正常和异常场景下的正确性
 - 故障注入：磁盘故障、网络分区、进程崩溃、慢节点、磁盘静默错误
@@ -65,7 +64,7 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
 
 ## Integration
 
-- **前置 Skill**: `/ky:arch`、`/ky:define`
-- **后续 Skill**: `/ky:plan`（集成测试 proposal 的输入依据）
+- **前置 Skill**: `/df:design`、`/df:define`
+- **后续 Skill**: `/df:plan`（集成测试 proposal 的输入依据）
 - **协作 Agent**: `architect`
 - **相关 Rules**: R1 `workflow`

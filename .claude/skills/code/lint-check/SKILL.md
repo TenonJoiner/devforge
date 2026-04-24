@@ -1,7 +1,6 @@
 ---
 name: code/lint-check
 description: C 项目静态检查与内存安全检测——编译 + clang-tidy + valgrind
-version: 1.0.0
 allowed-tools: [Read, Bash, Grep, Glob]
 ---
 
@@ -17,7 +16,7 @@ allowed-tools: [Read, Bash, Grep, Glob]
 
 - 编写或修改 C 代码后（fast 模式）
 - 提交前最终检查（fast 模式）
-- `/ky:tdd` GREEN 后快速验证（fast 模式）
+- `/df:tdd` GREEN 后快速验证（fast 模式）
 - 特性级 archive 前或 Q.1 质量收尾（`--full` 模式）
 
 ## 检查层级
@@ -91,16 +90,16 @@ ctest -D ExperimentalMemCheck
 
 ## 输出解读与问题路由
 
-**lint-check 的职责是验证而非修复**。它期望 0 错误，因为此时代码应已在 `/ky:tdd`、refactor 和 review 阶段被 developer 修复完毕。
+**lint-check 的职责是验证而非修复**。它期望 0 错误，因为此时代码应已在 `/df:tdd`、refactor 和 review 阶段被 developer 修复完毕。
 
 若发现问题：
-- **编译错误** → 停止提交，返回 developer 修复（通常在 /ky:tdd GREEN 就应消除）
+- **编译错误** → 停止提交，返回 developer 修复（通常在 /df:tdd GREEN 就应消除）
 - **clang-tidy 告警** → 返回 developer 修复；确认为误报的可经评估后在 .clang-tidy 中 suppress
 - **valgrind 内存错误** → 返回 developer 修复，通常需在 TDD 中补充测试复现后再修复
 
 ## Integration
 
-- **前置 Command**: /ky:tdd 或 /ky:refactor
+- **前置 Command**: /df:tdd 或 /df:refactor
 - **执行时机**：
   - 高频（fast 模式）：单个 task 完成后的最终检查（在 git commit 前）
   - 中频（`--full` 模式）：/opsx:apply 的 Q.1 质量收尾阶段、archive 前

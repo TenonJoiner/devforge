@@ -1,7 +1,6 @@
 ---
 name: code/code-review
 description: 三级代码评审管线——通用质量 → C 语言专项 → 安全审计
-version: 1.0.0
 allowed-tools: [Read, Grep, Bash, Agent]
 ---
 
@@ -105,6 +104,6 @@ allowed-tools: [Read, Grep, Bash, Agent]
 
 ## Integration
 
-- **前置 Command**: `/ky:tdd`（代码已完成，测试已绿）
-- **后续 Command**: `/ky:refactor`（针对评审意见修改后再次简化）
+- **前置 Command**: `/df:tdd`（代码已完成，测试已绿）
+- **后续 Command**: `/df:refactor`（针对评审意见修改后再次简化）
 - **相关 Rules**: R3 `coding-style`, R4 `testing`

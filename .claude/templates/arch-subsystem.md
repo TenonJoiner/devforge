@@ -17,7 +17,6 @@ optional-sections:
   - 部署与拓扑
   - 待决策问题
 checklist-at-end: true
-min-lines: 400
 ---
 
 # <子系统名> 架构设计
