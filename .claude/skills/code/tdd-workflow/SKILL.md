@@ -1,6 +1,6 @@
 ---
 name: code/tdd-workflow
-description: TDD 铁律开发工作流——RED-GREEN-REFACTOR，针对 C 语言项目
+description: TDD 铁律开发工作流——RED-GREEN-REFACTOR，根据 domain-config.yaml 自动适配语言和测试框架
 allowed-tools: [Read, Write, Edit, Bash, Grep, Glob]
 ---
 
@@ -53,10 +53,32 @@ N.M.8 COMMIT    → git commit
 3. 在测试文件中编写最小测试用例
 4. 运行测试，确认失败，记录失败信息
 
-**C 语言测试建议**：
-- 使用 `cmocka` 作为单元测试框架
+**语言特定测试建议**（根据 domain-config.yaml 的 languages.primary）：
+
+**C/C++**：
+- 使用 `cmocka` (C) 或 `gtest` (C++) 作为单元测试框架
 - 测试文件命名：`tests/test_<module>_<scenario>.c`
 - Mock 外部依赖时，优先使用链接期桩函数（link seam），避免侵入式宏修改
+
+**Rust**：
+- 使用内置 `#[test]` 和 `#[cfg(test)]`
+- 测试文件命名：`tests/<module>_test.rs` 或模块内 `mod tests`
+- Mock 使用 trait 抽象或 `mockall` crate
+
+**Go**：
+- 使用内置 `testing` 包
+- 测试文件命名：`<module>_test.go`
+- Mock 使用接口抽象或 `gomock`
+
+**Python**：
+- 使用 `pytest` 或 `unittest`
+- 测试文件命名：`test_<module>.py`
+- Mock 使用 `unittest.mock` 或 `pytest-mock`
+
+**Java**：
+- 使用 `JUnit`
+- 测试文件命名：`<Module>Test.java`
+- Mock 使用 `Mockito`
 
 **红旗自查**：
 - 测试一开始就通过了（说明测试没测到目标行为）
@@ -114,7 +136,7 @@ NO PRODUCTION CODE WITHOUT A FAILING TEST FIRST
 |------|------|
 | "测试框架还没搭好" | 先花 10 分钟写一个最小可运行的 `main.c` 测试桩 |
 | "这太简单了，边写边测就行" | 简单代码也请写至少一个边界测试 |
-| "TDD 不适合 C 语言" | 这是本团队的工作方式，cmocka + valgrind 已经验证可行 |
+| "TDD 不适合系统编程语言" | 这是本团队的工作方式，各语言都有成熟的测试框架和工具链 |
 
 ## 输出位置
 

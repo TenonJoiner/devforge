@@ -2,19 +2,10 @@
 
 制定迭代计划和 proposal 清单。
 
-## 何时使用
-
-- 从零开始制定产品迭代计划
-- 继续推进当前阶段的规划（自动识别下一步）
-- 滚动更新已有计划
-
 ## 使用示例
 
 ```
 /df:plan
-> 启动检测中...
-> 进入对应阶段规划...
-> 评审通过，下一步：/opsx:new 启动特性开发
 ```
 
 ## 输出物
@@ -26,7 +17,10 @@ docs/iteration-plan/
 └── ...
 ```
 
-## 关联
+## 执行前必读
 
-- Skill: `product/plan`
-- Rules: `workflow`
+**CRITICAL**：Skill 工具加载后，立即读取 `.claude/skills/product/plan/SKILL.md`，定位当前阶段，精读该阶段的"执行方式"部分，然后输出"执行方式确认"后再开始执行。
+
+## 调用方式
+
+调用 Skill 工具加载 `product/plan`

@@ -15,8 +15,7 @@ checklist-at-end: true
 # 迭代 M<x>-I<y>：<主题>
 
 > **追溯**：docs/iteration-plan/milestone-plan.md
-> **版本**：v0.1
-> **状态**：待独立评审
+> **状态**：草稿
 
 ---
 
@@ -37,7 +36,7 @@ checklist-at-end: true
 
 ## Wave 0 — 无依赖，立即启动
 
-> Wave 0 内的 proposal 可由不同开发者并行开发。
+> **写什么**：无依赖、可立即启动的 proposal 列表。
 
 | # | Proposal | 故事点 | 大小 | 类型 | 描述 | 执行人 |
 |---|----------|--------|------|------|------|--------|
@@ -48,7 +47,7 @@ checklist-at-end: true
 
 ## Wave 1 — 依赖 Wave 0
 
-> Wave 1 的 proposal 仅依赖 Wave 0 中已完成的 proposal。
+> **写什么**：依赖 Wave 0 中 proposal 的列表，标注具体依赖。
 
 | # | Proposal | 故事点 | 大小 | 类型 | 依赖 | 描述 | 执行人 |
 |---|----------|--------|------|------|------|------|--------|
@@ -58,7 +57,7 @@ checklist-at-end: true
 
 ## Wave N — 依赖 Wave 0..N-1
 
-> 按需添加更多 Wave。每个 Wave 的 proposal 仅依赖前序 Wave 中的 proposal。
+> **写什么**：按需添加更多 Wave，每个 Wave 标注其依赖的前序 Wave。
 
 ---
 

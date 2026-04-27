@@ -1,0 +1,4 @@
+interface:
+  display_name: "Test Skill"
+  short_description: "Smoke-test skill for invocation checks"
+  default_prompt: "Use $test-skill to verify custom skill loading in this workspace."

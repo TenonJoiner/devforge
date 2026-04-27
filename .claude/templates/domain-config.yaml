@@ -1,0 +1,106 @@
+# .claude/domain-config.yaml
+# 领域配置文件 - 定义系统类型、语言、质量属性等
+# 由 /df:define 和 /df:design 的阶段 0 交互式生成和更新
+
+version: "1.0"
+
+# 系统类型分类
+system:
+  # 主类型（必填）
+  primary_type: ""  # distributed-storage | distributed-computing | message-queue | database | os-kernel | compiler-runtime | network-stack | virtualization | hpc | embedded
+
+  # 子类型（可选）
+  sub_type: ""  # 如 object-storage, block-storage, file-system
+
+  # 系统规模（必填）
+  scale:
+    complexity: ""  # small | medium | large | very-large
+    team_size: ""
+    codebase_size: ""
+
+  # 一句话描述（必填）
+  description: ""
+
+# 编程语言配置
+languages:
+  # 主语言（必填，至少一个）
+  primary:
+    - name: ""  # C | C++ | Rust | Go | Python | Java | Scala | Kotlin
+      version: ""
+      standard: ""
+      toolchain: []
+
+  # 次要语言（可选）
+  secondary: []
+
+  # 语言特定约束（可选）
+  constraints: []
+
+# 质量属性优先级（必填）
+quality_attributes:
+  # 优先级排序（1-5，1 最高）
+  priorities:
+    consistency: 0      # 一致性
+    performance: 0      # 性能
+    availability: 0     # 可用性
+    maintainability: 0  # 可维护性
+    cost: 0            # 成本
+
+  # 具体目标（可选但推荐）
+  targets:
+    consistency_model: ""  # strong | eventual | causal
+    latency_p99: ""
+    throughput: ""
+    availability_sla: ""
+
+# 标杆产品清单（由 /df:design 阶段 0 收集）
+benchmarks: []
+
+# 技术栈约束（由 /df:design 阶段 0 或后续阶段补充）
+tech_stack:
+  os:
+    primary: ""
+    versions: []
+  network:
+    protocols: []
+  storage:
+    media: []
+  dependencies: []
+
+# 架构特征（由 /df:design 阶段 0 或后续阶段补充）
+architecture:
+  distributed:
+    enabled: false
+    consensus_protocol: ""  # Raft | Paxos | Quorum | 2PC | None
+    replication_strategy: ""  # sync | async | hybrid
+  concurrency:
+    model: ""  # single-threaded | multi-threaded | event-driven | actor
+    synchronization: []
+  memory:
+    strategy: ""  # manual | gc | hybrid
+    allocators: []
+
+# 开发约束（由 /df:design 阶段 0 或后续阶段补充）
+development:
+  coding_standards:
+    style_guide: ""  # LLVM | Google | Custom
+    formatter: ""
+    linter: ""
+  testing:
+    framework: ""
+    coverage_target: 0
+    memory_checker: ""
+  build:
+    system: ""  # CMake | Make | Bazel | Cargo | Maven | Gradle
+    ci_cd: ""
+
+# 领域特定约束（可选，可扩展）
+domain_specific: {}
+
+# 元数据
+metadata:
+  created_at: ""
+  created_by: ""  # /df:define | /df:design
+  last_updated: ""
+  updated_by: ""
+  schema_version: "1.0"
