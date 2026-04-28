@@ -48,13 +48,13 @@ Plan 阶段由主会话基于上下文直接完成（信息整理与视角分配
 
 主会话收集完项目背景并完成 Plan 阶段任务解构后，**并行启动 5 个不同角色的 Agent**，各自侧重不同维度独立产出：
 
-- **project-manager**（关注计划编排与资源分配）：侧重里程碑划分、Backlog 组织、整体容量预算
-- **architect**（关注技术依赖与风险识别）：侧重技术依赖分析、关键路径识别、技术风险评估
-- **product-manager**（关注价值对齐与优先级）：侧重价值对齐、优先级排序、验收标准映射
+- **project-manager**（关注里程碑结构与 Backlog 组织）：侧重里程碑划分、proposal 清单、优先级排序、Backlog 结构设计
+- **architect**（关注技术依赖与风险识别）：侧重技术依赖分析、关键路径识别、技术风险评估、接口冻结点确定
+- **product-manager**（关注价值对齐与优先级）：侧重价值对齐、优先级排序、验收标准映射、用户价值论证
 - **researcher**（关注历史数据与标杆参考）：侧重历史 Velocity 数据分析、标杆项目规模参考、估算基准建立
-- **project-manager**（关注关键路径与缓冲策略）：侧重关键路径缓冲策略、风险应对预案、里程碑依赖关系验证
+- **project-manager**（关注容量与风险管控）：侧重容量预算、缓冲策略、风险应对预案、资源分配合理性验证
 
-主会话整合五个 agent 的产出，形成统一的 `docs/iteration-plan/milestone-plan.md`，写入文件。
+主会话整合五个 agent 的产出，形成统一�� `docs/iteration-plan/milestone-plan.md`，写入文件。
 
 ## Step 2 出口标准
 

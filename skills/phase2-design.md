@@ -123,7 +123,7 @@
 
 #### 2.2.1 Skill: `product/architect`（架构探索与决策）
 
-**文件路径**：`.claude/skills/product/architect/SKILL.md`
+**文件路径**：`.claude/skills/devforge-architect/SKILL.md`
 
 **解决**：P1（缺少产品级规划视角）
 
@@ -405,7 +405,7 @@ ls docs/architecture/ docs/adr.md 2>/dev/null || echo "无现有文档"
 
 #### 2.2.2 Skill: `product/define`（定义性思考）
 
-**文件路径**：`.claude/skills/product/define/SKILL.md`
+**文件路径**：`.claude/skills/devforge-define/SKILL.md`
 
 **解决**：P1（缺少产品级规划视角）
 
@@ -653,7 +653,7 @@ ls docs/requirements/ 2>/dev/null || echo "无现有需求文档"
 ---
 #### 2.2.3 Skill: `product/plan`（规划性思考）
 
-**文件路径**：`.claude/skills/product/plan/SKILL.md`
+**文件路径**：`.claude/skills/devforge-plan/SKILL.md`
 
 **解决**：P1（缺少产品级规划视角）
 
@@ -853,7 +853,7 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
 
 #### 2.2.4 Skill: `product/test-design`（测试策略设计）
 
-**文件路径**：`.claude/skills/product/test-design/SKILL.md`
+**文件路径**：`.claude/skills/devforge-test-design/SKILL.md`
 
 **解决**：P4（集成测试不成体系）
 

@@ -10,8 +10,8 @@
 > **Plan 阶段内联**：第 3 阶段为高复杂度（Scenario / 用例设计），必须先解构再发散。
 
 **任务解构**：
-1. 派遣 **1 个 architect agent** 执行轻量级任务解构
-2. 确认切分维度（如按分析类型拆分：正常路径/故障异常路径）
+1. 派遣 **1 个 product-manager agent** 执行轻量级任务解构
+2. 确认切分维度（如按分析类型拆分：正常路径/故障异常路径/运维扩展路径）
 3. 分配视角约束、列出关键假设、识别评审视角缺口
 4. 产出以结构化文本形式在对话中输出
 
@@ -19,9 +19,9 @@
 1. 主会话读取 `product-spec.md`（Actor-Feature 终稿）作为统一输入源
 2. 按 domain 拆分，无依赖的 domain 并行处理
 3. **每个 domain 并行启动 ≥3 个 `product-manager` agent**（按分析类型切分）：
-   - `product-manager`（正常路径视角）
-   - `product-manager`（故障/异常路径视角）
-   - `product-manager`（性能/一致性关键路径视角）
+   - product-manager（关注正常路径）：分析用户核心业务流程、happy path
+   - product-manager（关注故障/异常路径）：分析错误处理、边界条件、降级策略
+   - product-manager（关注运维/扩展路径）：分析配置变更、升级、监控、集成
 4. 每个 agent 基于定稿的 Actor-Feature 挖掘 Scenario
 5. **所有内容结构严格遵循 `.claude/templates/req-feature.md` 模板**
 6. 量化非功能需求

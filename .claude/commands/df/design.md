@@ -19,7 +19,7 @@
 
 ## 执行前必读
 
-**CRITICAL**：Skill 工具加载后，立即读取 `.claude/skills/product/design/SKILL.md`，定位当前阶段，精读该阶段的"执行方式"部分，然后输出"执行方式确认"后再开始执行。
+**CRITICAL**：Skill 工具加载后，立即读取 `.claude/skills/devforge-design/SKILL.md`，定位当前阶段，精读该阶段的"执行方式"部分，然后输出"执行方式确认"后再开始执行。
 
 ## 调用方式
 

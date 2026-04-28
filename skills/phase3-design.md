@@ -23,7 +23,7 @@
 
 #### 3.1.1 Skill: `code/tdd-workflow`（TDD 铁律）
 
-**文件路径**：`.claude/skills/code/tdd-workflow/SKILL.md`
+**文件路径**：`.claude/skills/devforge-tdd-workflow/SKILL.md`
 
 **解决**：P3（代码开发阶段能力不足）
 
@@ -178,7 +178,7 @@ NO PRODUCTION CODE WITHOUT A FAILING TEST FIRST
 
 #### 3.1.2 Skill: `code/code-review`（三级评审管线）
 
-**文件路径**：`.claude/skills/code/code-review/SKILL.md`
+**文件路径**：`.claude/skills/devforge-code-review/SKILL.md`
 
 **解决**：P3, P6（代码开发阶段能力不足、缺少文档/代码评审手段）
 
@@ -313,7 +313,7 @@ allowed-tools: [Read, Grep, Bash, Agent]
 
 #### 3.1.3 Skill: `code/code-refactor`（代码简化重构）
 
-**文件路径**：`.claude/skills/code/code-refactor/SKILL.md`
+**文件路径**：`.claude/skills/devforge-code-refactor/SKILL.md`
 
 **解决**：P3
 
@@ -422,7 +422,7 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob]
 
 #### 3.1.6 Skill: `code/simplify`（复用/质量/效率三维度深度清理）
 
-**文件路径**：`.claude/skills/code/simplify/SKILL.md`
+**文件路径**：`.claude/skills/devforge-simplify/SKILL.md`
 
 **解决**：P3
 
@@ -585,7 +585,7 @@ allowed-tools: [Read, Bash, Grep, Glob, Agent]
 
 #### 3.1.4 Skill: `code/lint-check`（编译检查 + clang-tidy + valgrind）
 
-**文件路径**：`.claude/skills/code/lint-check/SKILL.md`
+**文件路径**：`.claude/skills/devforge-lint-check/SKILL.md`
 
 **解决**：P3
 
@@ -718,7 +718,7 @@ ctest -D ExperimentalMemCheck
 
 #### 3.1.5 Skill: `code/git-worktree`（worktree 并行开发）
 
-**文件路径**：`.claude/skills/code/git-worktree/SKILL.md`
+**文件路径**：`.claude/skills/devforge-git-worktree/SKILL.md`
 
 **解决**：P3
 

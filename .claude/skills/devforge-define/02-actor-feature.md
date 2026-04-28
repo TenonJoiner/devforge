@@ -10,7 +10,7 @@
 > **Plan 阶段内联**：第 2 阶段为极高复杂度（核心 Feature / Actor 定义），必须先解构再发散。
 
 **任务解构**：
-1. 派遣 **1 个 product-manager agent** 读取 `.claude/templates/req-product-spec.md`
+1. 派遣 **1 个 architect agent** 读取 `.claude/templates/req-product-spec.md`
 2. 识别各章节的决策权重分布（Actor 定义、Feature 定义、Scenario 设计各占比）
 3. 确认切分维度、分配视角约束、列出关键假设、识别评审视角缺口
 4. 产出以结构化文本形式在对话中输出，不写入文件
@@ -44,19 +44,21 @@
 
 **产出文件**：`docs/requirements/product-spec.md`（草稿状态）
 
-1. **并行启动 3 个 product-manager agent**，各自从不同用户场景角度围绕 Actor 核心目标独立推导 Feature 列表
+1. **并行启动 3 个 product-manager agent + 1 个 architect agent**：
+   - **3 个 product-manager**：各自从不同用户场景角度围绕 Actor 核心目标独立推导 Feature 列表
+     - product-manager（关注终端用户场景）：分析终端用户的核心业务流程、交互方式、易用性需求，推导面向用户的 Feature
+     - product-manager（关注运维治理场景）：分析运维人员的监控、告警、故障恢复、配置管理需求，推导面向运维的 Feature
+     - product-manager（关注集成扩展场景）：分析第三方集成、API 设计、插件机制、扩展性需求，推导面向集成的 Feature
+   - **1 个 architect**：同步评估各 Feature 实现复杂度
    - 禁止用一个 agent "内部发散多个方案"替代多个 agent 独立产出
-   - 视角切分由任务解构的 product-manager agent 确定
-   - **3 个 agent 的视角区分**（必须按以下维度区分）：
-     - `product-manager`（终端用户场景视角）
-     - `product-manager`（运维治理场景视角）
-     - `product-manager`（集成扩展场景视角）
-2. 主会话整合三个 agent 的 Feature 列表，去重并客观记录冲突
-3. 每个 Feature 记录：一句话价值摘要、涉及 Actor、归属特性域、优先级
-4. 产出 Feature 间依赖关系矩阵
-5. **并行启动 architect** 评估各 Feature 实现复杂度
-6. Feature 价值论证必须是推导式，禁止"矩阵后直接给结论"
-7. **读取 `.claude/templates/req-product-spec.md` 模板**，写入 `product-spec.md`
+2. 主会话等待所有 4 个 agent 完成后，整合结果
+3. 主会话整合四个 agent 的产出：
+   - 合并三个 product-manager 的 Feature 列表，去重并客观记录冲突
+   - 每个 Feature 记录：一句话价值摘要、涉及 Actor、归属特性域、优先级
+   - 产出 Feature 间依赖关系矩阵
+   - 整合 architect 的实现复杂度评估
+4. Feature 价值论证必须是推导式，禁止"矩阵后直接给结论"
+5. **读取 `.claude/templates/req-product-spec.md` 模板**，写入 `product-spec.md`
 
 **Step 2 出口标准**：
 - [ ] Feature 列表非空，覆���所有已识别 Actor 的核心目标
@@ -84,15 +86,17 @@
 **准入条件**：`product-spec.md` 草稿已写入文件
 
 1. **并行启动 `pm-reviewer` 和 `architect-reviewer`** 执行**独立评审**
-   - `pm-reviewer` 覆盖 3 个 product-manager agent 的用户场景视角差异
-   - `architect-reviewer` 从跨子系统边界和实现可行性视角审视 Feature 列表
-2. 质疑点数量要求：按特性域复杂度（简单≥3、中等≥5、复杂≥7）
+   - `pm-reviewer`（关注用户价值与商业合理性）：质疑 Feature 的用户假设、优先级推导、Actor 遗漏、价值论证充分性
+   - `architect-reviewer`（关注技术可行性与架构一致性）：质疑跨子系统边界、实现复杂度评估、依赖关系合理性、技术风险
+   - **双评审覆盖要求**：合计必须覆盖 Actor 遗漏、Feature 价值、依赖关系、优先级推导维度，每个维度至少 1 个质疑
+2. 质疑点数量要求：按特性域复杂度（简单≥3、中等≥5���复杂≥7）
 
 **Step 3 出口标准**：
 - [ ] pm-reviewer 和 architect-reviewer 均完成独立评审
 - [ ] 质疑点数量达标
 - [ ] 所有质疑点已按 CRITICAL/HIGH/MEDIUM/LOW 分级标注
 - [ ] 评审记录章节 ≤ 200 字
+- [ ] 双评审覆盖要求已满足（Actor 遗漏、Feature 价值、依赖关系、优先级推导各至少 1 个质疑）
 
 ---
 

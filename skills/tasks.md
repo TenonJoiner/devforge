@@ -97,9 +97,9 @@ Skills（3 个产品级文档生产能力）：
 
 | # | 交付物 | 文件路径 |
 |---|--------|---------|
-| 2.1 | PS1 `product/explore` — 探索性思考 | `.claude/skills/product/explore/SKILL.md` |
-| 2.2 | PS2 `product/define` — 定义性思考 | `.claude/skills/product/define/SKILL.md` |
-| 2.3 | PS3 `product/plan` — 规划性思考 | `.claude/skills/product/plan/SKILL.md` |
+| 2.1 | PS1 `product/explore` — 探索性思考 | `.claude/skills/devforge-explore/SKILL.md` |
+| 2.2 | PS2 `product/define` — 定义性思考 | `.claude/skills/devforge-define/SKILL.md` |
+| 2.3 | PS3 `product/plan` — 规划性思考 | `.claude/skills/devforge-plan/SKILL.md` |
 
 Agent（1 个）：
 
@@ -148,11 +148,11 @@ Skills（5 个代码级日常核心）：
 
 | # | 交付物 | 文件路径 |
 |---|--------|---------|
-| 3.1 | S1 `code/tdd-workflow` — TDD 铁律 RED-GREEN-REFACTOR | `.claude/skills/code/tdd-workflow/SKILL.md` |
-| 3.2 | S2 `code/code-review` — 三级评审管线 | `.claude/skills/code/code-review/SKILL.md` |
-| 3.3 | S4 `code/code-refactor` — 代码简化重构 | `.claude/skills/code/code-refactor/SKILL.md` |
-| 3.4 | S6 `code/lint-check` — 编译检查 + clang-tidy | `.claude/skills/code/lint-check/SKILL.md` |
-| 3.5 | S7 `code/git-worktree` — worktree 并行开发 | `.claude/skills/code/git-worktree/SKILL.md` |
+| 3.1 | S1 `code/tdd-workflow` — TDD 铁律 RED-GREEN-REFACTOR | `.claude/skills/devforge-tdd-workflow/SKILL.md` |
+| 3.2 | S2 `code/code-review` — 三级评审管线 | `.claude/skills/devforge-code-review/SKILL.md` |
+| 3.3 | S4 `code/code-refactor` — 代码简化重构 | `.claude/skills/devforge-code-refactor/SKILL.md` |
+| 3.4 | S6 `code/lint-check` — 编译检查 + clang-tidy | `.claude/skills/devforge-lint-check/SKILL.md` |
+| 3.5 | S7 `code/git-worktree` — worktree 并行开发 | `.claude/skills/devforge-git-worktree/SKILL.md` |
 
 Agents（2 个）：
 
@@ -207,9 +207,9 @@ Skills（3 个代码级补充）：
 
 | # | 交付物 | 文件路径 |
 |---|--------|---------|
-| 4.1 | S3 `code/spec-review` — 特性级交付件评审 | `.claude/skills/code/spec-review/SKILL.md` |
-| 4.2 | S5 `code/parallel-develop` — 多 Agent 并行协调 | `.claude/skills/code/parallel-develop/SKILL.md` |
-| 4.3 | S8 `code/systematic-debug` — 系统化调试四阶段 | `.claude/skills/code/systematic-debug/SKILL.md` |
+| 4.1 | S3 `code/spec-review` — 特性级交付件评审 | `.claude/skills/devforge-spec-review/SKILL.md` |
+| 4.2 | S5 `code/parallel-develop` — 多 Agent 并行协调 | `.claude/skills/devforge-parallel-develop/SKILL.md` |
+| 4.3 | S8 `code/systematic-debug` — 系统化调试四阶段 | `.claude/skills/devforge-systematic-debug/SKILL.md` |
 
 Agent（1 个）：
 
@@ -244,9 +244,9 @@ Skills（3 个产品级质量保障）：
 
 | # | 交付物 | 文件路径 |
 |---|--------|---------|
-| 5.1 | PS4 `product/review` — 多维评审 + 跨文档一致性 + 红旗检测 | `.claude/skills/product/review/SKILL.md` |
-| 5.2 | PS5 `product/test-design` — 测试策略 + 各级测试方案 | `.claude/skills/product/test-design/SKILL.md` |
-| 5.3 | PS6 `product/verify` — 全量双向一致性检查 | `.claude/skills/product/verify/SKILL.md` |
+| 5.1 | PS4 `product/review` — 多维评审 + 跨文档一致性 + 红旗检测 | `.claude/skills/devforge-review/SKILL.md` |
+| 5.2 | PS5 `product/test-design` — 测试策略 + 各级测试方案 | `.claude/skills/devforge-test-design/SKILL.md` |
+| 5.3 | PS6 `product/verify` — 全量双向一致性检查 | `.claude/skills/devforge-verify/SKILL.md` |
 
 Agents（6 个补充角色）：
 

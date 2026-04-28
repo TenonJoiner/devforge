@@ -22,8 +22,20 @@
 1. **并行启动 ≥5 个 architect agent**，各自从不同视角独立收敛 ADR
 2. 每个 architect 基于第 2 阶段的决策文档，提炼关键架构决策
 3. 主会话整合为统一的 ADR 索引
-4. **并行启动 ≥3 个 architect-reviewer** 执行独立评审
-5. 按 `common.md` 标准评审修正循环执行
+4. 写入 `docs/architecture/adr.md`
+
+### 评审修正循环
+
+按 `common.md` 标准评审修正循环执行，本 Step 特有配置：
+
+- **独立评审**：并行启动 ≥3 个 architect-reviewer
+  - 评审视角差异化：至少覆盖技术可行性、一致性、完整性三个维度
+  - 质疑点数量要求：≥5 个（ADR 为极高复杂度）
+  
+- **修正 agent 配置**：
+  - 少量修正：1 个 architect
+  - 中量修正：2 个 architect 分块并行修正 + 主会话整合
+  - 大量修正：回退到本 Step 开头重新执行 ≥5 个 architect 并行发散
 
 **Step 1 置信度评分**：
 
@@ -43,8 +55,20 @@
 
 1. **并行启动 ≥5 个 architect agent**，各自从不同视角独立定稿系统总纲
 2. 主会话整合为统一的 design.md 定稿
-3. **并行启动 ≥3 个 architect-reviewer** 执行独立评审
-4. 按 `common.md` 标准评审修正循环执行
+3. 写入 `docs/architecture/design.md`
+
+### 评审修正循环
+
+按 `common.md` 标准评审修正循环执行，本 Step 特有配置：
+
+- **独立评审**：并行启动 ≥3 个 architect-reviewer
+  - 评审视角差异化：至少覆盖子系统边界、数据流、故障处理三个维度
+  - 质疑点数量要求：≥5 个（系统架构总纲为极高复杂度）
+  
+- **修正 agent 配置**：
+  - 少量修正：1 个 architect
+  - 中量修正：2 个 architect 分块并行修正 + 主会话整合
+  - 大量修正：回退到本 Step 开头重新执行 ≥5 个 architect 并行发散
 
 **Step 2 置信度评分**：
 
@@ -66,8 +90,20 @@
 1. 按子系统拆分，无依赖的子系统并行处理
 2. **每个子系统并行启动 ≥3 个 architect agent**
 3. 主会话整合为统一的子系统架构文档
-4. **并行启动 ≥2 个 architect-reviewer** 执行独立评审
-5. 按 `common.md` 标准评审修正循环执行
+4. 写入 `docs/architecture/<subsystem>/design.md`
+
+### 评审修正循环
+
+按 `common.md` 标准评审修正循环执行，本 Step 特有配置：
+
+- **独立评审**：并行启动 ≥2 个 architect-reviewer
+  - 评审视角差异化：至少覆盖功能完整性、故障处理两个维度
+  - 质疑点数量要求：≥3 个（子系统架构为高复杂度）
+  
+- **修正 agent 配置**：
+  - 少量修正：1 个 architect
+  - 中量修正：2 个 architect 分块并行修正 + 主会话整合
+  - 大量修正：回退到本 Step 开头重新执行 ≥3 个 architect 并行发散
 
 **Step 3 置信度评分**（按子系统）：
 
