@@ -1,25 +1,18 @@
 # /df:plan
 
-制定迭代计划和 proposal 清单。
+制定迭代计划与 Backlog 清单。多 Agent 深度思考，按阶段逐步展开，迭代式完善。
 
 ## 使用示例
 
 ```
-/df:plan
+/df:plan                    # 首次启动，从里程碑规划开始
+/df:plan                    # 再次调用，自动检测状态并继续
 ```
 
 ## 输出物
 
-```
-docs/iteration-plan/
-├── milestone-plan.md      # 第 1 阶段：里程碑计划 + Backlog 清单
-├── iteration-m1-i1.md     # 第 2 阶段：迭代执行计划
-└── ...
-```
-
-## 执行前必读
-
-**CRITICAL**：Skill 工具加载后，立即读取 `.claude/skills/devforge-plan/SKILL.md`，定位当前阶段，精读该阶段的"执行方式"部分，然后输出"执行方式确认"后再开始执行。
+- `docs/iteration-plan/milestone-plan.md` — 里程碑计划与 Backlog 清单
+- `docs/iteration-plan/iteration-m<x>-i<y>.md` — 各迭代执行计划
 
 ## 调用方式
 

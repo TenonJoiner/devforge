@@ -8,6 +8,21 @@
 
 ## 执行方式
 
+### Plan 阶段（任务解构）
+
+第 1 阶段复杂度为「高」（调研报告 + 跨产品对比），需先解构再发散。主会话派遣 **1 个 product agent** 执行任务解构：
+
+1. 读取 `.claude/templates/ref-requirements.md`，识别各章节的决策权重分布
+2. 分析系统上下文（产品定位、目标用户、竞品格局）
+3. 决定 agent 数量（基于高复杂度下限，≥3）
+4. 设计切分维度（按标杆产品 / 按分析类型）
+5. 列出需要被显式质疑的关键假设
+6. 产出调度方案（并行产出 agent 配置 + 评审 agent 配置 + 整合策略）
+
+主会话原样执行 product 的调度方案。
+
+### 并行产出
+
 1. 主会话基于已有上下文识别候选标杆列表，向用户确认标杆选择
 2. **每个标杆并行启动 2 个 researcher agent**（需求模式），各自从不同需求视角独立研究同一标杆
    - 产出目录：`docs/requirements/reference/`
@@ -15,8 +30,10 @@
    - 模板约束：使用 `.claude/templates/ref-requirements.md`
    - **禁止**两个 researcher 使用同一 prompt 模板、同一分析框架
 3. researcher 完成后，**主会话将内容写入文件**
-4. **并行启动 `pm-reviewer` + `architect-reviewer` 执行独立评审**
-   - `pm-reviewer` 重点评审需求视角正确性、功能边界清晰度、量化指标合理性
+> **主会话职责**：在派遣评审 agent 的 prompt 中必须注入文档的系统上下文——标杆研究报告在需求体系中的位置（作为 Actor-Feature 定义的输入依据）、重要性（错误标杆选择或分析偏差会导致后续需求定义偏离方向）、可替换性（修正成本评估，标杆研究阶段的修正成本远低于 Feature 定义阶段）。
+
+4. **并行启动 `product-reviewer` + `architect-reviewer` 执行独立评审**
+   - `product-reviewer` 重点评审需求视角正确性、功能边界清晰度、量化指标合理性
    - `architect-reviewer` 重点评审研究深度、方法论严谨性、结论与产品定位的匹配度
 5. **主会话验收**：检查文档中是否出现技术实现细节，如有则**强制打回重写**
 6. 不达标时反馈 researcher 补充分析，按 `common.md` 标准评审修正循环执行
@@ -29,13 +46,13 @@
 
 - [ ] 每个标杆完成"功能特性组织方式、Scenario 策略、量化边界"的分析
 - [ ] 无技术实现细节混入（纯需求/产品视角）
-- [ ] `pm-reviewer` 和 `architect-reviewer` 均给出"通过"或"有条件通过"
+- [ ] `product-reviewer` 和 `architect-reviewer` 均给出"通过"或"有条件通过"
 - [ ] 所有标杆文件已落盘并验证存在
 - [ ] 文档状态标记为"第 1 阶段完成"
 
 ### 问题分级处理
 
-- **CRITICAL**：标杆数量 < 2、或任一标杆未完成三维度分析、或存在技术实现细节混入 → 必须修正，阻塞推进
+- **CRITICAL**：标杆数量 < 2、或任一标杆未完成三维度分析、或存在技术实现细节混入 → 必须修正，阻塞推进。CRITICAL 判定须同时满足 common.md 的 3 条系统级判定标准（影响整体产品方向 + 不修正导致后续推倒重来 + 涉及不可逆/高成本变更）
 - **HIGH**：分析深度不足、关键维度遗漏 → 默认接受修正
 - **MEDIUM/LOW**：记录但不阻塞推进，纳入后续迭代跟踪
 
@@ -45,7 +62,7 @@
 
 按 `common.md` 标准评审修正循环执行，特殊配置：
 
-- **评审方**：`pm-reviewer` + `architect-reviewer`
+- **评审方**：`product-reviewer` + `architect-reviewer`
 - **修正 agent**：researcher
 - **中量修正**：2 个 researcher 分块并行修正 + 主会话整合
 - **大量修正**：回退到重新选择标杆或重新执行多 researcher 并行研究
