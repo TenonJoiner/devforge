@@ -98,7 +98,6 @@ domain_specific: {}
 # 元数据
 metadata:
   created_at: ""
-  created_by: ""  # /df:define | /df:design
   last_updated: ""
-  updated_by: ""
+  contributors: []  # 记录所有修改过此文件的 skill，如 ["/df:define", "/df:design"]
   schema_version: "1.0"

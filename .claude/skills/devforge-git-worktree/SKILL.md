@@ -1,10 +1,10 @@
 ---
-name: code/git-worktree
+name: devforge-git-worktree
 description: Git worktree 隔离并行开发——创建、切换、清理规范
 allowed-tools: [Read, Write, Edit, Bash, Grep]
 ---
 
-# code/git-worktree — worktree 隔离并行开发
+# devforge-git-worktree — worktree 隔离并行开发
 
 ## 概述
 

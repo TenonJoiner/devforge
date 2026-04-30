@@ -1,10 +1,10 @@
 ---
-name: code/code-refactor
+name: devforge-code-refactor
 description: 测试护航下的代码简化重构——消除重复、降低复杂度、澄清意图
 allowed-tools: [Read, Write, Edit, Bash, Grep, Glob]
 ---
 
-# code/code-refactor — 代码简化重构
+# devforge-code-refactor — 代码简化重构
 
 ## 概述
 

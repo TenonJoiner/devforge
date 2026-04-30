@@ -1,10 +1,10 @@
 ---
-name: code/lint-check
+name: devforge-lint-check
 description: 静态检查与代码质量检测——编译 + 静态分析 + 内存/并发检测，根据 domain-config.yaml 自动适配语言和工具链
 allowed-tools: [Read, Bash, Grep, Glob]
 ---
 
-# code/lint-check — 编译检查与静态分析
+# devforge-lint-check — 编译检查与静态分析
 
 ## 概述
 

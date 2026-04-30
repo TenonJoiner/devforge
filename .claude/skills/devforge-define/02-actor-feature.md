@@ -17,10 +17,14 @@
 5. 产出以结构化文本形式在对话中输出，不写入文件
 
 **Actor 识别**：
-1. **product** 基于产品定位和标杆研究洞察，识别所有 Actor
+1. **并行启动 3 个 product agent**，各自从不同关注视角独立识别 Actor：
+   - product（关注终端用户场景）：分析终端用户的核心业务流程、交互方式、易用性需求，识别面向用户的 Actor
+   - product（关注运维治理场景）：分析运维人员的监控、告警、故障恢复、配置管理需求，识别面向运维的 Actor
+   - product（关注安全合规场景）：分析安全审计、权限管控、合规认证、数据隐私需求，识别面向安全与合规的 Actor
 2. **并行启动 researcher** 补充竞品 Actor 映射表
-3. 每个 Actor 明确：类型、职责、交互方式、关注点
-4. **写入文件**
+3. 主会话等待所有 agent 完成后，合并 Actor 列表，去重并记录冲突
+4. 每个 Actor 明确：类型、职责、交互方式、关注点
+5. **写入文件**
 
 **步骤 1 出口标准**：
 - [ ] Actor 列表非空，至少识别出 1 个核心 Actor
@@ -92,7 +96,17 @@
    - `product-reviewer`（关注用户价值与商业合理性）：质疑 Feature 的用户假设、优先级推导、Actor 遗漏、价值论证充分性
    - `architect-reviewer`（关注技术可行性与架构一致性）：质疑跨子系统边界、实现复杂度评估、依赖关系合理性、技术风险
    - `project-reviewer`（关注可交付性与迭代可行性）：质疑 Feature 粒度合理性、跨特性域依赖、与里程碑计划的对齐度
-   - **三评审覆盖要求**：合计必须覆盖 Actor 遗漏、Feature 价值、依赖关系、优先级推导、可交付性维度，每个维度至少 1 个质疑
+   - **三评审覆盖要求**：合计必须覆盖 Actor 遗漏、Feature 价值、依赖关系、优先级推导、可交付性维度，每个维度至少 1 个质疑，维度-主责映射如下：
+
+     | 维度 | 主责 reviewer | 备责 reviewer |
+     |------|-------------|-------------|
+     | Actor 遗漏 | product-reviewer | project-reviewer |
+     | Feature 价值 | product-reviewer | — |
+     | 依赖关系 | architect-reviewer | project-reviewer |
+     | 优先级推导 | project-reviewer | product-reviewer |
+     | 可交付性 | project-reviewer | — |
+
+     主责 reviewer 必须对该维度产出至少 1 个质疑，备责 reviewer 可补充但非强制。
 2. 质疑点数量要求：按特性域复杂度（简单≥3、中等≥5、复杂≥7）
 
 **步骤 3 出口标准**：
@@ -108,7 +122,7 @@
 
 评审完成后**不等待用户确认**，由 product 自动决策并执行修正。
 
-按 `common.md` 标准评审修正循环执行，特殊配置：
+按「通用规范」标准评审修正循环执行，特殊配置：
 
 - **修正 agent**：product
 - **少量修正**（<10 处）：1 个 product agent

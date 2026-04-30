@@ -1,10 +1,10 @@
 ---
-name: code/simplify
+name: devforge-simplify
 description: 复用/质量/效率三维度深度清理——基于 git diff 的批量 code review 与修复
 allowed-tools: [Read, Bash, Grep, Glob, Agent]
 ---
 
-# code/simplify — 三维度深度清理
+# devforge-simplify — 三维度深度清理
 
 ## 概述
 

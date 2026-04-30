@@ -1,10 +1,10 @@
 ---
-name: product/design
+name: devforge-design
 description: 架构探索与决策 skill。采用多 agent 深度思考模式，强调标杆研究先行、方案对比、长时间迭代。禁止快速产出，强制螺旋式完善
 allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
 ---
 
-# product/design — 架构探索与决策
+# devforge-design — 架构探索与决策
 
 ## 概述
 

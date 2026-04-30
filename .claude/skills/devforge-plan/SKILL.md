@@ -1,10 +1,10 @@
 ---
-name: product/plan
+name: devforge-plan
 description: 制定迭代计划，智能识别当前所处阶段，按顺序推进两阶段规划（里程碑 → 迭代执行计划），每阶段独立评审（architect-reviewer + product-reviewer + project-reviewer 三重视角）
 allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
 ---
 
-# product/plan — 规划性思考
+# devforge-plan — 规划性思考
 
 ## 概述
 

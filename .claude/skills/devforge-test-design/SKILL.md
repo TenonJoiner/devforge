@@ -1,10 +1,10 @@
 ---
-name: product/test-design
+name: devforge-test-design
 description: 测试策略设计——测试分层定义、覆盖率目标分配、各级测试方案设计。可反复迭代，随架构和需求同步调整
 allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
 ---
 
-# product/test-design — 测试策略设计
+# devforge-test-design — 测试策略设计
 
 ## 概述
 

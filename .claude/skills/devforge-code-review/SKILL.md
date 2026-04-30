@@ -1,10 +1,10 @@
 ---
-name: code/code-review
+name: devforge-code-review
 description: 三级代码评审管线——通用质量 → 语言专项 → 安全审计，根据 domain-config.yaml 自动适配语言和评审侧重
 allowed-tools: [Read, Grep, Bash, Agent]
 ---
 
-# code/code-review — 三级代码评审管线
+# devforge-code-review — 三级代码评审管线
 
 ## 概述
 

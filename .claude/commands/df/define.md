@@ -1,6 +1,6 @@
 # /df:define
 
-定义产品需求、制定验收标准。多 Agent 深度思考，标杆研究先行，Feature-Scenario 分层展开，螺旋式迭代完善。
+定义产品需求、制定验收标准。多 agent 深度思考，标杆研究先行，Feature-Scenario 分层展开，螺旋式迭代完善。
 
 ## 使用示例
 
@@ -17,4 +17,4 @@
 
 ## 调用方式
 
-调用 Skill 工具加载 `product/define`
+调用 Skill 工具加载 `devforge-define`
