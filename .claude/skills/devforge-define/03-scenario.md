@@ -1,40 +1,34 @@
 # 第 3 阶段：Scenario 挖掘与特性域定稿
 
-**准入条件**：第 2 阶段完成，Actor-Feature 已定稿（无 CRITICAL 问题 + 缺陷密度 ≤ 1.5 分/Feature）
+**准入条件**：第 2 阶段已通过出口标准（Actor-Feature 已定稿，无 CRITICAL 问题 + 缺陷密度达标）
 **产出文件**：`docs/requirements/<feature-domain>.md`（各特性域文档）
 
 ---
 
-## 步骤 1：任务解构与 Scenario 挖掘（分域并行）
-
-> **Plan 阶段内联**：第 3 阶段命中上调条件时为「高」复杂度，需先解构再发散。未命中时按「中等」复杂度执行，跳过 Plan 阶段，主会话直接派遣 1-2 个 product agent。
-
-**任务解构**（仅命中上调条件时执行）：
-1. 派遣 **1 个 product agent** 读取 `.claude/templates/req-feature.md`，识别各章节的决策权重分布
-2. 分析系统上下文（该特性域在产品中的位置、与 product-spec.md 的依赖关系、可替换性）
-3. 决定 agent 数量（基于高复杂度下限，≥3；按分析类型切分：正常路径/故障异常路径/运维扩展路径）
-4. 设计切分维度，分配视角约束、列出关键假设、识别评审视角缺口
-5. 产出调度方案（并行产出 agent 配置 + 评审 agent 配置 + 整合策略）
-6. 产出以结构化文本形式在对话中输出
-
-**Plan 禁止事项**：
-- 不产出深度分析内容
-- 不预设最终结论或倾向性方案
-
-**主会话职责**：原样执行 product 的调度方案，不做修改。若对方案有疑问，与用户确认或重新派遣 plan agent。
+## 步骤 1：Scenario 挖掘（分域并行）
 
 **Scenario 挖掘**：
 1. 主会话读取 `product-spec.md`（Actor-Feature 终稿）作为统一输入源
-2. 按 domain 拆分，无依赖的 domain 并行处理
-3. **每个 domain 并行启动 product agent**：
-   - 未命中上调条件（中等）：1-2 个 product agent，按正常路径和故障路径分工
-   - 命中上调条件（高）：≥3 个 product agent，按分析类型切分：
-     - product（关注正常路径）：分析用户核心业务流程、happy path
-     - product（关注故障/异常路径）：分析错误处理、边界条件、降级策略
-     - product（关注运维/扩展路径）：分析配置变更、升级、监控、集成
+2. 按 `product-spec.md#Feature 总览` 中"归属特性域"字段对 Feature 分组（每个特性域 = 一个 domain，对应一个 `docs/requirements/<feature-domain>.md` 产出文件），无依赖的 domain 并行处理
+3. **按 domain 分别判定复杂度，并行启动 product agent**：
+   - 主会话对每个 domain 独立判定复杂度（综合评估以下因素，非二维布尔）：
+     - 涉及 Actor 数量与权限复杂度
+     - Feature 间的依赖关系密度
+     - `domain-config.yaml` 中的系统规模与并发模式
+     - 质量属性优先级是否将该 domain 放在关键路径上
+     - 判定结果：**中等**（常规 Scenario 挖掘）或 **高**（需多视角并行深度展开）
+   - 中等复杂度 domain：1-2 个 product agent，由主会话按需分工
+   - 高复杂度 domain：≥3 个 product agent，视角切分由主会话根据该 domain 的**实际性质**动态决定（如按正常/故障/运维维度、按 Actor 角色维度、按时间阶段维度等），在派遣 prompt 中说明切分理由，禁止套用固定视角清单
 4. 每个 agent 基于定稿的 Actor-Feature 挖掘 Scenario
 5. **所有内容结构严格遵循 `.claude/templates/req-feature.md` 模板**
 6. 量化非功能需求
+7. 主会话收集各 agent 产出，按模板整合为统一 domain 文档，写入 `docs/requirements/<feature-domain>.md`
+
+**主会话职责**（步骤 1）：
+- 读取 `product-spec.md`，按"归属特性域"字段对 Feature 分组，确定 domain 列表
+- 对每个 domain 独立判定复杂度（综合评估 Actor 数量、依赖密度、规模与并发、质量关键路径等因素，非二维布尔）
+- 按 domain 复杂度派遣 product agent，注入对应的视角约束
+- 收集各 agent 产出，整合去重、处理冲突，按模板写入对应 domain 文件
 
 **步骤 1 出口标准**（每个 domain 文档）：
 - [ ] 文档已按 `req-feature.md` 模板结构写入
@@ -43,81 +37,51 @@
 - [ ] 非功能需求有量化指标（具体数字 + 验收方法）
 - [ ] 文档已写入 `docs/requirements/<feature-domain>.md`
 
-**步骤 1 缺陷密度评审**（按 domain）：
-
-主会话基于步骤 2 评审结果计算缺陷密度。
-
-```
-缺陷密度 = 所有问题的分数之和 / Feature 数量
-问题分值：CRITICAL=10分, HIGH=3分, MEDIUM=1分, LOW=0.1分
-```
-
-**进入门槛**：
-- 无 CRITICAL 问题
-- 缺陷密度 ≤ 2.0 分/Feature
-
 ---
 
-## 步骤 2：独立评审（评审修正循环起点）
+## 步骤 2：评审修正循环
 
-**准入条件**：特性域文档初稿已写入文件
+> **准入条件**：步骤 1 出口标准已通过（所有 domain 文档已写入并验证存在）
+> **核心约束**：按 SKILL.md「标准评审修正循环」执行，本文只声明本阶段特有参数和规则。
 
-1. **并行启动 reviewer** 执行**独立评审**：
-   - 未命中上调条件（中等）：≥1 个 reviewer（product-reviewer 或 architect-reviewer）
-   - 命中上调条件（高）：product-reviewer + architect-reviewer 并行评审
-   - **主会话职责**：在派遣评审 agent 的 prompt 中必须注入文档的系统上下文——本文档在需求体系中的位置（特性域 Scenario 规格，基于 product-spec.md 中的 Feature 展开）、重要性（定义验收标准和具体用例，直接影响开发和测试）、可替换性（修正成本评估）
-2. 质疑点数量要求：按特性域复杂度（简单≥3、中等≥5、复杂≥7）
+### 2.1 评审配置
 
-**步骤 2 出口标准**：
-- [ ] product-reviewer 和 architect-reviewer 均完成独立评审
-- [ ] 质疑点数量达标
-- [ ] 所有质疑点已按 CRITICAL/HIGH/MEDIUM/LOW 分级标注
+**按 domain 分别配置 reviewer**（沿用步骤 1 已判定的复杂度）：
 
-**评审纪要写作规范**（由主会话执行，写入文档时遵守）：
-- 评审记录章节 ≤ 200 字
-- 仅保留 reviewer 名称、结论、遗留问题数及分类
-- 详细评审意见留存对话上下文，不写入正式文档
+- 中等复杂度 domain：≥1 个 reviewer，以 product-reviewer 为主，architect-reviewer 可选辅助
+- 高复杂度 domain：product-reviewer（主责）+ architect-reviewer（辅助）并行评审
+- **主会话职责**：在派遣评审 agent 的 prompt 中注入文档的系统上下文——本文档在需求体系中的位置（特性域 Scenario 规格，基于 product-spec.md 中的 Feature 展开）、重要性（定义验收标准和具体用例，直接影响开发和测试）、可替换性（修正成本评估）
 
----
+### 2.2 独立评审
 
-## 步骤 3：评审修正定稿
+主会话按评审配置并行派遣 reviewer。
 
-按 domain 分别评分。按「通用规范」标准评审修正循环执行，特殊配置：
+- **评审纪要写作规范**：参见 SKILL.md「评审纪要写作规范」
 
-- **修正 agent**：product
-- **复核**：修正后重新启动独立评审（product-reviewer + architect-reviewer）
-- **特殊终止条件**：所有 CRITICAL 已修正 + 所有 HIGH 已修正或有明确处理方案 + 双 reviewer 均已完成独立评审 + 各特性域缺陷密度 ≤ 1.5 分/Feature
+### 2.3 验证与修正
 
-**步骤 3 缺陷密度评审**（按 domain）：
+> 按 SKILL.md「标准评审修正循环」步骤 2-7 执行。**按 domain 分别判定**：每个 domain 独立走判断→修正→复核循环，状态互不影响。
 
-主会话基于步骤 2 评审结果计算缺陷密度。
+| 参数 | 值 | 说明 |
+|------|-----|------|
+| 评估对象数 | Feature 数量 | 按 domain 内 Feature 数计算，各 domain 独立 |
+| 缺陷密度门槛 | ≤ 1.5 分/Feature | 见 SKILL.md「缺陷密度门槛标定依据」 |
+| 修正 agent | product agent | 修正后更新对应 domain 文档 |
+| 修正后复核路径 | 回到 2.2 独立评审 | |
+| \> 30 处回退目标 | 仅该 domain 回退到步骤 1 | 重新执行多 agent 并行发散，其他 domain 不受影响 |
 
-```
-缺陷密度 = 所有问题的分数之和 / Feature 数量
-问题分值：CRITICAL=10分, HIGH=3分, MEDIUM=1分, LOW=0.1分
-```
-
-**进入门槛**：
-- 无 CRITICAL 问题
-- 缺陷密度 ≤ 1.5 分/Feature
+**成功退出条件**（同时满足）：
+- 所有 domain 均已通过独立评审
+- 各 domain 无 CRITICAL 问题
+- 各 domain 缺陷密度 ≤ 1.5 分/Feature
+- 各 domain 所有 HIGH 问题已评估：接受修正 / 接受延期 / 拒绝
 
 ---
 
 ## 第 3 阶段出口标准
 
-- [ ] 所有 CRITICAL 问题已修正
-- [ ] 所有 HIGH 问题已评估：接受修正 / 接受延期 / 拒绝
-- [ ] product-reviewer 和 architect-reviewer 均已完成独立评审
-- [ ] 各特性域缺陷密度 ≤ 1.5 分/Feature
-- [ ] 验收标准可量化、可独立验证
-- [ ] 非功能需求有量化指标
-- [ ] 文档已写入并验证存在
+- [ ] 所有 domain 文档通过步骤 1 出口标准（文档内容完整性）
+- [ ] 所有 domain 文档通过步骤 2 出口标准（评审质量达标）
 - [ ] 文档中无子系统内部模块名，纯用户视角
 
----
-
-## 自动推进规则
-
-- 各特性域缺陷密度 ≤ 1.5 分/Feature → **确认后推进**（向用户汇报结果摘要，等待用户确认后进入第 4 阶段）
-- 缺陷密度 1.5-2.5 分/Feature → 自动再修正一次
-- 缺陷密度 > 2.5 分/Feature 或有 CRITICAL 问题 → 等待人工决策
+> 出口条件全部满足后，向用户汇报各 domain 缺陷密度和问题处理摘要，等待确认后进入第 4 阶段。

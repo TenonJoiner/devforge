@@ -8,13 +8,23 @@ system:
   primary_type: ""  # distributed-storage | distributed-computing | message-queue | database | os-kernel | compiler-runtime | network-stack | virtualization | hpc | embedded
 
   # 子类型（可选）
-  sub_type: ""  # 如 object-storage, block-storage, file-system
+  sub_type: ""  # 可选。取决于系统类型，部分典型值：object-storage | block-storage | file-system（distributed-storage 类），其他类型由主会话结合对话上下文追问，不强制枚举
 
   # 系统规模（必填）
   scale:
-    complexity: ""  # small | medium | large | very-large
-    team_size: ""
-    codebase_size: ""
+    deployment: ""  # 单机 | 小集群 | 中等集群 | 大规模集群
+    data_scale: ""  # GB级 | TB级 | PB级 | EB级
+    concurrency:
+      peak: ""  # <100 | 100-1k | 1k-10k | 10k-100k | >100k
+      # 以下字段按 system.primary_type 条件性填充，未匹配时可省略
+      write: ""              # 仅 distributed-storage / database
+      read: ""               # 仅 distributed-storage / database
+      read_write_ratio: ""   # 仅 distributed-storage / database，如 "1:9"
+      produce: ""            # 仅 message-queue
+      consume: ""            # 仅 message-queue
+      task_count: ""         # 仅 distributed-computing
+      task_long_running: ""  # 仅 distributed-computing，true | false
+      connection_mode: ""    # peak >10k 时追问：long | short | mixed
 
   # 一句话描述（必填）
   description: ""

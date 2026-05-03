@@ -1,0 +1,107 @@
+# .claude/domain-config.yaml
+# 领域配置文件 - 定义系统类型、语言、质量属性等
+# 由 /df:define 和 /df:design 的阶段 0 交互式生成和更新
+
+# 系统类型分类
+system:
+  # 主类型（必填）
+  primary_type: "database"
+
+  # 子类型（可选）
+  sub_type: "timeseries"
+
+  # 系统规模（必填）
+  scale:
+    deployment: "中等集群"
+    data_scale: "TB级"
+    concurrency:
+      peak: "100-1k"
+      write: "100-1k"
+      read: "<100"
+      read_write_ratio: "1:9"
+
+  # 一句话描述（必填）
+  description: "边云结合的时序数据库，面向海量传感数据 7×24 高写入场景。目标用户为数据分析师、运维和开发者，提供从边缘到云端的一体化数据管理。不做跨地域强一致复制（仅支持最终一致性），不做完整的事务 ACID 支持。"
+
+# 编程语言配置
+languages:
+  # 主语言（必填，至少一个）
+  primary:
+    - name: ""
+      version: ""
+      standard: ""
+      toolchain: []
+
+  # 次要语言（可选）
+  secondary: []
+
+  # 语言特定约束（可选）
+  constraints: []
+
+# 质量属性优先级（必填）
+quality_attributes:
+  # 优先级排序（1-5，1 最高）
+  priorities:
+    consistency: 5
+    performance: 1
+    availability: 2
+    maintainability: 4
+    cost: 3
+
+  # 具体目标（可选但推荐）
+  targets:
+    consistency_model: "eventual"
+    latency_p99: ""
+    throughput: ""
+    availability_sla: ""
+
+# 标杆产品清单（由 /df:design 阶段 0 收集）
+benchmarks: []
+
+# 技术栈约束（由 /df:design 阶段 0 或后续阶段补充）
+tech_stack:
+  os:
+    primary: ""
+    versions: []
+  network:
+    protocols: []
+  storage:
+    media: []
+  dependencies: []
+
+# 架构特征（由 /df:design 阶段 0 或后续阶段补充）
+architecture:
+  distributed:
+    enabled: false
+    consensus_protocol: ""
+    replication_strategy: ""
+  concurrency:
+    model: ""
+    synchronization: []
+  memory:
+    strategy: ""
+    allocators: []
+
+# 开发约束（由 /df:design 阶段 0 或后续阶段补充）
+development:
+  coding_standards:
+    style_guide: ""
+    formatter: ""
+    linter: ""
+  testing:
+    framework: ""
+    coverage_target: 0
+    memory_checker: ""
+  build:
+    system: ""
+    ci_cd: ""
+
+# 领域特定约束（可选，可扩展）
+domain_specific: {}
+
+# 元数据
+metadata:
+  created_at: "2026-05-03"
+  last_updated: "2026-05-03"
+  contributors: ["/df:define"]
+  schema_version: "1.0"
