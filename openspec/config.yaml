@@ -1,24 +1,18 @@
+# OpenSpec 项目配置文件
+# 本文件由 OpenSpec CLI 自动读取，内容会注入到每个 artifact 的 instructions 中
+# schema.yaml 中各 artifact 的详细规则定义已覆盖大部分场景，此处仅保留 schema 声明
 schema: spec-driven-enhanced
 
-context: |
-  语言：C
-  构建系统：make / cmake
-  平台：Linux
-  领域：分布式存储
-  编码规范：参见 .claude/rules/coding-style.md
-  测试框架：<!-- 子系统指定 -->
+# 项目上下文（可选）
+# 会被注入到所有 artifact（proposal/specs/design/tasks）的 instructions
+# 如有需要，可在此补充未被 schema.yaml 覆盖的领域特定约束
+# context: |
+#   技术栈：C 语言、Linux 系统编程
+#   领域：分布式存储
 
-rules:
-  proposal:
-    - 有对应产品级文档时须关联 iteration-plan 条目，无则填写"不适用"并说明动机
-  specs:
-    - 每个 Requirement 必须包含 SHALL 或 MUST
-  design:
-    - 涉及跨子系统接口时必须列出接口变更
-    - 涉及并发或分布式一致性时，须声明并发模型、一致性保证和故障语义
-  review:
-    - 评审未通过不得生成 tasks
-  tasks:
-    - 每个任务必须包含 TDD 三步骤（RED/GREEN/REFACTOR）
-    - 可并行任务必须标注 independent
-    - 禁止随意 mock：子系统内部禁止 mock，只允许 mock 外部边界，每个 mock 必须注释理由
+# 按 artifact 类型定义的额外规则（可选）
+# 键名对应 artifact id：proposal / specs / design / review / tasks / apply
+# 如与 schema.yaml 中的规则重复，以 schema.yaml 为准
+# rules:
+#   proposal:
+#     - 补充项目特定的 proposal 写作规则
