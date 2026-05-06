@@ -24,22 +24,28 @@ RED → GREEN → REFACTOR。没有先失败的测试，决不写生产代码。
 
 ## 与 tasks.md 的映射
 
-spec-driven-enhanced 的 tasks 模板将每个实现 task 拆为 7 步：
+spec-driven-enhanced 的 tasks 模型采用 OpenSpec 两层结构 + TDD 步骤映射：
 
 ```
-N.M.1 TEST      → /df:tdd 的 RED 阶段
-N.M.2 VERIFY-RED  → /df:tdd 的 RED 阶段
-N.M.3 IMPL      → /df:tdd 的 GREEN 阶段
-N.M.4 VERIFY-GREEN → /df:tdd 的 GREEN 阶段
-N.M.5 REFACTOR  → /df:refactor（本 skill 的 REFACTOR 阶段调用）
-N.M.6 REVIEW    → /df:code-review（输出评审报告）
-N.M.7 FIX-REVIEW → developer 读取评审报告，修复 CRITICAL/HIGH 问题
-N.M.8 COMMIT    → git commit
+任务组层（## N. <Requirement>）：
+├─ Scenario A 的实现：
+│   ├─ - [ ] N.M  RED      → /df:tdd 的 RED 阶段（写失败测试 + 验证失败）
+│   └─ - [ ] N.M' GREEN    → /df:tdd 的 GREEN 阶段（最小实现 + 验证通过）
+├─ Scenario B 的实现：
+│   ├─ - [ ] N.M'' RED
+│   └─ - [ ] N.M''' GREEN
+├─ - [ ] REFACTOR         → /df:refactor（积累 2-3 轮后做一次）
+├─ - [ ] LINT             → /df:lint（任务组末尾质量闸口）
+└─ - [ ] REVIEW           → /df:code-review（任务组末尾评审 + 修复）
 ```
 
-`/df:tdd` 覆盖步骤 N.M.1 ~ N.M.4，产出测试代码和生产代码的最小实现。
+**`/df:tdd` 的覆盖范围**：仅 RED 和 GREEN 两个步骤，对应单个 Scenario 的实现循环。
 
-`/df:code-review` 输出评审报告后，由 `developer`（或 feedback-loop）在 N.M.7 阶段按 CRITICAL → HIGH 顺序修复，修复后必须通过回归测试。
+**REFACTOR / LINT / REVIEW 不在 `/df:tdd` 内**：
+- REFACTOR 由 `/df:refactor` 独立 skill 处理（任务组中累积后做）
+- LINT / REVIEW 由各自 skill 处理（任务组末尾固定追加，由 apply 阶段的 code-reviewer agent 评审 + developer agent 修复）
+
+`/df:code-review` 输出评审报告后，由 developer agent 按 CRITICAL → HIGH 顺序修复，修复后必须通过回归测试。
 
 ## 核心流程
 

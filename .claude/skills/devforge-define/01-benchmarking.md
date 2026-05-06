@@ -62,16 +62,19 @@
    - **确保分析维度完整**：至少覆盖功能与场景、质量属性、运维与集成三个维度
    - **reviewer 配置**：2 个（product-reviewer + architect-reviewer），横向对比所有标杆
 
-### 2.2 并行启动 researcher
+### 2.2 并行启动 researcher（滑动窗口限流）
 
-1. 按 2.1 确定的配置，**每个标杆并行启动 ≥2 个 researcher agent**：
+1. 按 2.1 确定的配置，**每个标杆启动 ≥2 个 researcher agent**：
    - 各自从分配的需求视角独立研究同一标杆
    - 产出目录：`docs/requirements/reference/`
    - 分析视角：**需求/用户/产品视角**，禁止技术分析
    - 模板约束：使用 `.claude/templates/ref-requirements.md`
    - **禁止**多个 researcher 使用同一 prompt 模板、同一分析框架
 
-2. researcher 完成后，**主会话将内容写入文件**
+2. **遵守 SKILL.md「Agent 并发控制」**：若 agent 总数超过 `agent.max_concurrent`，使用滑动窗口策略——初始启动 5 个，每完成一个立即补位下一个。禁止以并发限制为由减少 researcher 数量或合并视角
+
+3. 每批 researcher 完成后，**主会话将内容写入文件**
+4. **主会话确认所有 researcher agent 已完成**（成功或最终失败），收集全部产出后，方可进入步骤 3。禁止在 agent 仍在运行期间提前进入评审
 
 ---
 
@@ -110,4 +113,5 @@
 **成功退出条件**（同时满足）：
 - 无 CRITICAL 问题
 - 缺陷密度 ≤ 2.0 分/标杆
+- 每个标杆文件末尾已写入 `**评审状态**: ✅ PASS` 标记（按 SKILL.md「评审纪要写作规范」格式）
 

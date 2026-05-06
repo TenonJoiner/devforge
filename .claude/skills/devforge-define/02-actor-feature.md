@@ -34,7 +34,7 @@
 
 ### 执行
 
-1. **并行产出**：同时启动各路 agent，每路独立注入对应输入和视角分配
+1. **并行产出（滑动窗口限流）**：同时启动各路 agent（遵守 SKILL.md「Agent 并发控制」），每路独立注入对应输入和视角分配。若总数超限，初始启动 5 个，每完成一个立即补位
 2. **合并**：主会话按上述规则合并产出
 3. 每个 Actor 明确：类型、职责、交互方式、关注点
 4. 写入 `docs/requirements/product-spec.md`（Actor 章节），格式遵循 `.claude/templates/req-product-spec.md`
@@ -66,9 +66,10 @@
 
 按"第 1 波 product 并行 → 主会话整合 → 第 2 波 architect 评估"串行编排，避免 architect agent 在 Feature 列表尚未产出时无输入可读。
 
-**第 1 波：4 个 product agent 并行**
+**第 1 波：≥4 个 product agent（遵守 SKILL.md「Agent 并发控制」滑动窗口）**
 - 各 agent 读取 `product-spec.md#actors` 和分配的用户场景视角，围绕 Actor 核心目标独立推导 Feature 列表
 - 禁止用一个 agent "内部发散多个方案"替代多个 agent 独立产出
+- 若 agent 数超过 `agent.max_concurrent`，初始启动 5 个，每完成一个立即补位。禁止以并发限制为由减少 agent 数量
 
 **主会话整合（第 1 波完成后）**
 - **对齐分类框架**：基于模板结构确定统一的特性域分类和优先级定义，确保各 agent 产出在同一坐标下比较
@@ -136,4 +137,5 @@
 - 无 CRITICAL 问题
 - 步骤 1 缺陷密度 ≤ 1.5 分/Actor，步骤 2 缺陷密度 ≤ 1.5 分/Feature
 - 文档 `docs/requirements/product-spec.md` 已写入并验证存在
+- `product-spec.md` 末尾已写入 `**评审状态**: ✅ PASS` 标记（按 SKILL.md「评审纪要写作规范」格式）
 - 所有 HIGH 问题已评估：接受修正 / 接受延期 / 拒绝

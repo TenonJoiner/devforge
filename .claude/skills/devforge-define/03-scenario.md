@@ -10,7 +10,7 @@
 **Scenario 挖掘**：
 1. 主会话读取 `product-spec.md`（Actor-Feature 终稿）作为统一输入源
 2. 按 `product-spec.md#Feature 总览` 中"归属特性域"字段对 Feature 分组（每个特性域 = 一个 domain，对应一个 `docs/requirements/<feature-domain>.md` 产出文件），无依赖的 domain 并行处理
-3. **按 domain 分别判定复杂度，并行启动 product agent**：
+3. **按 domain 分别判定复杂度，并行启动 product agent**（遵守 SKILL.md「Agent 并发控制」滑动窗口）：
    - 主会话对每个 domain 独立判定复杂度（综合评估以下因素，非二维布尔）：
      - 涉及 Actor 数量与权限复杂度
      - Feature 间的依赖关系密度
@@ -19,6 +19,7 @@
      - 判定结果：**中等**（常规 Scenario 挖掘）或 **高**（需多视角并行深度展开）
    - 中等复杂度 domain：1-2 个 product agent，由主会话按需分工
    - 高复杂度 domain：≥3 个 product agent，视角切分由主会话根据该 domain 的**实际性质**动态决定（如按正常/故障/运维维度、按 Actor 角色维度、按时间阶段维度等），在派遣 prompt 中说明切分理由，禁止套用固定视角清单
+   - **并发规则**：汇总所有 domain 的 agent 总数，若超 `agent.max_concurrent`，初始启动 5 个，每完成一个立即从待启动队列中补位下一个。禁止以并发限制为由减少 domain 数或降低复杂度判定
 4. 每个 agent 基于定稿的 Actor-Feature 挖掘 Scenario
 5. **所有内容结构严格遵循 `.claude/templates/req-feature.md` 模板**
 6. 量化非功能需求
@@ -54,7 +55,7 @@
 
 ### 2.2 独立评审
 
-主会话按评审配置并行派遣 reviewer。
+主会话按评审配置派遣 reviewer（遵守 SKILL.md「Agent 并发控制」滑动窗口）。若所有 domain 的 reviewer 总数超过 `agent.max_concurrent`，初始启动 5 个，每完成一个立即补位下一个。
 
 - **评审纪要写作规范**：参见 SKILL.md「评审纪要写作规范」
 
@@ -74,6 +75,7 @@
 - 所有 domain 均已通过独立评审
 - 各 domain 无 CRITICAL 问题
 - 各 domain 缺陷密度 ≤ 1.5 分/Feature
+- 各特性域文档末尾已写入 `**评审状态**: ✅ PASS` 标记（按 SKILL.md「评审纪要写作规范」格式）
 - 各 domain 所有 HIGH 问题已评估：接受修正 / 接受延期 / 拒绝
 
 ---
