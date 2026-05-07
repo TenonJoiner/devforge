@@ -2,8 +2,7 @@
 
 ## 适用范围
 
-- `**/*.c`
-- `**/*.h`
+所有语言的测试代码。语言特定的测试框架和文件组织规范见各语言的 `coding-style-<lang>.md`。
 
 ---
 
@@ -23,15 +22,12 @@
 2. **GREEN**：写最小实现使测试通过
 3. **REFACTOR**：在绿色下简化代码
 
-> valgrind 内存检测留在 proposal 收尾或 `/df:lint --full` 阶段执行，不阻塞 TDD 小步循环。
-
 ---
 
 ## 单元测试要求
 
 - 每个公开的 API 函数至少有一个直接测试
 - 每个错误路径至少有一个测试
-- proposal/PR 级别通过 `/df:lint --full` 或项目 CI 集成 valgrind
 - 新增代码必须被测试覆盖
 
 ---
@@ -75,15 +71,59 @@ assert_memory_equal(expected, actual, len);
 
 ---
 
-## Mock 纪律（与 spec-driven-enhanced tasks 模板一致）
+## 测试命名规范
+
+测试名称是测试的"第一句话"，应让阅读者一眼理解测试在验证什么行为。
+
+### 好测试 vs 坏测试
+
+| 质量 | 好 | 坏 |
+|------|-----|-----|
+| **Minimal（单一）** | 一个测试只验证一个行为 | `test_wal_append_and_read_and_validate`（用"和"连接了多个行为） |
+| **Clear（清晰）** | 名称描述行为 | `test1`、`test_case_42` |
+| **Shows intent（展示意图）** | 名称展示期望的 API 用法 | 名称包含内部实现细节（如 `test_hash_insert_collision_chain` 而非 `test_put_with_bucket_full`） |
+
+### 命名模式
+
+- **Scenario 测试**：`test_<module>_<scenario>`
+  - 好：`test_wal_append_persists_data`
+  - 坏：`test_wal`
+- **异常路径**：`test_<module>_<scenario>_rejects_<condition>`
+  - 好：`test_wal_append_rejects_null_buffer`
+  - 坏：`test_wal_append_error`
+- **边界值**：`test_<module>_<scenario>_at_<boundary>`
+  - 好：`test_wal_append_at_max_record_size`
+  - 坏：`test_wal_append_big`
+
+### 反模式
+
+- 🚩 名称中包含"and"（说明测试在验证多个行为，应拆分）
+- 🚩 名称是数字或编号（`test1`、`test_case_42`）
+- 🚩 名称描述实现而非行为（`test_binary_search` 而非 `test_finds_element_in_sorted_array`）
+- 🚩 名称中同时包含正常路径和异常路径（应拆分为两个测试）
+
+---
+
+## Mock 纪律
+
+Mock 是隔离的手段，不是要测试的东西。
+
+### 通用原则
+
+- **先真实后 mock**：写测试时先用真实实现运行，确认测试对真实代码失败后，才在正确层级添加最小 mock
+- **只 mock 慢/不可控的部分**：优先使用轻量级真实替代（内存数据库、临时文件、本地回环），只在确实不可控的外部边界使用 mock
+- **不测试 mock 行为**：断言必须针对被测系统的真实行为，不能针对 mock 是否被调用、mock 返回值等 mock 自身行为
+- **完整 mock**：mock 的数据结构必须完整镜像真实 API 的全部字段，不能只 mock 已知字段
+- **注释说明**：每个 mock 必须注释说明 mock 了什么、为什么必须 mock、mock 行为与真实行为的差异
+- **Mock 太复杂时重构**：如果 mock 设置占测试 >50%，说明被测模块耦合过紧，应重构解耦而非继续增加 mock 复杂度
 
 ### 单元测试
-- 可以 mock **子系统外部边界**（外部 RPC、外部服务依赖、外部存储介质模拟）
-- **禁止 mock 子系统内部模块**（同子系统内的 `.c`/`.h` 模块），测试必须走真实的内部调用链
-- 每个 mock 必须注释说明：mock 了什么、为什么必须 mock、mock 行为与真实行为的差异
-- 🚩 如果发现需要 mock 内部模块才能写测试，说明模块耦合过紧，应先重构解耦
+
+- mock 内部模块时，遵守 testing-anti-patterns.md 中的 Mock 反模式指导
+- 优先使用真实调用链，mock 作为最后手段
 
 ### 集成测试
+
 - **原则上禁止 mock**，必须走真实调用链
 - 仅在极少数无法真实集成的外部边界（如第三方付费 API、特定硬件）才可例外 mock，且需经 code-reviewer 确认
 - mock 必须注释说明其与真实行为的差异及不可真实集成的原因

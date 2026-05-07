@@ -12,11 +12,11 @@
 
 1. 激活 `developer` Agent
 2. 读取当前 task 上下文（如由 `/opsx:apply` 触发）
-3. 进入 `code/tdd-workflow` Skill：
-   - RED：编写失败测试（对应 tasks.md N.M.1 ~ N.M.2）
-   - GREEN：写最小实现使测试通过（对应 tasks.md N.M.3 ~ N.M.4）
-   - REFACTOR：调用 `/df:refactor` 简化代码（对应 tasks.md N.M.5）
-5. 运行测试确认绿色（valgrind 留到 proposal 收尾或 `/df:lint --full` 阶段）
+3. 进入 `devforge-tdd-workflow` Skill：
+   - RED：编写失败测试（对应 tasks.md N.M）
+   - GREEN：写最小实现使测试通过
+   - REFACTOR：在测试绿色下简化代码
+4. 运行测试确认绿色
 
 ## 参数
 
@@ -29,19 +29,20 @@
 ## 使用示例
 
 ```
-/df:tdd 实现 WAL 写入接口的追加逻辑
-> RED：编写 test_wal_append.c，断言写入后 offset 增加
+/df:tdd 实现追加写入逻辑
+> RED：编写测试，断言写入后 offset 增加
 > 测试失败：assertion failed: offset == 0
 >
-> GREEN：实现 wal_append，返回更新的 offset
-> 测试通过 ✅
+> GREEN：实现 append，返回更新的 offset
+> 测试通过
 >
-> REFACTOR：提取边界检查到 wal_validate_record
-> 测试保持绿色 ✅
+> REFACTOR：提取边界检查到 validate_record
+> 测试保持绿色
 ```
 
 ## 关联
 
-- Skill: `code/tdd-workflow`
+- Skill: `devforge-tdd-workflow`（TDD 铁律工作流）
+- Reference: `testing-anti-patterns.md`（测试反模式）
 - Agent: `developer`
 - Rules: `coding-style`, `testing`

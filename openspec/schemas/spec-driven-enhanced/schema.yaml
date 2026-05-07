@@ -318,22 +318,25 @@ artifacts:
       创建 tasks 前 MUST 读取 review.md，检查「Tech Leader 最终决策」区域：
       - 决策为 PASS 或 PASS WITH CONDITIONS → 允许继续创建 tasks
       - 决策为 REJECT 或决策区域为空/未填写 → **禁止创建 tasks**，提示：「review.md 中 Tech Leader 最终决策未填写或为 REJECT，请先完成交叉评审并由 Tech Leader 确认后再继续」
-      - PASS WITH CONDITIONS 时，将附加条件作为约束纳入任务分解
 
       ## 任务推导
 
       任务清单的**主要输入是 specs**，design 辅助提供实现路径和顺序。
       OpenSpec 两层结构：`##` = 任务组（对应一条 Requirement 或 QA 闸口），
       `- [ ]` = 任务（apply phase 跟踪的最小单元）。
-      本工作流将每个 TDD 步骤（RED / GREEN / REFACTOR）映射为一个独立的 `- [ ]` 任务，
+      本工作流将每个 Scenario 映射为一个完整的 TDD 任务（RED → GREEN → REFACTOR），
       并在每个 Requirement 任务组末尾追加 LINT 和 REVIEW 任务，
       所有 Requirement 任务组之后追加一个 QA 任务组作为 feature 级闸口。
 
       ### 从 specs 推导任务
 
       - **Requirement → 任务组**：每条 Requirement 对应一个任务组（`## N. <Requirement 名称>`）
-      - **Scenario → 一组 TDD 任务**：每个 Scenario（正常 + 异常）拆分为 RED + GREEN 任务，
-        多个 Scenario 完成后视情况追加 REFACTOR 任务（TDD 步骤的具体写法见下方「TDD 三步骤」）
+      - **Scenario → 一个 TDD 任务**：每个 Scenario（正常路径或异常路径）对应一个 checkbox，
+        一次 `/df:tdd` 调用完成完整的 RED → GREEN → REFACTOR 循环
+        （TDD 步骤的具体写法见下方「TDD 任务格式」）
+      - **Scenario 粒度原则**：每个 Scenario 只描述一个具体的、可验证的行为。一次 `/df:tdd` 调用
+        应在几分钟到十几分钟内完成。如果某个 Scenario 的实现需要多轮 RED-GREEN-REFACTOR
+        才能覆盖，说明该 Scenario 定义过粗，应在 specs 层面拆分为多个更细的 Scenario
       - **异常 Scenario 独立成任务**：异常路径不合并到正常路径任务中，独立列出避免遗漏
       - **追溯标注**：每个任务描述末尾标注对应的 Requirement/Scenario 标识，便于核对覆盖
 
@@ -357,7 +360,7 @@ artifacts:
       - **LINT 任务**：调用 `/df:lint` 进行静态检查并修复
       - **REVIEW 任务**：调用 `/df:code-review` 进行代码评审，按 CRITICAL → HIGH 顺序修复
 
-      末尾任务的位置在所有 RED/GREEN/REFACTOR 之后，是该 Requirement 完成的质量闸口。
+      末尾任务的位置在所有 Scenario 任务之后，是该 Requirement 完成的质量闸口。
 
       ### 末尾 QA 任务组（强制）
 
@@ -367,7 +370,7 @@ artifacts:
       ## QA. 质量保障
       - [ ] QA.1 FULL-LINT: 调用 /df:lint --full 静态检查（含内存检查）并修复
       - [ ] QA.2 FULL-REVIEW: 调用 /df:code-review 全量评审并修复 CRITICAL/HIGH
-      - [ ] QA.3 DEEP-REFACTOR: 调用 /df:refactor --deep 深度简化重构
+      - [ ] QA.3 DEEP-REFACTOR: 调用 /df:simplify 深度简化重构
       - [ ] QA.4 UNIT-COVERAGE: 重新执行单元测试，验收覆盖率达标
       - [ ] QA.5 INTEGRATION-TEST: 开发 feature 级别集成测试用例，运行并验证通过
       ```
@@ -379,38 +382,31 @@ artifacts:
       - 任务组使用 `## N. <Requirement 名称>` 或 `## QA. 质量保障` 标题
       - 每个任务必须是 checkbox：`- [ ] N.M <类型>: <描述>`
       - 任务类型枚举：
-        - Requirement 任务组内：RED / GREEN / REFACTOR / LINT / REVIEW / CHORE / INTEGRATION-TEST
+        - Requirement 任务组内：SCENARIO / LINT / REVIEW / CHORE / INTEGRATION-TEST
         - QA 任务组内：FULL-LINT / FULL-REVIEW / DEEP-REFACTOR / INTEGRATION-TEST / UNIT-COVERAGE
       - 未使用 `- [ ]` 的任务不会被 apply phase 跟踪
       - 按依赖顺序排列（先做的排前面）
       - 每个任务必须可验证——完成时能明确判断"做完了"
+      - 禁止模糊描述（如"实现数据处理"、"写测试"）
 
-      ## TDD 任务
+      ### SCENARIO 任务必填内容
 
-      每个 `- [ ]` 任务对应一个 TDD 步骤，apply phase 跟踪到此粒度。
-      三个步骤的语义、必填内容如下：
+      任务描述中必须包含：测试文件路径、测试函数名、源文件路径、函数签名、关键逻辑。
 
-      - **RED**：编写一个会失败的测试，直接验证 specs 中对应 Scenario 的 WHEN/THEN。
-        - 必填：测试文件路径、测试函数名、要验证的 Scenario 标识
-        - 此时被测代码尚未实现，测试必然失败
-      - **GREEN**：编写最小实现让上一个 RED 测试通过，不追求完美只追求通过。
-        - 必填：要修改的源文件路径、函数签名、关键逻辑
-        - 需要 mock 的外部边界在此步骤中处理
-      - **REFACTOR**：积累 2-3 轮 RED+GREEN 后统一重构既有代码。
-        - 必填：重构范围和目标（如"提取 format_cell()"、"简化错误处理链"）
-        - 不做新功能，只改善结构
+      ### CHORE 任务
 
-      禁止模糊描述（如"实现数据处理"、"写测试"）。
-
-      **无需 TDD 的任务**：纯配置变更、文档更新、构建脚本等无需测试的任务，
-      类型标注为 CHORE，并说明为什么不需要测试。
+      纯配置变更、文档更新、构建脚本等无需测试的任务，类型标注为 CHORE，并说明为什么不需要测试。
 
       ## Mock 纪律
 
-      - 子系统内部模块之间禁止 mock，测试必须走真实的内部调用链
-      - 只允许 mock 子系统外部边界（外部 RPC、外部服务依赖、外部存储介质模拟）
-      - 每个 mock 必须注释说明：mock 了什么、为什么必须 mock、mock 行为与真实行为的差异
-      - 🚩 如果发现需要 mock 内部模块才能写测试，说明模块耦合过紧，应先重构解耦
+      Mock 是隔离的工具，不是要测试的东西。遵循以下原则：
+
+      - **先真实后 mock**：写测试时先用真实实现运行，确认测试对真实代码失败后，才在正确层级添加最小 mock
+      - **只 mock 慢/不可控的部分**：优先使用轻量级真实替代（内存数据库、临时文件），只在确实不可控的外部边界使用 mock
+      - **不测试 mock 行为**：断言必须针对被测系统的真实行为，不能针对 mock 是否被调用、mock 返回值等 mock 自身行为
+      - **完整 mock**：mock 的数据结构必须完整镜像真实 API 的全部字段，不能只 mock 已知字段
+      - **注释说明**：每个 mock 必须注释说明 mock 了什么、为什么必须 mock、mock 行为与真实行为的差异
+      - **Mock 太复杂时重构**：如果 mock 设置占测试 >50%，说明被测模块耦合过紧，应重构解耦而非继续增加 mock 复杂度
 
       ## Parallel
 
@@ -429,8 +425,7 @@ artifacts:
 
       ## 反模式检查
       - 🚩 任务描述无具体文件路径和函数名（如"实现存储模块"）
-      - 🚩 RED 任务未写明测试文件路径、测试函数名、以及要验证的 Scenario
-      - 🚩 GREEN 任务未写明要修改的源文件路径和函数签名
+      - 🚩 Scenario 任务未写明测试文件路径、测试函数名、源文件路径和函数签名
       - 🚩 Requirement 任务组末尾缺少 LINT 和 REVIEW 任务
       - 🚩 缺少末尾 QA 任务组
       - 🚩 所有任务组都标记为 depends-on 导致完全串行（应重新审视是否可以拆出独立任务组）
@@ -438,7 +433,6 @@ artifacts:
       - 🚩 任务凭空编排，未追溯到 specs 中的 Requirement 或 Scenario
       - 🚩 按 TDD 类型做分组（如「## RED 阶段」「## GREEN 阶段」），而非按 Requirement 分组
       - 🚩 在单任务粒度标注 Parallel 属性，而非任务组粒度
-      - 🚩 REFACTOR 任务添加了新功能，而非单纯重构既有代码
     requires: [review]
 
 apply:
@@ -460,16 +454,22 @@ apply:
 
     | 任务类型 | 执行者 | 调用方式 |
     |---------|--------|---------|
-    | RED / GREEN | developer agent | `/df:tdd` skill |
-    | REFACTOR | developer agent | `/df:refactor` skill |
+    | SCENARIO | developer agent | `/df:tdd` skill（RED → GREEN → REFACTOR） |
     | CHORE | developer agent | 直接处理，无 skill |
     | LINT | code-reviewer agent → developer agent | `/df:lint` 检查 → developer 修复 |
     | REVIEW | code-reviewer agent → developer agent | `/df:code-review` 评审 → developer 按 CRITICAL/HIGH 修复 |
-    | DEEP-REFACTOR | developer agent | `/df:refactor --deep` skill |
+    | DEEP-REFACTOR | developer agent | `/df:simplify` skill（深度重构，跨 scenario） |
     | FULL-REVIEW | code-reviewer agent → developer agent | `/df:code-review` 全量评审 → developer 修复 |
     | FULL-LINT | code-reviewer agent → developer agent | `/df:lint --full` → developer 修复 |
     | UNIT-COVERAGE | developer agent | 运行测试套件，验收覆盖率达标 |
     | INTEGRATION-TEST | developer agent | feature 级别基本集成测试编写与验证 |
+
+    **任务类型判定规则**：
+    - 任务描述包含 `RED → GREEN → REFACTOR` → SCENARIO 类型 → `/df:tdd`
+    - 任务描述以 `LINT:` 开头 → LINT 类型
+    - 任务描述以 `REVIEW:` 开头 → REVIEW 类型
+    - 任务描述以 `CHORE:` 开头 → CHORE 类型
+    - QA 任务组中的任务按对应前缀判定（`FULL-LINT:` / `FULL-REVIEW:` / `DEEP-REFACTOR:` 等）
 
     **Agent 职责约束**：
     - **developer agent**：只写不审。负责所有代码编写、测试编写、修复实现。
