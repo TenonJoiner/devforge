@@ -167,6 +167,4 @@ allowed-tools: [Read, Grep, Bash, Agent]
 
 ## Integration
 
-- **前置 Command**: `/df:tdd`（代码已完成，测试已绿）
-- **后续 Command**: `/df:refactor`（针对评审意见修改后再次简化）
 - **相关 Rules**: R3 `coding-style`, R4 `testing`

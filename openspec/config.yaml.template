@@ -1,7 +1,7 @@
 # OpenSpec 项目配置文件
 # 本文件由 OpenSpec CLI 自动读取，内容会注入到每个 artifact 的 instructions 中
 # schema.yaml 中各 artifact 的详细规则定义已覆盖大部分场景，此处仅保留 schema 声明
-# schema: spec-driven-enhanced
+schema: spec-driven-enhanced
 
 # 项目上下文（可选）
 # 会被注入到所有 artifact（proposal/specs/design/tasks）的 instructions

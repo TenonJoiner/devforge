@@ -109,7 +109,7 @@
 **触发命令**：
 - `/df:tdd` — TDD 开发
 - `/df:review` — 代码评审
-- `/df:refactor` — 代码重构
+- `/df:simplify` — 代码简化重构（深度）
 - `/df:lint` — 编译检查
 - `/df:switch-worktree` — 切换 worktree
 - `/df:debug` — 系统化调试

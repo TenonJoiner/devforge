@@ -14,7 +14,7 @@ allowed-tools: [Read, Bash, Grep, Glob, Agent]
 
 - 单个 task 或一组 task 的变更量较大（>200 行）
 - archive 前最终整理
-- `/df:refactor` 后发现仍有明显异味
+- 代码评审后发现仍有明显异味
 - 特性级 `/opsx:apply` 的 Q.4 阶段（全量 diff 评审后）
 
 ## 执行流程
@@ -123,17 +123,7 @@ allowed-tools: [Read, Bash, Grep, Glob, Agent]
 - 热路径上出现了 `malloc` 或锁
 - 新文件/新函数的 50% 以上代码在别处已存在
 
-## 与 `code/code-refactor` 的关系
-
-| | `code/code-refactor` | `code/simplify` |
-|---|---|---|
-| 触发时机 | 每个 task 后 | 一批变更后 / archive 前 |
-| 检查方式 | 单 agent，聚焦结构 | 3 subagent 并行，复用+质量+效率 |
-| 成本 | 秒级–分钟级 | 分钟级 |
-| 使用节奏 | 日常高频 | 低频深度 |
-
 ## Integration
 
-- **前置 Command**: `/df:code-review` 或 `/df:refactor`（本 Skill 由 `/df:refactor --deep` 触发）
-- **后续 Command**: `/df:lint`
+- **相关 Rules**: R3 `coding-style`
 - **Agent**: `developer` 调度，`code-reviewer` 作为 subagent
