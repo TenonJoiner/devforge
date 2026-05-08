@@ -1,46 +1,43 @@
 # /df:lint
 
-执行编译检查和静态分析。默认 fast 模式只跑编译 + clang-tidy；`--full` 模式额外跑 valgrind 全量内存检测。
+编译检查与静态分析。按项目配置自动探测语言工具链。
 
 ## 何时使用
 
-- 修改 C 代码后快速验证（fast 模式）
+- 修改代码后快速验证（fast 模式）
 - 提交前最终检查（fast 模式）
 - `/df:tdd` 后的补充验证（fast 模式）
-- 特性级 archive 前或 Q.1 质量收尾（`--full` 模式）
+- 特性级 archive 前或 QA 阶段质量收尾
 
 ## 执行流程
 
 1. 激活 `developer` Agent
 2. 进入 `code/lint-check` Skill：
-   - L1：编译（优先使用项目构建脚本 `make`/`cmake --build build` 等）
-   - L2：clang-tidy
-   - L3：valgrind（仅在 `--full` 模式下执行，需测试二进制已存在）
+   - L1：编译检查（探测构建脚本，验证 zero warning，生成 compile_commands.json）
+   - L2：静态分析（按项目配置自动探测工具：clang-tidy + cppcheck / clippy / golangci-lint / ruff / eslint 等）
 3. 汇总检查结果
 4. 如发现问题，提供修复建议
 
 ## 参数
 
 ```
-/df:lint [--full] [target]
+/df:lint [target]
 ```
 
-- `--full`：同时执行 valgrind 内存检测
-- `target`（可选）：指定要检查的目标文件或构建产物
+- `target`（可选）：指定要检查的目标文件或目录
 
 ## 使用示例
 
 ```
 /df:lint
-> 编译 ✅ 0 error, 0 warning
-> clang-tidy ⚠️ 2 个 readability Warning
-```
-
-```
-/df:lint --full
-> 编译 ✅ 0 error, 0 warning
-> clang-tidy ⚠️ 2 个 readability Warning
-> valgrind ✅ 0 errors
+> L1 编译检查
+>   ✓ make: 0 error, 0 warning
+>
+> L2 静态分析
+>   ✓ clang-tidy: 0 error, 0 warning
+>   ✓ cppcheck: 0 error, 0 warning
+>
+> 总计: 0 error, 0 warning
 ```
 
 ## 关联

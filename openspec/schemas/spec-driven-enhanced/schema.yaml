@@ -368,7 +368,7 @@ artifacts:
 
       ```
       ## QA. 质量保障
-      - [ ] QA.1 FULL-LINT: 调用 /df:lint --full 静态检查（含内存检查）并修复
+      - [ ] QA.1 FULL-LINT: 调用 /df:lint 编译检查 + 静态分析并修复
       - [ ] QA.2 FULL-REVIEW: 调用 /df:code-review 全量评审并修复 CRITICAL/HIGH
       - [ ] QA.3 DEEP-REFACTOR: 调用 /df:simplify 深度简化重构
       - [ ] QA.4 UNIT-COVERAGE: 重新执行单元测试，验收覆盖率达标
@@ -460,7 +460,7 @@ apply:
     | REVIEW | code-reviewer agent → developer agent | `/df:code-review` 评审 → developer 按 CRITICAL/HIGH 修复 |
     | DEEP-REFACTOR | developer agent | `/df:simplify` skill（深度重构，跨 scenario） |
     | FULL-REVIEW | code-reviewer agent → developer agent | `/df:code-review` 全量评审 → developer 修复 |
-    | FULL-LINT | code-reviewer agent → developer agent | `/df:lint --full` → developer 修复 |
+    | FULL-LINT | code-reviewer agent → developer agent | `/df:lint` → developer 修复 |
     | UNIT-COVERAGE | developer agent | 运行测试套件，验收覆盖率达标 |
     | INTEGRATION-TEST | developer agent | feature 级别基本集成测试编写与验证 |
 
