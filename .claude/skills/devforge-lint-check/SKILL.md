@@ -57,17 +57,39 @@ allowed-tools: [Read, Bash, Grep, Glob]
 
 **工具链探测**（按项目配置文件自动选择）：
 
-| 语言 | 探测信号 | 静态分析工具 | 说明 |
-|------|---------|------------|------|
-| C/C++ | `.clang-tidy` / `compile_commands.json` | `clang-tidy` + `cppcheck` | 两者互补，clang-tidy 偏 AST 分析，cppcheck 偏数据流分析 |
-| Rust | `Cargo.toml` | `clippy` | 官方 linter，需要 `cargo clippy` |
-| Go | `go.mod` / `.golangci.yml` | `golangci-lint` | 集成多个 linter |
-| Python | `pyproject.toml` / `.pylintrc` | `ruff check` / `pylint` | ruff 速度优先，pylint 深度优先 |
-| JS/TS | `package.json` / `biome.json` / `.eslintrc*` | `biome check` / `eslint` | biome 为 format+lint 二合一 |
+| 语言 | 探测信号 | 类型检查 | 静态分析 | 说明 |
+|------|---------|---------|---------|------|
+| C/C++ | `.clang-tidy` / `compile_commands.json` | 编译器内置（L1） | `clang-tidy` + `cppcheck` | 编译即类型检查；静态分析双工具互补 |
+| Rust | `Cargo.toml` | 编译器内置（L1） | `clippy` | `cargo clippy` 同时做类型检查和 lint |
+| Go | `go.mod` / `.golangci.yml` | 编译器内置（L1） | `golangci-lint` / `go vet` | 编译即类型检查 |
+| Python | `pyproject.toml` / `mypy.ini` | `mypy` / `pyright` | `ruff check` / `pylint` | Python 为动态类型，需要显式 type check |
+| JS/TS | `package.json` / `tsconfig.json` | `tsc --noEmit` | `biome check` / `eslint` | TS 编译器做类型检查；JS 可选 `// @ts-check` |
+
+**执行顺序（L2 内部）**：
+
+1. **Type Check**（仅对需要显式类型检查的语言）：
+   - Python: `mypy .` 或 `pyright`
+   - JS/TS: `tsc --noEmit`（需要 `tsconfig.json`）
+   - C/C++/Rust/Go: 编译器已覆盖，跳过
+
+2. **Lint / 静态分析**：
+   - 按语言调用对应工具（见上表）
 
 **配置文件策略**：
 - **存在项目配置**（如 `.clang-tidy`、`.golangci.yml`）→ 尊重并使用该配置
 - **不存在项目配置** → 提示用户创建，给出推荐模板（参考 `.claude/rules/coding-style-<lang>.md`）
+
+**Type Check 执行示例**：
+
+```bash
+# Python
+mypy --strict src/          # 或 pyright
+
+# TypeScript
+tsc --noEmit                # 需要 tsconfig.json
+# JavaScript（带 // @ts-check）
+tsc --noEmit --allowJs --checkJs
+```
 
 **cppcheck 执行参数（C/C++）**：
 ```bash
