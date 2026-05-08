@@ -23,6 +23,20 @@ allowed-tools: [Read, Bash, Grep, Glob]
 - `/df:tdd` 后的补充验证（fast 模式）
 - 特性级 archive 前或 QA 阶段质量收尾
 
+## 执行范围
+
+通过 `git diff` 自动判定检查范围，无需额外参数。
+
+| 场景 | 范围判定 | L1 编译 | L2 静态分析 | 适用阶段 |
+|------|---------|---------|------------|---------|
+| **增量** | `git diff --name-only HEAD`（未提交变更） | 交给构建系统自然增量 | 仅对变更的源文件执行 linter | Requirement LINT（tasks.md 1.3 / 2.2） |
+| **全量** | `git diff $(git merge-base HEAD main)..HEAD` 或不限制 | clean build 或构建系统全量 | 全项目执行 linter | QA FULL-LINT（tasks.md QA.1） |
+
+**范围铁律**：
+- L1 编译始终由构建系统（make/cmake/cargo/go）处理增量，不做人为限制
+- L2 静态分析按上表范围执行，只分析范围内的源文件
+- 头文件（`.h`/`.hpp`）变更时，静态分析工具应通过 `--header-filter` 等机制捕获其影响
+
 ## 检查层级
 
 ### L1：编译检查（零 warning 验证）

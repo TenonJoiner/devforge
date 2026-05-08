@@ -14,7 +14,7 @@
   <!-- 测试文件路径、测试函数名、源文件路径、函数签名、关键逻辑 -->
 - [ ] 1.2 <!-- Scenario B（异常路径）标识 -->: RED → GREEN → REFACTOR
   <!-- 异常路径测试文件路径、测试函数名、源文件路径、函数签名 -->
-- [ ] 1.3 LINT: 调用 /df:lint 静态检查并修复
+- [ ] 1.3 LINT: 调用 /df:lint 检查变更文件，修复编译错误和静态分析问题
 - [ ] 1.4 REVIEW: 调用 /df:code-review 评审并修复 CRITICAL/HIGH
 
 ## 2. <!-- Requirement 名称 -->
@@ -23,13 +23,14 @@
 
 - [ ] 2.1 <!-- Scenario 标识 -->: RED → GREEN → REFACTOR
   <!-- 测试文件路径、测试函数名、源文件路径、函数签名、关键逻辑 -->
-- [ ] 2.2 LINT: 调用 /df:lint 静态检查并修复
+- [ ] 2.2 LINT: 调用 /df:lint 检查变更文件，修复编译错误和静态分析问题
 - [ ] 2.3 REVIEW: 调用 /df:code-review 评审并修复 CRITICAL/HIGH
 
 ## QA. 质量保障
 
-- [ ] QA.1 FULL-LINT: 调用 /df:lint --full 静态检查（含内存检查）并修复
+- [ ] QA.1 FULL-LINT: 调用 /df:lint 全量检查（编译 + 静态分析），修复所有 error/warning
 - [ ] QA.2 FULL-REVIEW: 调用 /df:code-review 全量评审并修复 CRITICAL/HIGH
 - [ ] QA.3 DEEP-REFACTOR: 调用 /df:simplify 深度简化重构
 - [ ] QA.4 UNIT-COVERAGE: 重新执行单元测试，验收覆盖率达标
 - [ ] QA.5 INTEGRATION-TEST: 开发 feature 级别集成测试用例，运行并验证通过
+- [ ] QA.6 MEMORY-CHECK: 调用 valgrind / AddressSanitizer 执行内存检测（动态分析，需编译运行）
