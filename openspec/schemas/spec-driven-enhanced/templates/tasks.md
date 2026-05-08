@@ -33,4 +33,3 @@
 - [ ] QA.3 DEEP-REFACTOR: 调用 /df:simplify 深度简化重构
 - [ ] QA.4 UNIT-COVERAGE: 重新执行单元测试，验收覆盖率达标
 - [ ] QA.5 INTEGRATION-TEST: 开发 feature 级别集成测试用例，运行并验证通过
-- [ ] QA.6 MEMORY-CHECK: 调用 valgrind / AddressSanitizer 执行内存检测（动态分析，需编译运行）
