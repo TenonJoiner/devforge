@@ -14,9 +14,18 @@
       "type": "PostToolUse",
       "matcher": {
         "tool": "Edit",
-        "fileGlob": "**/*.{c,h}"
+        "fileGlob": "**/*.{c,h,cpp,cc,cxx,hpp,hh,rs,go,py,js,ts,jsx,tsx,json,jsonc,md}"
       },
       "command": "bash .claude/hooks/post-edit-format.sh"
+    },
+    {
+      "name": "post-edit-quality-gate",
+      "type": "PostToolUse",
+      "matcher": {
+        "tool": "Edit",
+        "fileGlob": "**/*.{json,jsonc,yaml,yml}"
+      },
+      "command": "bash .claude/hooks/post-edit-quality-gate.sh"
     },
     {
       "name": "worktree-guard",
