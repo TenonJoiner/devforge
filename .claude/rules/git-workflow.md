@@ -4,6 +4,20 @@
 
 所有代码提交。
 
+## Commit 粒度
+
+**基本单位是 task group（Requirement）**。
+
+- 每个 Requirement 任务组（含所有 Scenario 实现 + LINT 修复 + REVIEW 修复）完成后，整理为一个正式 commit
+- task 内部 developer 可自由 commit 作为工作快照，task group 完成前使用 `git rebase -i` 整理为单一 atomic commit
+- 禁止一个 commit 包含多个 Requirement 的变更
+- 禁止多个 task group 不 commit 攒在一起
+
+**为什么以 task group 为粒度**：
+- 与代码评审（N.M.6 REVIEW）的粒度对齐——REVIEW 评审的是整个 Requirement 的变更
+- 保持对外 commit 历史简洁，同时允许开发过程中频繁快照
+- 每个 commit 对应一条可独立验证的 Requirement
+
 ## Conventional Commits
 
 提交信息格式：
@@ -28,6 +42,8 @@ Refs: <proposal-name>/<task-id>
 **scope**：子系统名，如 `storage`、`metadata`、`network`
 
 **Refs**：关联的 OpenSpec proposal 或 task（如 `Refs: storage-wal-impl/step-2`）
+
+**commit message 中的 `task-id`**：使用 tasks.md 中的任务组编号（如 `1`、`2a`），表示该 commit 对应哪个 Requirement 任务组
 
 ## 分支策略
 

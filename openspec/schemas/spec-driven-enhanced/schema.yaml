@@ -477,6 +477,16 @@ apply:
     - **code-reviewer agent**：只审不写。输出结构化分级评审意见
       （CRITICAL / HIGH / MEDIUM / LOW），不直接修改代码
 
+    ## Commit 策略
+
+    遵循 R2 `git-workflow` 的 Commit 规范：
+
+    - **粒度**：每个 Requirement 任务组完成后整理为一个正式 commit
+    - **格式**：Conventional Commits，Refs 字段关联 proposal 和任务组编号
+    - **整理**：task 内部可自由 commit，task group 完成前 rebase 为单一 atomic commit
+
+    详见 `.claude/rules/git-workflow.md` §Commit 粒度。
+
     ## 主会话职责
 
     主会话作为调度者，只做：
