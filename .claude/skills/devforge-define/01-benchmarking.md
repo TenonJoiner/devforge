@@ -66,30 +66,31 @@
 
 1. 按 2.1 确定的配置，**每个标杆启动 ≥2 个 researcher agent**：
    - 各自从分配的需求视角独立研究同一标杆
-   - 产出目录：`docs/requirements/reference/`
+   - **写入文件**：将完整报告写入 `docs/requirements/reference/<product>-draft-{view}.md`
+   - **返回摘要**：向主会话返回 ≤5 行轻量摘要（覆盖章节数、关键发现数、异常点）
    - 分析视角：**需求/用户/产品视角**，禁止技术分析
    - 模板约束：使用 `.claude/templates/ref-requirements.md`
    - **禁止**多个 researcher 使用同一 prompt 模板、同一分析框架
 
 2. **遵守 SKILL.md「Agent 并发控制」**：若 agent 总数超过 `agent.max_concurrent`，使用滑动窗口策略——初始启动 5 个，每完成一个立即补位下一个。禁止以并发限制为由减少 researcher 数量或合并视角
 
-### 2.3 产出格式与合并规则
+### 2.3 标杆整合（合并 researcher）
 
-**每个标杆产出为单一文件**，命名格式：
-```
-docs/requirements/reference/<product>.md
-```
+**主会话确认所有 researcher 完成后**，按标杆分组各派一个合并 researcher：
 
-多视角研究合并要求：
-- 主会话收集同一标杆的所有 researcher 产出后，**整合为单一文档**
-- 在文档开头增加「研究视角」章节，标注各视角的 researcher 归属
-- 同一章节内多视角内容冲突时，主会话标注差异并给出整合理由
-- **禁止**将同一标杆的多个视角拆分为多个独立文件（如 `influxdb.md` + `influxdb-ops.md`）
-- 合并后删除 researcher 原始分散产出，只保留合并后的单一文件
+- **输入**：`reference/<product>-draft-*.md`（同一标杆的所有 draft 文件）
+- **执行**：读取所有 draft，按以下规则整合为单一文档
+  - 按 `.claude/templates/ref-requirements.md` 模板组装
+  - 在文档开头增加「研究视角」章节，标注各视角的 researcher 归属
+  - 同一章节内多视角内容冲突时，保留更具体的描述，标注差异并给出整合理由
+- **输出**：`docs/requirements/reference/<product>.md`
+- **返回**：向主会话返回摘要（合并后章节数、冲突标注数、各视角覆盖度）
+
+**禁止**：将同一标杆的多个视角保留为多个独立文件（如 `minio.md` + `minio-ops.md`），必须整合为单一文件。
 
 ### 2.4 产出完整性检查
 
-主会话将合并后的标杆文件写入目录后、进入步骤 3 前，必须执行以下检查：
+合并后的标杆文件写入目录后、进入步骤 3 前，必须执行以下检查：
 
 - [ ] **标杆文件数** = 确认的标杆数（每个标杆恰好 1 个文件）
 - [ ] **每个标杆的视角数** ≥ 2（通过「研究视角」章节或文件内标注确认）
@@ -121,7 +122,12 @@ docs/requirements/reference/<product>.md
 
 ### 3.2 收集评审结果
 
-主会话收集 reviewer 产出的问题列表（每个问题标注级别和所属维度），进入验证流程。
+每个 reviewer agent：
+- 读取标杆最终文件（`reference/<product>.md`）执行评审
+- 将评审意见追加到 `reference/<product>-review.md`
+- 向主会话返回数字摘要：{issues: N, density: X, critical: Y}
+
+主会话从数字摘要判定通过/修正/回退，不读取完整评审内容。
 
 ### 3.3 验证与修正
 
@@ -133,7 +139,7 @@ docs/requirements/reference/<product>.md
 |------|-----|------|
 | 评估对象数 | 标杆数量 | 即 `docs/requirements/reference/` 下的文件数 |
 | 缺陷密度门槛 | ≤ 2.0 分/标杆 | 见 SKILL.md「缺陷密度门槛标定依据」 |
-| 修正后复核路径 | 回到 3.1 重新评审 | 对应标准循环第 5 步 |
+| 修正后复核路径 | 回到 3.1 重新评审；修正后的每一轮复核都必须重新计算缺陷密度并填入评审记录 | 对应标准循环第 5 步 |
 | \> 30 处回退目标 | 回退到步骤 2.1 | 重新决定 agent 配置和视角切分 |
 
 **成功退出条件**（同时满足）：

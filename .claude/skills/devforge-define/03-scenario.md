@@ -21,20 +21,34 @@
    - 高复杂度 domain：≥3 个 product agent，视角切分由主会话根据该 domain 的**实际性质**动态决定（如按正常/故障/运维维度、按 Actor 角色维度、按时间阶段维度等），在派遣 prompt 中说明切分理由，禁止套用固定视角清单
    - **并发规则**：汇总所有 domain 的 agent 总数，若超 `agent.max_concurrent`，初始启动 5 个，每完成一个立即从待启动队列中补位下一个。禁止以并发限制为由减少 domain 数或降低复杂度判定
 4. 每个 agent 基于定稿的 Actor-Feature 挖掘 Scenario
+   - **写入文件**：将 Scenario 表格写入 `docs/requirements/<feature-domain>-draft-{view}.md`
+   - **返回摘要**：向主会话返回 ≤5 行摘要（Feature 数、Scenario 数、覆盖率）
 5. **所有内容结构严格遵循 `.claude/templates/req-feature.md` 模板**
 6. 量化非功能需求
-7. 主会话收集各 agent 产出，按模板整合为统一 domain 文档，写入 `docs/requirements/<feature-domain>.md`
+7. **主会话确认所有 agent 完成后，按 domain 各派一个合并 product agent**
+   - **输入**：`<feature-domain>-draft-*.md`
+   - **执行**：读取所有 draft，去重、处理冲突，按模板组装完整文档
+   - **输出**：`docs/requirements/<feature-domain>.md`
+   - **返回**：向主会话返回摘要（Feature 数、Scenario 数、去重数）
+
+**agent prompt 产出粒度约束**（必须注入每个 agent 的 prompt）：
+- **Scenario 产出格式为表格行**（场景一句话描述 + 量化验收标准 + 可测试性），禁止展开为多段式用例（前置条件/触发动作/预期行为/验证方法等字段留给特性级 OpenSpec）
+- **禁止写具体故障注入方法**（如 iptables 命令、kill -9 步骤、tc 参数）和测试脚本
+- **验收标准限一句话量化**（如"P99 < 100ms"、"数据丢失率 = 0"、"恢复时间 < 30s"）
+- **每个 Feature 的 Scenario 数量控制在 5-10 个**（正常路径 2-3 + 故障/边界 3-5），超出需合并或提升抽象层级
+- **产品级只定义"验什么"，不定义"怎么验"**——具体验证步骤、测试环境搭建、数据准备等留给特性级
 
 **主会话职责**（步骤 1）：
 - 读取 `product-spec.md`，按"归属特性域"字段对 Feature 分组，确定 domain 列表
 - 对每个 domain 独立判定复杂度（综合评估 Actor 数量、依赖密度、规模与并发、质量关键路径等因素，非二维布尔）
 - 按 domain 复杂度派遣 product agent，注入对应的视角约束
-- 收集各 agent 产出，整合去重、处理冲突，按模板写入对应 domain 文件
+- 确认各 domain 的 agent 全部完成后，派发合并 product agent
+- 从合并 agent 返回的摘要确认 domain 文档已完成
 
 **步骤 1 出口标准**（每个 domain 文档）：
 - [ ] 文档已按 `req-feature.md` 模板结构写入
-- [ ] 每个 Scenario 有明确的触发条件、执行步骤、预期结果
-- [ ] 每个 Scenario 的验收标准可量化、可独立验证
+- [ ] 每个 Feature 有 5-10 个 Scenario（表格行），每行含一句话场景描述和量化验收标准
+- [ ] 故障模式覆盖矩阵中每个 Feature 至少 5 个 ✅（正常路径 + 4 种故障模式）
 - [ ] 非功能需求有量化指标（具体数字 + 验收方法）
 - [ ] 文档已写入 `docs/requirements/<feature-domain>.md`
 
@@ -55,9 +69,14 @@
 
 ### 2.2 独立评审
 
-主会话按评审配置派遣 reviewer（遵守 SKILL.md「Agent 并发控制」滑动窗口）。若所有 domain 的 reviewer 总数超过 `agent.max_concurrent`，初始启动 5 个，每完成一个立即补位下一个。
+派遣 reviewer，各 reviewer：
+- 读取对应 domain 最终文件执行评审
+- 将评审意见追加到 `<feature-domain>-review.md`
+- 向主会话返回数字摘要：{issues: N, density: X, critical: Y}
 
-- **评审纪要写作规范**：参见 SKILL.md「评审纪要写作规范」
+主会话从数字摘要判定各 domain 的通过/修正/回退，不读取完整评审内容。
+
+**并发规则**：若所有 domain 的 reviewer 总数超过 `agent.max_concurrent`，初始启动 5 个，每完成一个立即补位下一个。
 
 ### 2.3 验证与修正
 
@@ -68,7 +87,7 @@
 | 评估对象数 | Feature 数量 | 按 domain 内 Feature 数计算，各 domain 独立 |
 | 缺陷密度门槛 | ≤ 1.5 分/Feature | 见 SKILL.md「缺陷密度门槛标定依据」 |
 | 修正 agent | product agent | 修正后更新对应 domain 文档 |
-| 修正后复核路径 | 回到 2.2 独立评审 | |
+| 修正后复核路径 | 回到 2.2 独立评审；修正后的每一轮复核都必须重新计算缺陷密度并填入评审记录 | |
 | \> 30 处回退目标 | 仅该 domain 回退到步骤 1 | 重新执行多 agent 并行发散，其他 domain 不受影响 |
 
 **成功退出条件**（同时满足）：
