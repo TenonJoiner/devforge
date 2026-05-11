@@ -1,9 +1,7 @@
 # 第 0 阶段：前置调研与定位确认
 
 **准入条件**：无
-**产出文件**：
-- `.claude/domain-config.yaml`
-- `docs/architecture/design.md`（初稿/WIP 状态）
+**产出文件**：`.claude/domain-config.yaml`
 
 > **豁免说明**：第 0 阶段为交互式信息收集，豁免完整多 agent 评审修正循环，但需通过准入检查清单确认信息充分性。
 
@@ -11,159 +9,117 @@
 
 ## 核心原则
 
-不调研清楚背景和约束就开始标杆研究，等同于盲人摸象。必须与用户通过**多次交互式提问**逐层深入，禁止一次性抛出所有问题。
+不调研清楚背景和约束就开始标杆研究，标杆选择可能偏离方向。通过**交互式提问**逐层深入，禁止一次性抛出所有问题。
 
-每轮聚焦 1-2 个主题，从通用到具体逐层深入，根据用户回答动态调整后续问题方向。**问题由 architect agent 根据本次产品上下文动态生成，不预写固定问题清单。**
-
----
-
-## 执行方式
-
-交互式前置调研由**派遣 architect agent 执行**，主会话负责搬运产出到对话正文。
-
-> **关键事实**：用户看不到 Agent 工具的返回内容，只能看到主会话输出的文本。主会话必须将 architect agent 的交互式提问**完整搬运到对话正文**，用户才能看到问题并回答。
-
-**主会话职责**：
-1. 派遣 architect agent 执行交互式提问（按主题清单收敛，每轮 1-2 个主题）
-2. 将 agent 产出的问题列表完整搬运到对话正文（不改写、不裁剪，仅格式统一为 `R{n}-Q{m}` 编号）
-3. 收集用户回答后，将回答传递给 agent 继续下一轮提问
-4. 最终派 architect agent 写入 domain-config.yaml + design.md 初稿
-
-> 多轮交互编号规范见 SKILL.md「多轮交互的轮次编号规范」。
+> **两 skill 协作**：/df:define 和 /df:design 共用 T1-T6 主题清单。define 主导 T1-T5，design 主导 T6，双方互相校验。场景 B 时 design 跳过已闭合的 T1-T5，执行 T6 并从架构视角校验。
 
 ---
 
 ## 步骤 1：检查 domain-config.yaml
 
-主会话首先检查 `.claude/domain-config.yaml` 是否存在：
+交互式前置调研由**主会话直接执行**，不派遣 agent。主会话首先检查 `.claude/domain-config.yaml` 是否存在：
 
 **场景 A：文件不存在**（首次执行，/df:define 未执行）
 - 执行完整的领域信息收集（所有主题）
-- 由派遣的 architect agent 生成新的 domain-config.yaml
+- 最终由主会话生成新的 domain-config.yaml
 
 **场景 B：文件已存在**（/df:define 已执行过）
 - 主会话读取现有配置，向用户展示
-- 询问："这些信息是否仍然准确？"
-- 如果准确：跳过已有字段对应的主题，只收集 design 负责的字段
+- 询问："这些信息是否仍然准确？架构视角下是否有需要调整的？"
+- 如果准确：跳过已有字段对应的主题，只收集 design 负责的 T6
+- 如果需要修正：逐项确认需要修改的字段
+
+**场景 C：文件已存在**（/df:design 先前已执行过）
+- 读取现有配置，向用户展示
+- 从架构视角校验已填的 T1-T6：
+  - T1-T5：目标用户是否准确？痛点表述是否到位？规模量级是否合理？边界是否完整？
+  - T6：targets 量化目标是否反映了真实业务需求？数字是否合理？
+  - 校验动作：评估 targets 与 T4 priorities 的自洽性（如 consistency 优先级低但 targets 要求 strong，矛盾）
+- 询问："这些信息从架构视角看是否仍然准确？是否有需要调整或补充的？"
+- 如果准确：跳过步骤 2 中已有字段的提问
 - 如果需要修正：逐项确认需要修改的字段
 
 ---
 
-## 步骤 2：交互式领域信息收集
+## 步骤 2：前置调研信息收集（主题驱动对话）
 
-主会话派遣 architect agent，执行多轮交互式提问。**架构师按主题清单组织对话，禁止套用预写问题。**
+> **执行原则**：主会话围绕主题清单与用户进行交互式对话，**对话顺序、问法、追问深度由主会话动态决定**。文档不预写问题脚本，仅约束「必须收敛到的目标」和「下游依赖的锚点枚举」。
 
-### 必须收敛的主题清单（agent 据此组织对话）
+### 2.0 主题清单
 
-> 每个主题至少收敛到「目标 + 1 个关键事实」即视为闭合。具体问法、追问深度、提问顺序由 architect agent 基于产品上下文动态决定。
+围绕"前置调研"必须逐个收敛的主题（顺序由主会话根据对话进展决定，可交错进行）：
 
-**A. 系统类型与定位**（场景 A 必填，场景 B 已有则跳过）
-- 收敛目标：填充 `system.primary_type` + `system.sub_type`
-- 关键事实：系统主类型（分布式系统/OS/编译器/网络栈等）、子类型
+| 编号 | 主题 | 闭合标志 | 锚点 | 下游用途 |
+|------|------|---------|------|---------|
+| T1 | 系统类型与定位 | primary_type 已落到枚举 + sub_type 视情况追问 | `primary_type`、`sub_type` 枚举 | 第 1 阶段标杆筛选、架构模式预选 |
+| T2 | 目标用户与核心痛点 | 核心痛点收敛到一句话 + 主要用户类型已确认 | 自由文本（汇入 description） | 第 2 阶段 Actor 识别基线 |
+| T3 | 系统规模的量级表征 | 部署/数据/并发三档位均已落到枚举；条件性的并发拆分按系统类型完成 | `deployment`、`data_scale`、`concurrency.peak`（+ 条件性拆分字段）枚举 | 第 1 阶段标杆筛选、/df:design 规模约束 |
+| T4 | 质量属性优先级 | 5 项已排序 + 排序原因已说明 | `quality_attributes.priorities` 1-5 排序 | 标杆研究权重、架构权衡 |
+| T5 | 明确的边界约束 | >=2 个"不做的事"已列出 | 自由文本（汇入 description） | 第 2 阶段 Feature 识别的禁区 |
+| T6 | 质量属性量化目标 | 量化指标已明确（latency/throughput/SLA/consistency_model） | `quality_attributes.targets` | 第 2-3 阶段架构设计约束 |
 
-**B. 系统规模与团队**（场景 A 必填，场景 B 已有则跳过）
-- 收敛目标：填充 `system.complexity` + `team_size` + `codebase_size`
-- 关键事实：复杂度量级（small/medium/large/very-large）、团队规模、目标代码量级
+### 2.1 锚点字段（最终值必须落到模板枚举）
 
-**C. 编程语言与工具链**（design 负责，必填）
-- 收敛目标：填充 `languages.primary`（含 name/version/toolchain）
-- 关键事实：主语言（C/C++/Rust/Go/Python/Java 等）、版本/标准、工具链。如多语言需明确主次定位
+下游分支决策依赖以下字段，主会话**必须**将收集到的信息收敛到受控枚举值写入 yaml，不接受自由文本：
 
-**D. 标杆产品清单**（design 负责，必填）
-- 收敛目标：填充 `benchmarks` 列表
-- 关键事实：用户希望对比的 2-3 个标杆产品（agent 可基于产品定位主动建议候选，由用户确认/修正）
+- **T1**：`system.primary_type`（10 值枚举）；`system.sub_type` 为可选追问，主会话根据系统类型和对话上下文自行判断是否需要
+- **T3**：`system.scale.deployment`（4 值枚举）、`system.scale.data_scale`（4 值枚举）、`system.scale.concurrency.peak`（5 值枚举）
+- **T4**：`quality_attributes.priorities` 5 项（各填 1-5 整数，无重复）
+- **T6**：`quality_attributes.targets.consistency_model`（3 值枚举：strong / eventual / causal）
 
-**E. 架构约束**（design 负责，必填）
-- 收敛目标：填充 `architecture.distributed` / `architecture.concurrency` / `architecture.memory`
-- 关键事实：一致性模型（强一致/最终一致/因果一致）、并发模型（单线程/多线程/事件驱动/Actor）、内存管理策略（手动/GC/混合）
+**T3 条件性追问**：主会话根据 T1 系统类型判断是否追问 concurrency 拆分字段（如读写拆分、produce/consume、task_count 等）。具体字段-系统类型映射见模板 `.claude/templates/domain-config.yaml` 中各 concurrency 字段注释。
 
-**F. 性能基线量化**（design 负责，必填）
-- 收敛目标：填充 `quality_attributes.targets`
-- 关键事实：至少 3 个可量化指标，覆盖延迟（P50/P99/P99.9）、吞吐（单节点/集群）、扩展性（节点数范围）
+**工具约束**：`AskUserQuestion` 最多 4 个选项。当锚点取值数 > 4 时（如 `primary_type` 有 10 个值），主会话先通过开放式对话或粗分类将候选集缩至 <= 4 个，再用 `AskUserQuestion` 收口。**手段不限，但结果必须是模板枚举值。**
 
-**G. 质量属性优先级**（场景 A 必填，场景 B 已有则跳过）
-- 收敛目标：填充 `quality_attributes.priorities`
-- 关键事实：1-5 排序（一致性/性能/可用性/可维护性/成本）
+> **枚举值的单一信息源**：所有锚点字段的具体取值范围见 `.claude/templates/domain-config.yaml` 各字段注释。本 skill 不再列举枚举内容。
 
-**H. 系统目标与边界**（design 负责，必填）
-- 收敛目标：填充 `system.goal` + `system.non_goals`
-- 关键事实：解决什么问题、明确不做什么（≥ 2-3 项 non-goal）
+### 2.2 闭合度自检（出对话前主会话自检）
 
-**I. 部署拓扑与规模量级**（design 负责，必填）
-- 收敛目标：填充 `system.deployment`
-- 关键事实：部署形态、节点规模量级
+对话过程中主会话持续维护一份"主题闭合表"，每个主题有 3 种状态：未启动 / 进行中 / 已闭合。**所有主题进入"已闭合"才能进入步骤 3**。
 
-### Agent prompt 必须包含的约束
+**闭合判定标准**：
+- T1：primary_type 已落到枚举值；sub_type 为可选，由主会话判断是否追问
+- T2：用户已说出明确的核心痛点（不是"性能更好""体验更好"这种空话）+ 主要用户类型已确认
+- T3：deployment / data_scale / concurrency.peak 均已落到枚举值；条件性拆分字段按 T1 类型规则补齐
+- T4：5 项质量属性已排序（无并列、无遗漏）+ 用户给出了排序原因
+- T5：>=2 个具体的"不做的事"已列出（不是"不做无关的事"这种空话）
+- T6：量化目标已明确（至少 consistency_model 已落到枚举 + latency_p99 / throughput / availability_sla 有具体数值或范围）
 
-主会话派遣 architect agent 时，prompt 必须显式注入以下段落：
-
-```markdown
-## 交互式调研约束
-
-- ✅ 按主题清单收敛，每轮聚焦 1-2 个主题
-- ✅ 问题编号使用 `R{n}-Q{m}` 格式（如 R1-Q1、R2-Q2）
-- ✅ 根据用户回答动态调整下一轮提问方向，不预设固定问题序列
-- ✅ 涉及标杆产品候选时，可基于产品定位主动建议 2-3 个候选供用户选择
-- ❌ 禁止一次性抛出所有主题的问题（用户疲劳）
-- ❌ 禁止套用预写问题清单（如固定的"一致性模型选项 A/B/C/D"），应根据本次产品上下文动态产出
-- ❌ 禁止在主题未闭合前进入下一主题
-```
+**禁止行为**：
+- 一次性把所有主题的问题列出来等用户回答
+- 用预写脚本式提问（如"对每个场景问 X"），而不是根据用户已说的内容动态判断
+- 没有触发追问就跳到下一主题（用户回答含糊时主会话有责任追问澄清）
+- 在锚点字段上接受自由文本写入 yaml（如用户说"挺多并发"，主会话有责任引导其落到 `concurrency.peak` 的 5 档枚举值之一）
 
 ---
 
-## 步骤 3：生成配置文件和文档
+## 步骤 3：生成/更新 domain-config.yaml
 
-所有主题闭合后，主会话派 architect agent 完成落盘工作。
+主会话将 T1-T6 收集到的信息按 2.0 主题清单与 2.1 锚点字段定义的对应关系填入 `.claude/templates/domain-config.yaml` 模板：
 
-### 3.1 生成/更新 domain-config.yaml
+- 锚点字段：直接填入对应枚举值（取值见模板字段注释）
+- T2 + T5 自由文本：综合为 `system.description` 一段（不做结构化拆分）
+- 条件性 concurrency 拆分字段：不属于当前系统类型的直接删除，不留空
+- 场景 B/C：仅更新 design 负责的 T6 字段（保留 define 已生成字段）
+- 场景 A：`metadata.created_at` 填当前日期，`metadata.contributors` 填 `["/df:design"]`
+- 场景 B/C：`metadata.contributors` 追加 `"/df:design"`（如尚未包含），`metadata.last_updated` 填当前日期
 
-agent 任务：
-1. 读取 `.claude/templates/domain-config.yaml` 模板
-2. 将收集到的字段填充进模板
-3. 场景 A：写入完整文件
-4. 场景 B：仅更新 design 负责的字段（保留 define 已生成字段）
-5. 写入 `.claude/domain-config.yaml`
+写入 `.claude/domain-config.yaml`，用 `ls` 验证文件存在。
 
-### 3.2 生成 design.md 初稿
-
-agent 任务：
-1. 读取 `.claude/templates/arch-system.md` 模板
-2. 将调研结论整理为 design.md 初稿（WIP 状态，不含具体方案）
-3. 包含：系统目标、核心约束、规模量级、明确不做的事项、性能基线
-4. 写入 `docs/architecture/design.md`
-5. 文档末尾标记 `**文档状态**: 第 0 阶段 - WIP（标杆研究待启动）`
-
-主会话收到 agent 写入完成的摘要后，用 `ls` 验证文件存在。
+> **职责边界**：本文件由 /df:define 和 /df:design 共同维护。define 主导 T1-T5（`system` 全部 + `quality_attributes.priorities`），design 主导 T6（`quality_attributes.targets`）。`system` 和 `quality_attributes` 中 design 需要补充的字段由 design 更新，但不覆盖 define 已填充的值。实现细节（languages / architecture / tech_stack / development / benchmarks）不写入本文件，由 ADR 和后续阶段产出维护。
 
 ---
 
 ## 出口标准
 
-### 准入检查清单（豁免评审循环，但需准入清单）
+### 准入检查清单
 
-> 第 0 阶段是交互式信息收集，用户可能在部分主题上尚未想清楚。核心项是进入标杆研究的前提，补充项可延后到第 1 阶段开始前逐步闭合——不必一次性收齐所有信息才推进。
+- [ ] **T1 闭合**：`primary_type` 已落到枚举值；`sub_type` 视情况追问
+- [ ] **T2 闭合**：核心痛点已收敛为一句话描述（非空话）+ 主要用户类型已确认
+- [ ] **T3 闭合**：`deployment` / `data_scale` / `concurrency.peak` 均已落到枚举值
+- [ ] **T4 闭合**：`quality_attributes.priorities` 已排序
+- [ ] **T5 闭合**：>=2 个明确的"不做的事"已列出（非空话）
+- [ ] **T6 闭合**：量化目标已明确（consistency_model 已落到枚举 + 至少一项具体数值）
+- [ ] **domain-config.yaml 已落盘**（用 `ls` 验证文件存在）
 
-**核心项**（必须闭合才能进入第 1 阶段）：
-
-- [ ] `.claude/domain-config.yaml` 已存在或已生成
-- [ ] `system.primary_type` + `system.sub_type` 已填充
-- [ ] `languages.primary` 至少一个主语言（含版本和工具链）
-- [ ] `benchmarks` 列表已填充（至少 2-3 个标杆产品）
-- [ ] `system.goal` 已明确（一句话能描述系统目标）
-- [ ] `docs/architecture/design.md` 初稿已写入并验证存在
-
-**补充项**（可在第 1 阶段进行中逐步闭合，但需在第 1 阶段评审前完成）：
-
-- [ ] `architecture.distributed` / `concurrency` / `memory` 已填充（如适用）
-- [ ] `quality_attributes.targets` 至少 3 个量化指标
-- [ ] `quality_attributes.priorities` 已排序
-- [ ] `system.non_goals` 已列出（≥ 2-3 个明确不做的事项）
-- [ ] 用户已确认定位摘要无误
-
-### 自动推进规则
-
-核心项全部通过 → 可进入第 1 阶段（标杆研究），补充项并行推进。
-
-核心项未全部通过 → 继续派遣 architect agent 补充交互式提问，直至核心项闭合。
-
-补充项未全部通过 → 第 1 阶段可启动，但主会话需在第 1 阶段评审前确认补充项已闭合。
+全部通过 -> 可进入第 1 阶段（标杆研究）。

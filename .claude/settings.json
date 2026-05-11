@@ -10,15 +10,6 @@
             "command": "bash .claude/hooks/pre-commit-lint.sh"
           }
         ]
-      },
-      {
-        "matcher": "Edit|Write",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash .claude/hooks/worktree-guard.sh"
-          }
-        ]
       }
     ],
     "PostToolUse": [

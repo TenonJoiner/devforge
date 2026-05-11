@@ -1,7 +1,7 @@
 # 第 3 阶段：Scenario 挖掘与特性域定稿
 
 **准入条件**：第 2 阶段已通过出口标准（Actor-Feature 已定稿，无 CRITICAL 问题 + 缺陷密度达标）
-**产出文件**：`docs/requirements/<feature-domain>.md`（各特性域文档）
+**产出文件**：`docs/requirements/<feature-domain-en>.md`（各特性域文档，`<feature-domain-en>` 为 `product-spec.md#Feature 总览` 中「英文标识」列的 kebab-case 值，如 `data-query.md`）
 
 ---
 
@@ -9,7 +9,7 @@
 
 **Scenario 挖掘**：
 1. 主会话读取 `product-spec.md`（Actor-Feature 终稿）作为统一输入源
-2. 按 `product-spec.md#Feature 总览` 中"归属特性域"字段对 Feature 分组（每个特性域 = 一个 domain，对应一个 `docs/requirements/<feature-domain>.md` 产出文件），无依赖的 domain 并行处理
+2. 按 `product-spec.md#Feature 总览` 中"归属特性域"字段对 Feature 分组（每个特性域 = 一个 domain），无依赖的 domain 并行处理。文件名使用「英文标识」列的 kebab-case 值（如 `data-query.md`）
 3. **按 domain 分别判定复杂度，并行启动 product agent**（遵守 SKILL.md「Agent 并发控制」滑动窗口）：
    - 主会话对每个 domain 独立判定复杂度（综合评估以下因素，非二维布尔）：
      - 涉及 Actor 数量与权限复杂度
@@ -21,14 +21,14 @@
    - 高复杂度 domain：≥3 个 product agent，视角切分由主会话根据该 domain 的**实际性质**动态决定（如按正常/故障/运维维度、按 Actor 角色维度、按时间阶段维度等），在派遣 prompt 中说明切分理由，禁止套用固定视角清单
    - **并发规则**：汇总所有 domain 的 agent 总数，若超 `agent.max_concurrent`，初始启动 5 个，每完成一个立即从待启动队列中补位下一个。禁止以并发限制为由减少 domain 数或降低复杂度判定
 4. 每个 agent 基于定稿的 Actor-Feature 挖掘 Scenario
-   - **写入文件**：将 Scenario 表格写入 `docs/requirements/<feature-domain>-draft-{view}.md`
+   - **写入文件**：将 Scenario 表格写入 `docs/requirements/<feature-domain-en>-draft-{view}.md`
    - **返回摘要**：向主会话返回 ≤5 行摘要（Feature 数、Scenario 数、覆盖率）
 5. **所有内容结构严格遵循 `.claude/templates/req-feature.md` 模板**
 6. 量化非功能需求
 7. **主会话确认所有 agent 完成后，按 domain 各派一个合并 product agent**
-   - **输入**：`<feature-domain>-draft-*.md`
+   - **输入**：`<feature-domain-en>-draft-*.md`
    - **执行**：读取所有 draft，去重、处理冲突，按模板组装完整文档
-   - **输出**：`docs/requirements/<feature-domain>.md`
+   - **输出**：`docs/requirements/<feature-domain-en>.md`
    - **返回**：向主会话返回摘要（Feature 数、Scenario 数、去重数）
 
 **agent prompt 产出粒度约束**（必须注入每个 agent 的 prompt）：
@@ -50,7 +50,7 @@
 - [ ] 每个 Feature 有 5-10 个 Scenario（表格行），每行含一句话场景描述和量化验收标准
 - [ ] 故障模式覆盖矩阵中每个 Feature 至少 5 个 ✅（正常路径 + 4 种故障模式）
 - [ ] 非功能需求有量化指标（具体数字 + 验收方法）
-- [ ] 文档已写入 `docs/requirements/<feature-domain>.md`
+- [ ] 文档已写入 `docs/requirements/<feature-domain-en>.md`
 
 ---
 
@@ -71,7 +71,7 @@
 
 派遣 reviewer，各 reviewer：
 - 读取对应 domain 最终文件执行评审
-- 将评审意见追加到 `<feature-domain>-review.md`
+- 将评审意见追加到 `<feature-domain-en>-review.md`
 - 向主会话返回数字摘要：{issues: N, density: X, critical: Y}
 
 主会话从数字摘要判定各 domain 的通过/修正/回退，不读取完整评审内容。

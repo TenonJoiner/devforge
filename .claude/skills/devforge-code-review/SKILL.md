@@ -14,7 +14,7 @@ allowed-tools: [Read, Write, Edit, Grep, Bash, Agent]
 
 **核心原则**：
 - **审修闭环**：`code-reviewer` 评审 → `developer` 修复 → `code-reviewer` 验证修复，skill 内完整闭环。角色分离由 agent 分离保证（`code-reviewer` 不写代码，`developer` 按报告修复），不是靠拆成两次调用
-- **分级明确**：CRITICAL 必须修，HIGH 强烈建议修，MEDIUM 优化建议，INFO 记录不阻塞。风格问题不进入评审管线（由 `post-edit-format` hook 自动处理）
+- **分级明确**：CRITICAL 必须修，HIGH 强烈建议修，MEDIUM 优化建议，LOW 轻微问题可延期。风格问题不进入评审管线（由 `post-edit-format` hook 自动处理）
 - **证据说话**：每个问题必须引用代码行、说明影响、提供改进方案
 - **领域适配**：根据 domain-config.yaml 的语言和质量属性优先级调整评审侧重
 
@@ -36,7 +36,7 @@ allowed-tools: [Read, Write, Edit, Grep, Bash, Agent]
 | Q.4 全量收尾 | `git diff $(git merge-base HEAD main)..HEAD`（完整 proposal 变更） | 质量收尾阶段 |
 | 指定文件 | `file-pattern` 匹配的文件 | `/df:code-review <pattern>` |
 
-**范围铁律**：评审只针对本次变更范围内的代码。发现范围外的问题时，记录为INFO变体分析发现，不阻塞本次合并。
+**范围铁律**：评审只针对本次变更范围内的代码。发现范围外的问题时，记录为LOW变体分析发现，不阻塞本次合并。
 
 ## 评审流程
 
@@ -129,7 +129,7 @@ allowed-tools: [Read, Write, Edit, Grep, Bash, Agent]
 当发现一个 CRITICAL/HIGH 级别的安全漏洞模式后：
 1. 提取核心漏洞模式（如"未检查外部输入即用于索引访问"、"动态构造命令字符串执行"）
 2. 使用 Grep 工具搜索全仓同类模式
-3. 报告为 INFO 发现："Finding #N 的变体 — [文件:行号]"
+3. 报告为 LOW 发现："Finding #N 的变体 — [文件:行号]"
 4. 变体发现**不阻塞本次合并**，由 developer 决定是否在本次或后续修复
 
 > **为什么限制变体分析的范围**：安全漏洞通常有"同类多发"特征。限制在 CRITICAL/HIGH 安全发现时触发，既防止了系统性遗漏，又避免了对普通 MEDIUM 问题过度扩散修改范围。
@@ -210,7 +210,7 @@ Correctness 和 Security 维度中的部分检查项引用 `coding-style-<lang>.
 | CRITICAL | N | [全部需修复] |
 | HIGH | N | [N 个待确认] |
 | MEDIUM | N | [可选修复] |
-| INFO | N | [变体分析等] |
+| LOW | N | [变体分析等] |
 
 ### CRITICAL（阻塞合并）
 
@@ -228,7 +228,7 @@ Correctness 和 Security 维度中的部分检查项引用 `coding-style-<lang>.
 ### MEDIUM（优化建议）
 ...
 
-### INFO（变体分析、范围外发现）
+### LOW（变体分析、范围外发现）
 ...
 ```
 
@@ -243,14 +243,14 @@ Developer 按报告逐项修复后输出：
 |---------|----------|------|------|
 | #1 | HIGH | FIXED | 已按推荐方案修复：添加返回值检查 |
 | #2 | MEDIUM | MODIFIED | 采用替代方案：提取为单独函数而非拆分 |
-| #3 | INFO | SKIPPED | 变体分析，记录后关闭 |
+| #3 | LOW | SKIPPED | 变体分析，记录后关闭 |
 | #4 | MEDIUM | ACCEPTED_RISK | 经评估当前场景无风险，标注为已接受 |
 ```
 
 **状态说明**：
 - **FIXED** — 已按评审建议或等效方案修复
 - **MODIFIED** — 采用替代方案修复，需说明与建议方案的差异及理由
-- **SKIPPED** — INFO 类发现，记录后不修复
+- **SKIPPED** — LOW 类发现，记录后不修复
 - **ACCEPTED_RISK** — MEDIUM 及以下，经评估后决定不修复，需标注理由
 
 ### Round 2+：验证报告（仅深度评审）
@@ -314,7 +314,7 @@ Developer 按报告逐项修复后输出：
   - 正常：新一轮评审无新增 CRITICAL/HIGH 时结束
   - 上限：达到 3 轮时停止，即使仍有未处理的 CRITICAL/HIGH
 - **MEDIUM**：由 developer 判断是否修复，未修复的标注为"已接受风险"
-- **INFO**：不阻塞，记录后结束
+- **LOW**：不阻塞，记录后结束
 
 ## Integration
 

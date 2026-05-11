@@ -1,7 +1,7 @@
 ---
 name: devforge-lint-check
 description: 编译检查与静态分析——零 warning 验证 + 多语言静态分析工具链，按项目配置自动探测
-allowed-tools: [Read, Bash, Grep, Glob]
+allowed-tools: [Read, Bash, Grep, Glob, Edit]
 ---
 
 # devforge-lint-check — 编译检查与静态分析
@@ -10,32 +10,73 @@ allowed-tools: [Read, Bash, Grep, Glob]
 
 编译通过（零 warning）→ 静态分析（深层缺陷检测）。两层防护，提前拦截问题。
 
-**技能边界**：本 skill 仅执行检测并输出报告，不自动修改代码。
+**技能边界**：本 skill 执行检测，发现问题后自动派遣 developer 修复并回归检查，最多 5 轮。
 
-**职责划分**：
-- **lint skill（本文件）**：编译检查 + 静态分析
-- **测试验证级**：内存检测（valgrind/asan）、并发检测（tsan/helgrind）——需要编译 + 运行测试二进制，属于动态分析，不在 lint 中执行
+## 启动检测
 
-## 何时使用
+读取当前 git 状态判定检查范围：
 
-- 编写或修改代码后快速验证（fast 模式）
-- 提交前最终检查（fast 模式）
-- `/df:tdd` 后的补充验证（fast 模式）
-- 特性级 archive 前或 QA 阶段质量收尾
+```
+git diff --name-only HEAD
+  ├─ 有输出 → 增量（未提交变更）
+  └─ 无输出 → 分支全量（feature 分支相对于 main 的变更）
+```
+
+由 `/df:lint` 参数覆盖上述自动判定（`--full` 强制分支全量、`<target>` 指定目标）。
 
 ## 执行范围
 
-通过 `git diff` 自动判定检查范围，无需额外参数。
+### 手动执行
 
-| 场景 | 范围判定 | L1 编译 | L2 静态分析 | 适用阶段 |
-|------|---------|---------|------------|---------|
-| **增量** | `git diff --name-only HEAD`（未提交变更） | 交给构建系统自然增量 | 仅对变更的源文件执行 linter | Requirement LINT（tasks.md 1.3 / 2.2） |
-| **全量** | `git diff $(git merge-base HEAD main)..HEAD` 或不限制 | clean build 或构建系统全量 | 全项目执行 linter | QA FULL-LINT（tasks.md QA.1） |
+默认根据当前 git 状态自动判定：
+
+```
+git diff --name-only HEAD
+  ├─ 有输出（工作区存在未提交变更）→ 增量
+  └─ 无输出（工作区干净）          → 分支全量
+```
+
+| 范围 | 检查内容 |
+|------|---------|
+| **增量** | 工作区中已修改但未提交的文件 |
+| **分支全量** | 当前 feature 分支相对于 main 的所有变更文件 |
+
+显式参数覆盖（跳过自动判定）：
+- `--full` → 强制分支全量（feature 分支相对于 main 的所有变更文件）。⚠ 不是"全项目"——只检查当前分支引入的变更。
+- `<file-or-dir>` → 只检查指定目标
+
+### Workflow 执行
+
+由 tasks.md 中的阶段定义直接指定范围，不依赖 git 状态自动判定：
+
+| 阶段 | 范围 | 调用方式 | 说明 |
+|------|------|---------|------|
+| Requirement LINT（tasks.md 1.3 / 2.2） | 增量 | `/df:lint` | 开发中，工作区通常有未提交变更 |
+| QA FULL-LINT（tasks.md QA.1） | **分支全量** | `/df:lint --full` | **必须显式指定** |
+| pre-commit | 增量 | `/df:lint` | H1 hook 自动调用 |
 
 **范围铁律**：
-- L1 编译始终由构建系统（make/cmake/cargo/go）处理增量，不做人为限制
-- L2 静态分析按上表范围执行，只分析范围内的源文件
-- 头文件（`.h`/`.hpp`）变更时，静态分析工具应通过 `--header-filter` 等机制捕获其影响
+- L1 编译始终由构建系统自然处理，不做人为文件过滤
+- L2 静态分析严格按指定范围执行，只分析范围内的源文件
+- 头文件变更时，应确保其影响被静态分析工具捕获（如 C/C++ 的 `clang-tidy --header-filter` 等语言特定机制）
+
+## 执行流程
+
+```
+执行检查 → 发现问题 → 派遣 developer 修复 → 再次检查 → ... → 全部通过
+```
+
+1. **执行 L1 编译检查**
+   - 通过 → 进入步骤 2
+   - 失败（存在 error/warning）→ 进入步骤 4
+2. **执行 L2 静态分析**（L2a Type Check + L2b Lint）
+   - 通过 → 结束，输出通过报告
+   - 发现问题 → 进入步骤 4
+3. **结束**，输出通过报告
+4. **派遣修复**
+   - 激活 `developer` Agent
+   - 传入问题详情（文件、行号、错误类型、建议修复）
+   - developer 修复后，回到步骤 1（最多 5 轮，超过需人工介入）
 
 ## 检查层级
 
@@ -48,22 +89,40 @@ allowed-tools: [Read, Bash, Grep, Glob]
 2. C/C++ 的 `clang-tidy` 需要 `compile_commands.json`，而生成它需要项目能编译——L1 是 L2 的**前置条件**
 3. 但 lint 的编译检查**不是替代构建系统**，而是验证编译输出零 warning
 
-**执行策略**：
+**步骤**：
 
-1. **探测构建系统**（按优先级）：
-   - `Makefile` → `make`
-   - `CMakeLists.txt` → `cmake --build build`
-   - `build.sh` → `./build.sh`
-   - `Cargo.toml` → `cargo build`
-   - `go.mod` → `go build`
-   - `pyproject.toml` / `setup.py` → 按需
+1. **获取构建命令**
+   - 先查 `CLAUDE.md` 中是否已记录构建命令（搜索 BUILD_COMMAND、编译、构建等关键词）
+   - 若无，按以下优先级探测构建系统文件，生成候选命令：
+     `Cargo.toml` → `cargo build` | `go.mod` → `go build`
+     `build.sh` → `./build.sh` | `CMakeLists.txt` → `cmake --build build`
+     `Makefile` → `make` | `pyproject.toml` / `setup.py` → 按需
+     `package.json` → `npm run build` / `pnpm build`
+     `pom.xml` → `mvn compile` | `build.gradle` → `gradle build`
+   - **向用户确认**候选命令（是否需要额外参数、指定目录等）
+   - 确认后 **记录到 CLAUDE.md**，后续直接使用
 
-2. **检查结果**：提取输出中的 `error:` 和 `warning:` 数量，确保 warning 为 0
+2. **执行构建**
+   - 运行确认后的构建命令，捕获完整输出
 
-3. **compile_commands.json**（C/C++ 特有）：
-   - 检查项目根目录或 `build/` 目录下是否存在
-   - 若不存在且项目使用 CMake，建议运行 `cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=ON ...`
-   - `clang-tidy` / `cppcheck` 依赖此文件解析头文件路径和宏定义
+3. **处理结果**
+
+   | 结果 | 处理 |
+   |------|------|
+   | 存在 error | 停止，派遣 developer 修复 |
+   | 存在 warning | 返回 developer 修复（通常在 `/df:tdd` GREEN 阶段就应消除） |
+   | 零 error、零 warning | 通过，进入 L2 |
+
+**C/C++ 特有：compile_commands.json**
+
+`clang-tidy` / `cppcheck` 依赖此文件解析头文件路径和宏定义。**L1 构建时必须同步确保此文件存在**。
+
+| 场景 | 操作 |
+|------|------|
+| 已存在 | 直接使用，进入 L2 |
+| CMake 项目 | L1 构建命令追加 `-DCMAKE_EXPORT_COMPILE_COMMANDS=ON`，构建完成后检查是否生成 |
+| Makefile 项目 | L1 构建命令改用 `bear -- make`（需提前检测 bear 是否安装，未安装则提示安装） |
+| 生成失败 | L2 降级：仅分析变更的 `.c`/`.cpp` 源文件，跳过头文件影响分析（准确率降低，需人工复核） |
 
 ### L2：静态分析
 
@@ -71,27 +130,28 @@ allowed-tools: [Read, Bash, Grep, Glob]
 
 **工具链探测**（按项目配置文件自动选择）：
 
-| 语言 | 探测信号 | 类型检查 | 静态分析 | 说明 |
-|------|---------|---------|---------|------|
-| C/C++ | `.clang-tidy` / `compile_commands.json` | 编译器内置（L1） | `clang-tidy` + `cppcheck` | 编译即类型检查；静态分析双工具互补 |
-| Rust | `Cargo.toml` | 编译器内置（L1） | `clippy` | `cargo clippy` 同时做类型检查和 lint |
-| Go | `go.mod` / `.golangci.yml` | 编译器内置（L1） | `golangci-lint` / `go vet` | 编译即类型检查 |
-| Python | `pyproject.toml` / `mypy.ini` | `mypy` / `pyright` | `ruff check` / `pylint` | Python 为动态类型，需要显式 type check |
-| JS/TS | `package.json` / `tsconfig.json` | `tsc --noEmit` | `biome check` / `eslint` | TS 编译器做类型检查；JS 可选 `// @ts-check` |
+| 语言 | 探测信号 | 类型检查 | 静态分析 |
+|------|---------|---------|---------|
+| C/C++ | `.clang-tidy` / `compile_commands.json` | 编译器内置（L1） | `clang-tidy` + `cppcheck` |
+| Rust | `Cargo.toml` | 编译器内置（L1） | `clippy` |
+| Go | `go.mod` / `.golangci.yml` | 编译器内置（L1） | `golangci-lint` / `go vet` |
+| Python | `pyproject.toml` / `mypy.ini` | `mypy` / `pyright` | `ruff check` / `pylint` |
+| JS/TS | `package.json` / `tsconfig.json` | `tsc --noEmit` | `biome check` / `eslint` |
 
 **执行顺序（L2 内部）**：
 
-1. **Type Check**（仅对需要显式类型检查的语言）：
+1. **L2a Type Check**（仅对需要显式类型检查的语言）：
    - Python: `mypy .` 或 `pyright`
    - JS/TS: `tsc --noEmit`（需要 `tsconfig.json`）
    - C/C++/Rust/Go: 编译器已覆盖，跳过
 
-2. **Lint / 静态分析**：
+2. **L2b Lint / 静态分析**：
    - 按语言调用对应工具（见上表）
 
 **配置文件策略**：
 - **存在项目配置**（如 `.clang-tidy`、`.golangci.yml`）→ 尊重并使用该配置
-- **不存在项目配置** → 提示用户创建，给出推荐模板（参考 `.claude/rules/coding-style-<lang>.md`）
+- **不存在项目配置** → 使用工具默认规则继续执行，但输出中**强制标注降级状态**（作为输出总结的一部分，不可忽略）：
+  > ⚠ 项目未配置 `<config-file>`，L2 使用工具默认规则，部分检查项可能未覆盖。建议落地项目按 `.claude/rules/coding-style-<lang>.md` 创建对应配置文件。
 
 **Type Check 执行示例**：
 
@@ -139,17 +199,57 @@ L2 静态分析
 总计: 0 error, 1 warning
 ```
 
-**问题路由**：
-- **编译 error** → 停止提交，developer 修复（通常在 `/df:tdd` GREEN 阶段就应消除）
-- **编译 warning** → 返回 developer 修复
-- **静态分析 error** → 返回 developer 修复；确认为误报的可经评估后在配置文件中 suppress
-- **静态分析 warning** → 按严重程度处理，低优先级 warning 可记录待后续清理
+## 问题路由
+
+所有问题统一处理：派遣 developer 修复 → 回归检查。
+
+| 问题类型 | 处理方式 |
+|---------|---------|
+| 编译 error | 派遣 developer 修复，修复后回归 |
+| 编译 warning | 派遣 developer 修复，修复后回归 |
+| 静态分析 error | 派遣 developer 修复，修复后回归 |
+| 静态分析 warning | 派遣 developer 修复，修复后回归 |
+
+**修复循环上限**：自动修复最多 5 轮，超过仍未通过需人工介入。
+
+**关于 suppress**：若某条规则对项目不适用，通过修改配置文件（如 `.clang-tidy`）suppress，该变更作为正常代码修改参与 lint。
+
+## 文档写入铁律
+
+本 skill 不产出独立文件。但以下变更必须写入持久化位置：
+
+- **构建命令确认后**：记录到 `CLAUDE.md`（搜索关键词：`BUILD_COMMAND`、`编译`、`构建`）
+- **降级标注**：无项目配置时使用工具默认规则，在输出总结中强制标注 ⚠ 降级状态
+- 每轮执行记录：问题类型、文件、行号、修复建议，在对话中逐轮输出
+
+## 出口标准
+
+检查通过必须同时满足：
+
+- [ ] L1 编译零 error、零 warning
+- [ ] L2 静态分析零 error（warning 按问题路由处理）
+- [ ] 修复循环不超过 5 轮
+- [ ] 所有修复经回归验证通过
+
+**自动推进**：全部满足 → 输出通过报告 → 结束。
+**等待人工决策**：5 轮后仍未通过 → 输出当前问题清单 → 等待用户介入。
+
+## 红旗清单
+
+以下情况立即停止自动修复，等待人工决策：
+
+| 红旗 | 触发条件 | 处理方式 |
+|------|---------|---------|
+| 🚩 修复死循环 | 5 轮修复后仍有 error/warning | 停止，输出完整问题清单 |
+| 🚩 构建系统未知 | CLAUDE.md 无记录 + 探测无结果 + 用户无法确认 | 停止，提示用户配置构建命令 |
+| 🚩 C/C++ 编译数据库缺失 | `compile_commands.json` 生成失败 | L2 降级执行，强制标注准确率下降，建议人工复核 |
+| 🚩 修复引入新问题 | developer 修复后 L1 出现新的编译 error | 继续修复循环（消耗轮次），若同时触发 5 轮上限则停止 |
 
 ## Integration
 
 - **执行时机**：
-  - 高频（fast 模式）：单个 task 完成后的最终检查（在 git commit 前）
+  - 高频：单个 task 完成后的最终检查（在 git commit 前）
   - 中频：`/opsx:apply` 的 LINT/QA 阶段、archive 前
   - 自动：H1 pre-commit-lint 拦截存在严重问题的提交
-- **问题修复方**：developer（A2）在执行 lint 之前完成修复
+- **问题修复方**：developer（A2）自动修复并回归检查，最多 5 轮
 - **相关 Rules**: `.claude/rules/coding-style.md`（通用）、`.claude/rules/coding-style-<lang>.md`（语言特定）

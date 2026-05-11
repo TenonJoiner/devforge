@@ -10,23 +10,13 @@
 
 ## 执行流程
 
-1. 激活 `developer` Agent
-2. **前置状态检测**：检查当前分支是否已合并到 base branch（如 `main`）
-   - **若已合并**：直接提示"分支已合并，是否清理关联 worktree？"
-     - 确认后自动执行 `git worktree remove` + 删除分支 + 清除 `~/.claude/projects/<repo-name>/active-worktree`
-     - 跳过后续选项展示
-   - **若未合并**：继续下一步
-3. **验证测试**：运行 `./run-tests.sh ut`（或项目定义的测试命令），确认通过；失败则停止
-4. **确定 base branch**：通常为 `main`
-5. **呈现选项**：
-   - **选项 1**：本地合并回 `main`，成功后清理 worktree
-   - **选项 2**：推送分支并创建 Pull Request，**保留** worktree（PR 未合并前可能需要修改）
-   - **选项 3**：保持当前状态，以后再处理
-   - **选项 4**：丢弃当前分支和 worktree（需 typed 确认）
-6. **执行选择**：执行对应 git 操作
-7. **清理 worktree**（选项 1、4）：执行 `git worktree remove` 并删除 `~/.claude/projects/<repo-name>/active-worktree`
-   - **选项 2 的后续**：PR 合并后再次执行 `/df:finish-worktree`，将通过前置状态检测自动进入快速清理流程
-8. **后序引导**：清理完成后提示用户继续执行 `/opsx:verify`（如需）→ `/opsx:archive`
+1. 激活 `developer` Agent，进入 `devforge-git-worktree` Skill
+2. 前置状态检测：检查当前分支是否已合并到 base branch
+3. 环境检测：判断工作区状态（普通仓库 / linked worktree / detached HEAD）
+4. 验证测试：运行 `./run-tests.sh ut`，失败则停止
+5. 确定 base branch，呈现选项（本地合并 / 推送创建 PR / 保持状态 / 丢弃）
+6. 执行选择，按 Skill 中定义的清理约束执行清理
+7. 后序引导：提示 `/opsx:verify` → `/opsx:archive`
 
 ## 参数
 
@@ -34,18 +24,13 @@
 /df:finish-worktree    # 处理当前所在 worktree
 ```
 
-## 使用示例
+## 产出物
 
-```
-/df:finish-worktree
-> 测试通过 ✅
-> 选择：2. 推送并创建 PR
-> PR 已创建：#42
-> worktree 保留在 .claude/worktrees/wt-storage-wal
-```
+- 本地合并：代码合并到 main，worktree 和分支已清理
+- 创建 PR：PR 链接，worktree 保留
+- 丢弃：worktree 和分支已删除
 
 ## 关联
 
 - Skill: `devforge-git-worktree`
 - Agent: `developer`
-- Hooks: `worktree-guard`

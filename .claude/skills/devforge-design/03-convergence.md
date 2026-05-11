@@ -85,13 +85,13 @@
 ## 步骤 2：系统架构总纲定稿
 
 **复杂度**：极高（系统级架构定稿）
-**产出文件**：`docs/architecture/design.md`（定稿，覆盖第 0 阶段的初稿）
+**产出文件**：`docs/architecture/design.md`（首次定稿）
 
 ### 2.1 主会话决定 agent 配置
 
 主会话直接决策派遣配置：
 
-1. 读取 `docs/architecture/decisions/` 所有决策文档、`docs/architecture/adr.md`、第 0 阶段的 design.md 初稿
+1. 读取 `docs/architecture/decisions/` 所有决策文档、`docs/architecture/adr.md`
 2. 读取 `.claude/templates/arch-system.md`，明确模板章节结构
 3. **决定 agent 配置**：
    - **architect 数量**：极高复杂度下限 ≥5（阶段总 agent 数）
@@ -139,14 +139,14 @@
 
 | 参数 | 值 | 说明 |
 |------|-----|------|
-| 评估对象数 | 子系统数 | design.md 中识别的子系统数 |
-| 缺陷密度门槛 | ≤ 1.5 分/子系统 | 见 SKILL.md「缺陷密度门槛标定依据」 |
+| 评估对象数 | 子系统数 + 全局章节数 | design.md 中子系统定义章节 + 跨子系统全局章节（数据流/一致性/部署拓扑等） |
+| 缺陷密度门槛 | ≤ 1.5 分/评估对象 | 见 SKILL.md「缺陷密度门槛标定依据」 |
 | \> 30 处回退目标 | 回退到步骤 2.1 | 重新决定 agent 配置和视角切分 |
 
 **成功退出条件**（同时满足）：
 - 所有 reviewer 均已完成独立评审
 - 无 CRITICAL 问题
-- 缺陷密度 ≤ 1.5 分/子系统
+- 缺陷密度 ≤ 1.5 分/评估对象
 - `design.md` 末尾已写入 `**评审状态**: ✅ PASS` 标记
 - 所有 HIGH 问题已评估：接受修正 / 接受延期 / 拒绝
 

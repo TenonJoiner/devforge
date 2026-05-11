@@ -1,6 +1,6 @@
 # 第 1 阶段：标杆研究
 
-**准入条件**：第 0 阶段完成（`design.md` 初稿已落盘 + `domain-config.yaml` 已生成）
+**准入条件**：第 0 阶段完成（`domain-config.yaml` 已生成）
 **产出文件**：`docs/architecture/reference/<product>.md`（每个标杆一个文件，至少 2-3 个）
 **模板**：`.claude/templates/ref-architecture.md`
 

@@ -28,9 +28,19 @@
 - 执行完整的领域信息收集（步骤 2）
 - 生成新的 domain-config.yaml
 
-**场景 B：文件已存在**（/df:design 或 /df:define 先前已执行过）
+**场景 B：文件已存在**（/df:define 先前已执行过）
 - 读取现有配置，向用户展示
 - 询问："这些信息是否仍然准确？需求视角下是否有需要调整的？"
+- 如果准确：跳过步骤 2 中已有字段的提问
+- 如果需要修正：逐项确认需要修改的字段
+
+**场景 C：文件已存在**（/df:design 已执行过）
+- 读取现有配置，向用户展示
+- 从需求视角校验 design 已填的 T1-T6：
+  - T1-T5：目标用户是否准确？痛点表述是否到位？规模量级是否合理？边界是否完整？
+  - T6（design 新增）：targets 量化目标是否反映了真实业务需求？数字是否合理？
+- 校验动作：评估 targets 与 T4 priorities 的自洽性（如 consistency 优先级低但 targets 要求 strong，矛盾）
+- 询问："这些信息从需求视角看是否仍然准确？是否有需要调整或补充的？"
 - 如果准确：跳过步骤 2 中已有字段的提问
 - 如果需要修正：逐项确认需要修改的字段
 
@@ -49,6 +59,9 @@
 | T3 | 系统规模的量级表征 | 部署/数据/并发三档位均已落到枚举；条件性的并发拆分按系统类型完成 | `deployment`、`data_scale`、`concurrency.peak`（+ 条件性拆分字段）枚举 | 第 1 阶段标杆筛选、`/df:design` 规模约束 |
 | T4 | 质量属性优先级 | 5 项（consistency/performance/availability/maintainability/cost）已排序 + 排序原因已说明 | `priorities` 1-5 排序 | 标杆研究权重、架构权衡 |
 | T5 | 明确的边界约束 | ≥2 个"不做的事"已列出 | 自由文本（汇入 description） | 第 2 阶段 Feature 识别的禁区 |
+| T6 | 质量属性量化目标 | design 主导；define 场景 C 校验 | `quality_attributes.targets` | 第 2-3 阶段架构设计约束 |
+
+> **T6 职责分工**：T6 由 `/df:design` 主导收集（架构视角判断合理数值），`/df:define` 在场景 C 时从需求视角校验（数字是否反映真实业务需求）。define 场景 A/B 不收集 T6，domain-config.yaml 中对应字段留空，待 design 执行时补充。
 
 #### 2.1 锚点字段（最终值必须落到模板枚举）
 
@@ -57,6 +70,7 @@
 - **T1**：`system.primary_type`；`system.sub_type` 为可选追问，主会话根据系统类型和对话上下文自行判断是否需要
 - **T3**：`system.scale.deployment`、`system.scale.data_scale`、`system.scale.concurrency.peak`
 - **T4**：`quality_attributes.priorities` 5 项（各填 1-5 整数，无重复）
+- **T6**：`quality_attributes.targets.consistency_model`（3 值枚举：strong / eventual / causal）— 由 design 写入，define 场景 C 时校验
 
 **T3 条件性追问**：主会话根据 T1 系统类型判断是否追问 concurrency 拆分字段（如读写拆分、produce/consume、task_count 等）。具体字段-系统类型映射见模板 `.claude/templates/domain-config.yaml` 中各 concurrency 字段注释。
 
@@ -74,6 +88,7 @@
 - T3：deployment / data_scale / concurrency.peak 均已落到枚举值；条件性拆分字段按 T1 类型规则补齐
 - T4：5 项质量属性已排序（无并列、无遗漏）+ 用户给出了排序原因
 - T5：≥2 个具体的"不做的事"已列出（不是"不做无关的事"这种空话）
+- T6：define 场景 A/B 时标记为"留空，待 design 补充"；场景 C 时校验 targets 是否反映真实业务需求、与 T4 priorities 是否自洽
 
 **禁止行为**：
 - 🚩 一次性把所有主题的问题列出来等用户回答
@@ -88,11 +103,12 @@
 - 锚点字段：直接填入对应枚举值（取值见模板字段注释）
 - T2 + T5 自由文本：综合为 `system.description` 一段（不做结构化拆分）
 - 条件性 concurrency 拆分字段：不属于当前系统类型的直接删除，不留空
-- `metadata.created_at` 填当前日期，`metadata.contributors` 填 `["/df:define"]`
+- `metadata.created_at` 填当前日期（场景 A）或保留已有（场景 B/C），`metadata.last_updated` 填当前日期
+- `metadata.contributors` 追加 `"/df:define"`（如尚未包含）
 
 写入 `.claude/domain-config.yaml`，用 `ls` 验证文件存在。
 
-> **职责边界**：本文件由 /df:define 和 /df:design 共同维护。define 只填充 `system` 和 `quality_attributes` 两节，其他字段（`languages`、`benchmarks` 等）由 design 填充。标杆研究后可能需回溯修正 `description` 字段。
+> **职责边界**：本文件由 /df:define 和 /df:design 共同维护。define 主导 T1-T5（`system` 全部 + `quality_attributes.priorities`），design 主导 T6（`quality_attributes.targets`），双方互相校验。实现细节（languages / architecture / tech_stack / development / benchmarks）不写入本文件，由 ADR 和后续阶段产出维护。标杆研究后可能需回溯修正 `description` 字段。
 
 ---
 
@@ -107,6 +123,7 @@
 - [ ] **T3 闭合**：`deployment` / `data_scale` / `concurrency.peak` 均已落到枚举值；条件性拆分字段按 T1 类型规则全部补齐
 - [ ] **T4 闭合**：5 项质量属性优先级已排序（1-5，无重复）+ 排序原因已说明
 - [ ] **T5 闭合**：≥2 个明确的"不做的事"已列出（非空话）
+- [ ] **T6 确认**：`quality_attributes.targets` 已留空或标注"待 /df:design 补充"（define 不填充 T6）
 
 写入后必须确认：
 

@@ -36,4 +36,3 @@
 
 - Skill: `devforge-git-worktree`
 - Agent: `developer`
-- Hooks: `worktree-guard`

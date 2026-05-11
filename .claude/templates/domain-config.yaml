@@ -1,6 +1,7 @@
 # .claude/domain-config.yaml
-# 领域配置文件 - 定义系统类型、语言、质量属性等
-# 由 /df:define 和 /df:design 的阶段 0 交互式生成和更新
+# 产品定位配置文件 — 定义系统类型、规模、目标用户、质量属性等
+# 由 /df:define 和 /df:design 两 skill 协作完成，只承载产品定位信息
+# 实现细节（编程语言、架构选型、技术栈、开发规范）由 ADR 和后续阶段产出维护，不写入本文件
 
 # 系统类型分类
 system:
@@ -15,99 +16,48 @@ system:
     deployment: ""  # 单机 | 小集群 | 中等集群 | 大规模集群
     data_scale: ""  # GB级 | TB级 | PB级 | EB级
     concurrency:
-      peak: ""  # <100 | 100-1k | 1k-10k | 10k-100k | >100k
+      peak: ""              # <100 | 100-1k | 1k-10k | 10k-100k | >100k
       # 以下字段按 system.primary_type 条件性填充，未匹配时可省略
-      write: ""              # 仅 distributed-storage / database
-      read: ""               # 仅 distributed-storage / database
-      read_write_ratio: ""   # 仅 distributed-storage / database，如 "1:9"
-      produce: ""            # 仅 message-queue
-      consume: ""            # 仅 message-queue
-      task_count: ""         # 仅 distributed-computing
-      task_long_running: ""  # 仅 distributed-computing，true | false
-      connection_mode: ""    # peak >10k 时追问：long | short | mixed
+      write: ""             # 仅 distributed-storage / database
+      read: ""              # 仅 distributed-storage / database
+      read_write_ratio: ""  # 仅 distributed-storage / database，如 "1:9"
+      produce: ""           # 仅 message-queue
+      consume: ""           # 仅 message-queue
+      task_count: ""        # 仅 distributed-computing
+      task_long_running: "" # 仅 distributed-computing，true | false
+      connection_mode: ""   # peak >10k 时追问：long | short | mixed
 
   # 一句话描述（必填）
+  # 综合：系统目标、核心痛点、目标用户、场景拓扑特征、部署环境、non-goals
   description: ""
 
-# 编程语言配置
-languages:
-  # 主语言（必填，至少一个）
-  primary:
-    - name: ""  # C | C++ | Rust | Go | Python | Java | Scala | Kotlin
-      version: ""
-      standard: ""
-      toolchain: []
-
-  # 次要语言（可选）
-  secondary: []
-
-  # 语言特定约束（可选）
-  constraints: []
-
-# 质量属性优先级（必填）
+# 质量属性（必填）
 quality_attributes:
-  # 优先级排序（1-5，1 最高）
+  # 优先级排序（1-5，1 最高，无重复）
   priorities:
     consistency: 0      # 一致性
     performance: 0      # 性能
     availability: 0     # 可用性
     maintainability: 0  # 可维护性
-    cost: 0            # 成本
+    cost: 0             # 成本
 
-  # 具体目标（可选但推荐）
+  # 量化目标（必填）
+  # 由 design 主导补充数字指标（latency/throughput/SLA），define 校验
   targets:
     consistency_model: ""  # strong | eventual | causal
-    latency_p99: ""
-    throughput: ""
-    availability_sla: ""
-
-# 标杆产品清单（由 /df:design 阶段 0 收集）
-benchmarks: []
-
-# 技术栈约束（由 /df:design 阶段 0 或后续阶段补充）
-tech_stack:
-  os:
-    primary: ""
-    versions: []
-  network:
-    protocols: []
-  storage:
-    media: []
-  dependencies: []
-
-# 架构特征（由 /df:design 阶段 0 或后续阶段补充）
-architecture:
-  distributed:
-    enabled: false
-    consensus_protocol: ""  # Raft | Paxos | Quorum | 2PC | None
-    replication_strategy: ""  # sync | async | hybrid
-  concurrency:
-    model: ""  # single-threaded | multi-threaded | event-driven | actor
-    synchronization: []
-  memory:
-    strategy: ""  # manual | gc | hybrid
-    allocators: []
-
-# 开发约束（由 /df:design 阶段 0 或后续阶段补充）
-development:
-  coding_standards:
-    style_guide: ""  # LLVM | Google | Custom
-    formatter: ""
-    linter: ""
-  testing:
-    framework: ""
-    coverage_target: 0
-    memory_checker: ""
-  build:
-    system: ""  # CMake | Make | Bazel | Cargo | Maven | Gradle
-    ci_cd: ""
+    latency_p99: ""        # 查询延迟 P99 目标（如 "<1s" / "<10s"）
+    throughput: ""         # 写入吞吐量目标（如 "50k 点/秒"）
+    availability_sla: ""   # 可用性 SLA（如 "99.9%"）
 
 # 领域特定约束（可选，可扩展）
+# 记录场景级差异化（如边云协同模式、多租户模型、部署层级特征等）
+# 写入本块的信息必须是产品定位级，不是实现细节
+# 示例：边端云端通信模式、数据流向、预聚合策略等场景特征
 domain_specific: {}
 
 # 元数据
 metadata:
   created_at: ""
   last_updated: ""
-  contributors: []  # 记录所有修改过此文件的 skill，如 ["/df:define", "/df:design"]
-  schema_version: "1.0"
+  contributors: []  # 记录修改过此文件的 skill，如 ["/df:define", "/df:design"]
+  schema_version: "2.0"
