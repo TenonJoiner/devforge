@@ -19,7 +19,7 @@
 
 1. 激活 `developer` Agent
 2. 分析当前变更范围（git diff），确定重构策略
-3. 启动 `code/simplify` Skill：
+3. 启动 `devforge-simplify` Skill：
    - Phase 1：识别变更 → Phase 2：三 agent 并行评审 → Phase 3：`developer` 汇总修复
 4. 运行全部测试确认绿色
 5. 输出重构摘要
@@ -58,6 +58,6 @@
 
 ## 关联
 
-- Skill: `code/simplify`
+- Skill: `devforge-simplify`
 - Agent: `developer`（调度）+ `code-reviewer`（subagent）
 - Rules: `coding-style`

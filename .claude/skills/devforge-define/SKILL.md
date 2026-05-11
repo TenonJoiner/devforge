@@ -1,6 +1,6 @@
 ---
 name: devforge-define
-description: 定义产品需求、制定验收标准，采用多 agent 深度思考模式，标杆研究先行、Feature-Scenario 分层展开、独立评审验证。适用于需要深度思考的复杂需求定义场景，支持螺旋式迭代完善。当用户提到需求定义、产品规格、Feature 拆解、验收标准、用户故事设计时应使用此 skill。
+description: 定义产品需求、制定验收标准，产出 Actor-Feature 清单与 Scenario 规格。采用多 agent 深度思考模式，标杆研究先行、Feature-Scenario 分层展开、独立评审验证。适用于需要深度思考的复杂需求定义场景，支持螺旋式迭代完善。当用户提到需求定义、产品规格、Feature 拆解、验收标准、用户故事设计、Actor 识别时应使用此 skill。
 allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
 ---
 
@@ -106,7 +106,20 @@ Reviewer 产出：
 
 5. **复核**：修正完成后回到步骤 1（独立评审）
 6. **循环上限**：最多 3 次
-7. **降级规则**：3 次循环后仍未达标 → 等待人工决策
+7. **降级规则**：3 次循环后仍未达标 → 进入人工决策（见步骤 8）
+8. **人工决策返回路径**：用户对 3 次循环仍未达标的产出可选择三条路径之一，主会话据此恢复流程：
+   - **接受现状**：放行该交付件，写入 `**评审状态**: ⚠️ ACCEPTED-WITH-DEBT（缺陷密度 X，残留 N 个 HIGH）` 标记，记录残留问题到「评审记录」章节，进入下一阶段
+   - **重启循环**：根据用户提示（如调整视角切分、扩大 reviewer 角色、补充上下文）重新发起独立评审，循环计数从 1 开始
+   - **回退重做**：按各阶段定义的「>30 处回退目标」回退到对应步骤重新执行多 agent 并行产出
+9. **评审状态标记契约**（机器可解析，启动检测依此判定阶段过渡）：
+
+   ```markdown
+   **评审状态**: ✅ PASS（缺陷密度 X/评估对象，无 CRITICAL，循环 N/3）
+   ```
+
+   - 仅当无 CRITICAL + 缺陷密度达标时写入 `✅ PASS`；评审中或未通过写入 `❌ FAIL` 或不写
+   - 接受带债放行写入 `⚠️ ACCEPTED-WITH-DEBT`（不视为 PASS，但允许阶段过渡）
+   - 启动检测搜索 `**评审状态**:` 行；无 PASS / ACCEPTED-WITH-DEBT 标记 = 该交付件未完成
 
 **自动决策规则**：CRITICAL 必须修正 → HIGH 默认修正 → MEDIUM 评估后决定 → LOW 可延期
 
@@ -140,6 +153,12 @@ Reviewer 产出：
 - 所有非最终产出统一用 `-draft-` 标记，如 `actors-draft-users.md`
 - 评审意见统一追加到单 `-review.md` 文件，如 `product-spec-review.md`
 - 最终文件不含 `-draft-` 和 `-review` 标记
+
+**特性域文件命名**：
+- 文件名使用 **kebab-case 英文标识**（如 `data-query.md`、`security-compliance.md`），禁止使用中文字符
+- 中文特性域名称仅用于文档内部的标题和阅读显示
+- `product-spec.md#Feature 总览` 必须包含「英文标识」列，主会话据此确定文件路径
+- 示例：`数据查询` → `data-query.md` / `data-query-review.md`
 
 **例外**：步骤内部的工作指令（如调度方案、盲区分析）属于执行中间件，可按对应阶段规则豁免落盘。
 
@@ -205,7 +224,9 @@ Reviewer 产出：
 - 主会话在派遣前必须统计 agent 总数，若超限则明确写出滑动窗口方案（窗口大小、总 agent 数、预计启动节奏）
 - 禁止以"并发限制"为由将本应多 agent 独立产出的步骤压缩为单 agent 执行
 
-### 评审纪要写作规范
+### 评审纪要写作约束
+
+> 此节是写作风格约束，**不计入评审判定项**。状态标记契约见上方「标准评审修正循环」步骤 9。
 
 独立评审完成后，评审结果按以下方式处理：
 
@@ -213,19 +234,12 @@ Reviewer 产出：
 - **合并 agent**：评审通过后，将「评审记录」章节写入最终文件末尾
 - **主会话**：只读取 reviewer 返回的数字摘要（issues 数、缺陷密度、CRITICAL 数）做通过/修正/回退判定
 
-- **评审状态标记行**（机器可解析，用于启动检测判定阶段过渡）：
-  ```markdown
-  **评审状态**: ✅ PASS（缺陷密度 ≤ X/评估对象，无 CRITICAL，循环 N/3）
-  ```
-  仅当评审真正通过（无 CRITICAL + 缺陷密度达标）时才写入 `✅ PASS`。评审未通过或仍在循环中时写入 `❌ FAIL` 或不写标记。
-- **必须先读取对应模板文件**（`ref-requirements.md` / `req-product-spec.md` / `req-feature.md`）中的「评审记录」示例，再写入评审记录——模板中定义了表格列、日期格式等具体要求，不可省略此步骤
-- **日期格式**：精确到分钟，如 `2026-05-06 14:30`
-- **每轮必填缺陷密度**：评审记录表格的「缺陷密度」列在每一轮（含修正后的复核轮次）都必须有数值，不可留空或写"待复核"
+**写作要求**：
+- 写入评审记录前先读对应模板（`ref-requirements.md` / `req-product-spec.md` / `req-feature.md`）的「评审记录」示例，模板定义了表格列、日期格式等具体要求
+- 日期格式精确到分钟，如 `2026-05-06 14:30`
+- 评审记录表格的「缺陷密度」列每一轮（含修正后的复核轮次）都必须有数值，不可留空
 - 评审记录章节 ≤ 200 字
 - 详细评审意见（逐条分析）留存对话上下文，不写入正式文档
-
-> 此规范为写作约束，不计入评审判定项。
-> **启动检测唯一依据**：`✅ PASS` 标记是阶段过渡判定的唯一可信信号。文件存在但无 PASS 标记 = 该阶段未完成。
 
 ---
 
@@ -254,8 +268,8 @@ Reviewer 产出：
 ls -la .claude/domain-config.yaml
 ls -la docs/requirements/
 ls -la docs/requirements/reference/
-# 若 product-spec.md 存在，读取 Feature 总览表的「归属特性域」列，
-# 逐个检查 docs/requirements/<特性域名>.md 是否存在
+# 若 product-spec.md 存在，读取 Feature 总览表的「英文标识」列（kebab-case），
+# 逐个检查 docs/requirements/<feature-domain-en>.md 是否存在
 ```
 
 **状态判定**（按执行流程顺序）：
@@ -272,7 +286,7 @@ ls -la docs/requirements/reference/
 5. product-spec.md 存在：
    - 读取文件末尾评审状态，无 `✅ PASS` 标记 → **第 2 阶段步骤3（评审修正循环）**
    - 有 `✅ PASS` 标记 → 进入特性域文档检查
-6. 逐个检查各特性域文档（名单来自 product-spec.md#Feature 总览的「归属特性域」列）：
+6. 逐个检查各特性域文档（名单来自 product-spec.md#Feature 总览的「英文标识」列，kebab-case，如 `data-query.md`）：
    - 文档不存在 → 第 3 阶段（该特性域 Scenario 挖掘）
    - 文档存在但无 `✅ PASS` 标记 → **第 3 阶段步骤2（该特性域评审修正循环）**
    - 所有特性域文档均有 `✅ PASS` 标记 → 第 4 阶段（维护模式）
@@ -306,7 +320,7 @@ ls -la docs/requirements/reference/
 ### 第 3 阶段：Scenario 挖掘与特性域定稿
 
 - **准入**：Actor-Feature 已定稿（无 CRITICAL 问题 + 缺陷密度达标，门槛见「缺陷密度门槛标定依据」）
-- **产出**：`docs/requirements/<feature-domain>.md`
+- **产出**：`docs/requirements/<feature-domain-en>.md`（kebab-case 英文标识）
 - **规则**：`03-scenario.md`
 
 ### 第 4 阶段：需求维护与扩展
@@ -323,7 +337,7 @@ ls -la docs/requirements/reference/
 
 - `.claude/domain-config.yaml` — 产品定位配置
 - `docs/requirements/product-spec.md` — 全局需求总纲
-- `docs/requirements/<feature-domain>.md` — 按特性域组织的需求规格
+- `docs/requirements/<feature-domain-en>.md` — 按特性域组织的需求规格（kebab-case 英文标识）
 - `docs/requirements/reference/<product>.md` — 标杆需求分析
 
 ### 本 Skill 不产出

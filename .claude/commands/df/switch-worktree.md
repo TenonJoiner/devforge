@@ -14,7 +14,7 @@
 2. 检测现有 worktree 列表：`git worktree list`
 3. 如果用户指定了存在的 worktree → 直接切换
 4. 如果不存在 → 询问是否创建，并自动按 proposal 命名
-5. 进入 `code/git-worktree` Skill 完成切换
+5. 进入 `devforge-git-worktree` Skill 完成切换
 
 ## 参数
 
@@ -34,6 +34,6 @@
 
 ## 关联
 
-- Skill: `code/git-worktree`
+- Skill: `devforge-git-worktree`
 - Agent: `developer`
 - Hooks: `worktree-guard`

@@ -13,7 +13,7 @@
 1. 激活 `architect` Agent
 2. 检测现有测试策略（docs/test-strategy.md）
 3. 读取架构文档（docs/architecture/）和需求文档（docs/requirements/）
-4. 进入 `product/test-design` Skill 流程：
+4. 进入 `devforge-test-design` Skill 流程：
    - **不存在** → 完整制定：测试分层定义 → 覆盖率目标 → 各级测试方案
    - **已存在** → 增量更新：识别架构/需求变更 → 调整受影响的测试方案
 5. 输出保存到 docs/test-strategy.md
@@ -47,6 +47,6 @@
 
 ## 关联
 
-- Skill: `product/test-design`
+- Skill: `devforge-test-design`
 - Agent: `architect`
 - Rules: `workflow`

@@ -46,6 +46,6 @@
 
 ## 关联
 
-- Skill: `code/git-worktree`
+- Skill: `devforge-git-worktree`
 - Agent: `developer`
 - Hooks: `worktree-guard`

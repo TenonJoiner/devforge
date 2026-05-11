@@ -74,7 +74,7 @@
 
 ## 关联
 
-- Skill: `code/code-review`
+- Skill: `devforge-code-review`
 - Agent: `code-reviewer`
 - Rules: `coding-style`, `testing`
 - Hooks: `post-edit-format`（风格问题在编辑时自动处理，不进入评审管线）

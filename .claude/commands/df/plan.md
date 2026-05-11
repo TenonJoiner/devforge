@@ -16,4 +16,4 @@
 
 ## 调用方式
 
-调用 Skill 工具加载 `product/plan`
+调用 Skill 工具加载 `devforge-plan`
