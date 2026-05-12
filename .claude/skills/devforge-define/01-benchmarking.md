@@ -10,7 +10,14 @@
 
 ### 1.1 读取产品定位
 
-主会话读取 `domain-config.yaml` 的 `system.primary_type` 和 `system.sub_type`。
+主会话读取 `.claude/domain-config.yaml`，整合以下字段形成标杆筛选输入（缺一不可）：
+
+- `system.primary_type` / `system.sub_type` — 决定**标杆品类范围**
+- `system.description` — 包含核心痛点、目标用户、Non-Goals，决定**对标用户与场景方向**与**筛选禁区**
+- `system.scale`（deployment / data_scale / concurrency） — 决定**对标规模量级**（影响标杆的产品形态匹配）
+- `quality_attributes.priorities` — 决定**对标关注的质量维度权重**
+- `quality_attributes.targets`（latency_p99 / throughput / availability_sla / consistency_model） — 决定**对标量化指标精度**
+- `domain_specific`（如 edge_cloud_topology / data_loss_tolerance 等） — 决定**领域差异化筛选条件**（识别本产品 Actor / Feature 的特异性）
 
 ### 1.2 构造搜索查询
 
@@ -39,6 +46,8 @@
 - 复杂系统：3-5 个标杆
 - 确保覆盖不同架构流派或技术路线
 
+---
+
 ## 步骤2：标杆调研
 
 > **核心原则**：标杆研究是深度思考过程，统一采用多 agent 协作模式，确保研究质量。
@@ -60,14 +69,14 @@
      - 视角数 = 该标杆的 researcher 数
      - 禁止套用固定视角清单（如固定的"用户角色/使用阶段/分析维度"），必须以本次研究的具体上下文为出发点
    - **确保分析维度完整**：至少覆盖功能与场景、质量属性、运维与集成三个维度
-   - **reviewer 配置**：2 个（product-reviewer + architect-reviewer），横向对比所有标杆
+   - **reviewer 配置**：≥2 个，包含至少 product-reviewer + architect-reviewer 各 1 个；同一类型可多实例做交叉验证，数量基于标杆数与复杂度动态决定，横向对比所有标杆
 
 ### 2.2 并行启动 researcher（滑动窗口限流）
 
 1. 按 2.1 确定的配置，**每个标杆启动 ≥2 个 researcher agent**：
    - 各自从分配的需求视角独立研究同一标杆
    - **写入文件**：将完整报告写入 `docs/requirements/reference/<product>-draft-{view}.md`
-   - **返回摘要**：向主会话返回 ≤5 行轻量摘要（覆盖章节数、关键发现数、异常点）
+   - **返回摘要**：向主会话返回 ≤10 行轻量摘要（覆盖章节数、关键发现数、异常点）
    - 分析视角：**需求/用户/产品视角**，禁止技术分析
    - 模板约束：使用 `.claude/templates/ref-requirements.md`
    - **禁止**多个 researcher 使用同一 prompt 模板、同一分析框架
@@ -95,30 +104,59 @@
 - [ ] **标杆文件数** = 确认的标杆数（每个标杆恰好 1 个文件）
 - [ ] **每个标杆的视角数** ≥ 2（通过「研究视角」章节或文件内标注确认）
 - [ ] **所有 researcher agent 状态** = 已完成（成功或最终失败）
+- [ ] **三维度分析完整**：每个标杆文件包含功能与场景、质量属性、运维与集成三个维度
 
 **未通过处理**：
 - 任一标杆视角数 < 2 → 回退到步骤 2.1，针对该标杆重新分配 researcher，禁止跳过
--  researcher agent 仍有运行中 → 等待完成，禁止提前进入步骤 3
+- researcher agent 仍有运行中 → 等待完成，禁止提前进入步骤 3
 - 标杆文件数 ≠ 标杆数 → 检查是否有重复产出未合并或遗漏标杆未产出
+- 任一标杆三维度分析不完整 → 该标杆 researcher 重做缺失维度
 
-4. **主会话确认所有 researcher agent 已完成**（成功或最终失败），且产出完整性检查通过后，方可进入步骤 3。禁止在 agent 仍在运行期间提前进入评审
+**主会话确认所有 researcher agent 已完成**（成功或最终失败），且产出完整性检查通过后，**立即执行 draft 清理**（按 SKILL.md「draft 清理约束」）：
+
+```bash
+rm docs/requirements/reference/*-draft-*.md
+ls docs/requirements/reference/ | grep -- '-draft-' && echo "清理未完成" || echo "清理通过"
+```
+
+清理通过后方可进入步骤 3。禁止 draft 文件残留进入评审，禁止在 agent 仍在运行期间提前进入评审。
 
 ---
 
 ## 步骤3：评审修正循环
 
-> **前置条件**：步骤 2.2 已完成（所有标杆文件已写入）
+> **前置条件**：步骤 2 已完成（所有标杆文件已写入）
 > **核心约束**：评审修正循环按 SKILL.md「标准评审修正循环」执行，本文只声明本阶段特有参数和规则，不得重复标准循环内容。
 
 ### 3.1 并行评审
 
-**并行启动 2 个 reviewer agent**（product-reviewer + architect-reviewer），独立评审所有标杆报告：
+**reviewer agent 配置**：
+
+- **基线类型**：≥2 个（至少 product-reviewer + architect-reviewer 各 1 个）
+- **同一类型可多实例独立评审**做交叉验证（如复杂标杆可派 2 个 product-reviewer 对比意见）
+- **数量由主会话基于标杆数量与复杂度动态决定**（基线 2，可上调到 3-4），禁止默认按"两个分工"派遣
+
+**派遣 prompt 字段**（按 SKILL.md「评审视角（reviewer agent）」一节的「派遣 prompt 必备字段」清单组装，本阶段具体取值如下）：
+
+- **被评审对象路径**：`docs/requirements/reference/<product>.md`（每个标杆一份）
+- **被评审 template 路径**：`.claude/templates/ref-requirements.md`（视角来源 1：reviewer 从其 mandatory-sections + 深度自检清单提取评审锚点）
+- **评审报告产出路径**：`docs/requirements/reference/<product>-review.md`（多 reviewer / 多轮追加同一文件）
+- **评审报告格式**：`.claude/templates/review-report.md`
+
+**特异性子维度**（视角来源 2：主会话基于本次产品在派遣 prompt 中动态注入，禁止套用固定清单）：
+
+- 基于 `domain_specific` 注入对应领域 Actor / Feature 的检查项（如边云协同 → 要求检查标杆中"边运维""云管理"类 Actor 的识别完整性）
+- 基于 `quality_attributes.priorities` 前两项注入重点对比维度的检查深度
+- 基于 Non-Goals 注入"标杆中不适合本产品的 Feature"的识别要求
+
+**评审思维风格**（视角来源 3：reviewer agent 人设自带，主会话不重复声明）：
+
+- `product-reviewer`：业务/用户视角，关注标杆对本产品定位的对齐度、Feature 价值与场景覆盖
+- `architect-reviewer`：技术/架构视角，关注研究深度、方法论严谨性、结论合理性
 
 > **主会话职责**：在派遣评审 agent 的 prompt 中注入文档的系统上下文——标杆研究报告在需求体系中的位置（作为 Actor-Feature 定义的输入依据）、重要性（错误标杆选择或分析偏差会导致后续需求定义偏离方向）、可替换性（修正成本评估，标杆研究阶段的修正成本远低于 Feature 定义阶段）。
 
-- `product-reviewer` 重点评审需求视角正确性、三维度分析完整性（功能与场景、质量属性、运维与集成）、量化指标合理性
-- `architect-reviewer` 重点评审研究深度、方法论严谨性、结论与产品定位的匹配度
-- reviewer 需横向对比多个标杆，确保分析深度和质量标准一致
+reviewer 需横向对比多个标杆，确保分析深度和质量标准一致。
 
 ### 3.2 收集评审结果
 
@@ -137,13 +175,16 @@
 
 | 参数 | 值 | 说明 |
 |------|-----|------|
-| 评估对象数 | 标杆数量 | 即 `docs/requirements/reference/` 下的文件数 |
+| 评估对象数 | 标杆数量 | 即 `docs/requirements/reference/` 下的最终文件数 |
 | 缺陷密度门槛 | ≤ 2.0 分/标杆 | 见 SKILL.md「缺陷密度门槛标定依据」 |
+| 修正 agent | researcher agent | 修正后更新对应标杆的 `reference/<product>.md` |
 | 修正后复核路径 | 回到 3.1 重新评审；修正后的每一轮复核都必须重新计算缺陷密度并填入评审记录 | 对应标准循环第 5 步 |
 | \> 30 处回退目标 | 回退到步骤 2.1 | 重新决定 agent 配置和视角切分 |
 
 **成功退出条件**（同时满足）：
+- 所有 reviewer 均已完成独立评审
 - 无 CRITICAL 问题
 - 缺陷密度 ≤ 2.0 分/标杆
-- 每个标杆文件末尾已写入 `**评审状态**: ✅ PASS` 标记（按 SKILL.md「评审纪要写作规范」格式）
+- 每个标杆文件末尾已写入 `**评审状态**: ✅ PASS` 标记（按 SKILL.md「评审状态标记契约」格式）
+- 所有 HIGH 问题已评估：接受修正 / 接受延期 / 拒绝
 

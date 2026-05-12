@@ -21,7 +21,7 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
    - **合并 4 法则**：同类合并 / 技能边界 / 机制边界 / SLA 边界（详见下表）
 4. **分层产出**：先产出 Actor-Feature 清单并评审定稿，再进入 Scenario 挖掘
 5. **可验收性**：每个 Scenario 可独立验证，验收标准必须量化
-6. **产品级颗粒度**：需求文档是产品级交付件，用于指导后续特性级（OpenSpec）细化——只定义 Feature-Scenario 结构和验收标准，不深入特性级实现细节（字段级 API 签名、配置参数枚举、UI 布局等）。该在 `/opsx:*` 里做的事，不要在 `/df:define` 里提前做
+6. **产品级颗粒度**：只定义 Feature-Scenario 结构和验收标准，特性级实现细节（API 签名、配置参数、UI 布局等）归 `/opsx:*`
 7. **长时间迭代**：需求文档需要 3-10 个阶段才能定稿，禁止一次对话定需求
 
 ### Actor 合并 4 法则
@@ -62,7 +62,6 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
 **判定标准**：CRITICAL 须同时满足「影响核心方向 + 不修正会推倒重来 + 不可逆/高成本」。HIGH 影响局部质量但不改整体方向。MEDIUM 为优化建议。LOW 为非功能性问题。
 
 **常见误判**：子系统内部结构混乱 / Feature 不完整 → HIGH（可独立修复）；核心协议选型错误 → CRITICAL（系统级方向决策）。
-3. 核心一致性协议选型错误 → **CRITICAL**。理由：系统级方向性决策，影响多个子系统且难以回退
 
 ### 标准评审修正循环
 
@@ -97,22 +96,15 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
 
    - 仅当无 CRITICAL + 缺陷密度达标时写入 `✅ PASS`；评审中或未通过写入 `❌ FAIL` 或不写；接受带债放行写入 `⚠️ ACCEPTED-WITH-DEBT`（不视为 PASS，但允许阶段过渡）
 
-### 缺陷密度门槛标定依据
+### 缺陷密度门槛
 
-> 此节记录各阶段缺陷密度门槛的设定逻辑，供后续校准和质疑参考。数字不是经验拍脑袋的值，是基于以下假设：
-
-| 阶段 | 门槛 | 估算逻辑 |
+| 阶段 | 门槛 | 评估单位 |
 |------|------|---------|
-| 第 1 阶段（标杆研究） | 2.0 分/标杆 | 总分 ÷ 标杆数 ≤ 2.0。研究报告信息不完整（outside-in），适度容忍在研 gap。例 N=3 累计 ≤ 6 分（1 个 HIGH + 3 个 MEDIUM 已逼近），CRITICAL 单个否决 |
-| 第 2 阶段步骤 1（Actor） | 1.5 分/Actor | 总分 ÷ Actor 数 ≤ 1.5。Actor 内容简单（4 字段）、列表短（5-15），且是 Feature 的基础——需要比原 2.0 更严。例 N=10 累计 ≤ 15 分 |
-| 第 2 阶段步骤 2（Feature） | 1.5 分/Feature | 总分 ÷ Feature 数 ≤ 1.5。与 Actor 持平：Feature 内容更复杂但对象数更多（15-50），统计上均衡 |
-| 第 3 阶段（Scenario） | 1.5 分/**Feature** | 总分 ÷ Feature 数（非 Scenario 数）≤ 1.5。Scenario 粒度更细但评审维度收窄，与 Feature 门槛对齐 |
-| 第 4 阶段（维护模式） | 3.0 分/修正点 | 总分 ÷ 修正点数 ≤ 3.0。快速通道范围有限（单文件单章节），N=1 时 ≤ 3 分（1 个 HIGH 到顶，不可叠加 MEDIUM） |
-
-**校准规则**：
-- 门槛值被持续验证 10 轮后若无误判（假阳性/假阴性），可定为稳定值
-- 任一阶段连续 2 轮以底线通过（刚好不超标，修正 1 次即通过），应考虑下调门槛
-- 任一阶段连续 2 轮在第一轮通过（无任何 HIGH 问题），可讨论该阶段是否仍需评审循环
+| 第 1 阶段（标杆研究） | 2.0 分/标杆，CRITICAL 单个否决 | 每个标杆产品研究 |
+| 第 2 阶段步骤 1（Actor） | 1.5 分/Actor，CRITICAL 单个否决 | 每个 Actor（通常 5-15 个）|
+| 第 2 阶段步骤 2（Feature） | 1.5 分/Feature，CRITICAL 单个否决 | 每个 Feature（通常 15-50 个）|
+| 第 3 阶段（Scenario） | 1.5 分/**Feature**，CRITICAL 单个否决 | 每个 Feature（非 Scenario 数）|
+| 第 4 阶段（维护模式） | 3.0 分/修正点，CRITICAL 单个否决 | 修正点（单文件单章节）|
 
 ### 文档写入铁律
 
@@ -131,6 +123,14 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
 - 所有非最终产出统一用 `-draft-` 标记，如 `actors-draft-users.md`
 - 评审意见统一追加到单 `-review.md` 文件，如 `product-spec-review.md`
 - 最终文件不含 `-draft-` 和 `-review` 标记
+
+**draft 清理约束**（每个合并步骤的产出完整性检查通过后必须执行）：
+
+- 时机：合并 agent 写入最终文件 → 主会话执行产出完整性检查 → **通过后立即清理 draft**，再进入评审步骤
+- 命令：主会话用 Bash 执行 `rm <对应目录>/*-draft-*.md`（按各阶段文件的合并目录定位）
+- 验证：清理后用 `ls` 确认 `*-draft-*.md` 已全部移除，且最终文件仍存在
+- 禁止：draft 文件残留进入评审阶段或下一阶段；评审中需回退合并时，回退路径是重新派遣 agent 产出新 draft，不复用旧 draft
+- 例外：若产出完整性检查未通过需回退到合并前的产出 agent 阶段，draft 暂时保留至重新合并并通过检查后再清理
 
 **特性域文件命名**：
 - 文件名使用 **kebab-case 英文标识**（如 `data-query.md`、`security-compliance.md`），禁止使用中文字符
@@ -167,9 +167,47 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
 
 **滑动窗口策略**：初始启动 min(N, 5) 个 agent，每完成一个立即补位下一个，始终保持运行中 agent 数 = min(剩余, 5)。有依赖关系的 agent 必须等上游完成后才能入队。各阶段"并行启动"指令均受此限，禁止以并发限制为由压缩多 agent 步骤为单 agent。
 
+### 视角切分原则
+
+#### 发散视角（researcher / product 等产出 agent）
+
+多 agent 并行发散时，每个 agent 从独立、互补的视角产出。视角由主会话基于**本次产品的具体上下文**动态生成，在派遣 prompt 中说明切分理由。
+
+**视角质量标准**：互补（不重叠）、独立（任一视角缺失会导致分析盲区）、有明确命名和切分理由。
+
+**反面约束**：不得套用固定视角清单（如对所有产品都用"用户角色/使用阶段/分析维度"三视角）。视角服务于产品决策——不同产品的决策关注点不同，视角应反映这种差异。
+
+#### 评审视角（reviewer agent）
+
+**核心原则**：评审视角不由 reviewer agent 自带，必须从被评审对象的相关来源获取。reviewer agent 只负责承载"评审思维风格"。三层视角分工如下：
+
+| 视角层级 | 承担者 | 内容 |
+|---------|------|------|
+| **对象特异视角**（评审项） | 被评审 template | `mandatory-sections` + `checklist-at-end` 段（每个 template 已自带评审锚点） |
+| **场景特异视角**（评审深度） | 主会话派遣 prompt | 基于 `domain_specific` / `quality_attributes.priorities` 前两项 / Non-Goals 等动态注入 |
+| **评审思维风格** | reviewer agent 人设 | product-reviewer = 业务/用户视角；architect-reviewer = 技术/架构视角 |
+| **评审报告格式** | `.claude/templates/review-report.md` | 统一输出格式，**不含**任何评审项；reviewer 按格式产出 |
+
+**派遣 prompt 必备字段**（主会话每次派遣 reviewer 时必须传入）：
+
+1. **被评审对象路径**（如 `docs/requirements/reference/<product>.md`、`docs/requirements/product-spec.md`、`docs/requirements/<feature-domain>.md`）
+2. **被评审 template 路径**（如 `.claude/templates/ref-requirements.md` / `req-product-spec.md` / `req-feature.md`，指示视角来源 1）
+3. **特异性子维度清单**（基于本次产品上下文动态产出，指示视角来源 2）
+4. **本次评审的复杂度指引**（简单/中等/复杂，对应最低质疑点数 3/5/7）
+5. **评审报告产出路径**（如 `reference/<product>-review.md`、`product-spec-review.md`、`<feature-domain>-review.md`）
+6. **被评审对象在系统中的位置说明**（作为问题分级判定的系统上下文）
+
+**反面约束**：
+- 禁止 skill 中硬编码 reviewer 的检查项清单（如"product-reviewer 看用户场景 / Non-Goals 覆盖度 / 量化指标合理性"——这类视角应在被评审 template 中或派遣 prompt 中表达）
+- 禁止 skill 中硬编码 reviewer 数量（统一用 ≥N 描述下限）
+- 禁止默认"两个不同类型 reviewer = 一种分工组合"——同一类型也可多实例做交叉验证（如 2 个 product-reviewer 各侧重不同稳定视角）
+- 禁止 reviewer agent 在 prompt 之外携带任何评审项
+
+各阶段文件引用本原则，不再重复定义。
+
 ### 评审纪要写作约束
 
-> 此节是写作风格约束，**不计入评审判定项**。状态标记契约见上方「标准评审修正循环」步骤 9。
+> 写作风格约束，**不计入评审判定项**（reviewer 不应据此降级评审结论）。
 
 **写作要求**：
 - 写入评审记录前先读对应模板（`ref-requirements.md` / `req-product-spec.md` / `req-feature.md`）的「评审记录」示例，模板定义了表格列、日期格式等具体要求
@@ -190,9 +228,7 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
 | 第 3 阶段 | Scenario 挖掘 | 中等（基准） | 每个 domain 独立判定（综合 Actor 数量、依赖密度、规模与并发、质量关键路径等因素，非二维布尔，详见 `03-scenario.md`）：高复杂度 → ≥3 个 product + ≥2 个 reviewer；中等 → 1-2 个 product + 1-2 个 reviewer |
 | 第 4 阶段 | 维护模式 | 低 | 1 个对应角色 agent |
 
-**说明**：
-- 第 1 阶段统一采用高复杂度标准，符合 devforge 定位（大型复杂基础软件）
-- 第 3 阶段基准为「中等」（Scenario / 用例设计），由主会话基于 domain 多因素综合判断是否上调至「高」（详见 `03-scenario.md`）
+**说明**：第 3 阶段基准为「中等」（Scenario / 用例设计），由主会话基于 domain 多因素综合判断是否上调至「高」（详见 `03-scenario.md`）
 
 ---
 

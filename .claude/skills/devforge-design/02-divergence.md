@@ -53,31 +53,48 @@
 - [ ] 数据流正常路径 + 错误传播路径已定义
 - [ ] 文档已按模板结构写入 `decision-overall.md`
 - [ ] 文件已验证存在（`ls`/`wc` 确认）
+- [ ] **draft 已清理**：执行 `rm docs/architecture/decisions/decision-overall-draft-*.md`，并用 `ls` 确认无残留（按 SKILL.md「draft 清理约束」）
 
 ### 1.4 评审修正循环
 
-> **准入条件**：步骤 1 出口标准已通过
-> **核心约束**：按 SKILL.md「标准评审修正循环」执行，本文只声明本阶段特有参数和规则。
+> **前置条件**：步骤 1 出口标准已通过（decision-overall.md 已写入并通过完整性检查）
+> **核心约束**：评审修正循环按 SKILL.md「标准评审修正循环」执行，本文只声明本阶段特有参数和规则，不得重复标准循环内容。
 
-**评审配置**：
+### 1.4.1 评审配置
 
-≥3 个 reviewer，并行独立评审：
+**≥3 个 reviewer，并行独立评审**整体架构方案（同一类型可多实例做交叉验证）：
 
 - 主会话基于域特征动态决定 reviewer 角色组合（如 architect-reviewer × 2 + product-reviewer × 1，或 architect-reviewer + product-reviewer + project-reviewer 等），确保视角差异化
 - 评审维度必须覆盖：架构合理性、需求对齐、可实现性
-- **主会话职责**：在派遣评审 agent 的 prompt 中注入文档的系统上下文——本文档在架构体系中的位置（整体架构方案文档，定义子系统边界和全局数据流）、重要性（影响后续所有维度的方案发散和子系统设计）、可替换性（修正成本评估）
+- **特异性子维度由主会话基于本次产品的 `domain_specific` / `quality_attributes.priorities` 前两项 / Non-Goals 动态注入到派遣 prompt**，详见 SKILL.md「视角切分原则 - 评审视角」三层结构，禁止在 skill 中预写死本次特异关注点
+
+> **主会话职责**：在派遣评审 agent 的 prompt 中注入文档的系统上下文——本文档在架构体系中的位置（整体架构方案文档，定义子系统边界和全局数据流）、重要性（影响后续所有维度的方案发散和子系统设计）、可替换性（修正成本评估，整体方案变更影响所有维度的后续发散）。
+
+### 1.4.2 独立评审
+
+每个 reviewer agent：
+- 读取 `decisions/decision-overall.md` 执行评审
+- 将评审意见追加到 `decisions/decision-overall-review.md`
+- 向主会话返回数字摘要：{issues: N, density: X, critical: Y}
+
+主会话从数字摘要判定通过/修正/回退，不读取完整评审内容。
+
+### 1.4.3 验证与修正
+
+> 按 SKILL.md「标准评审修正循环」步骤 2-7 执行。本阶段特有参数声明如下：
 
 | 参数 | 值 | 说明 |
 |------|-----|------|
 | 评估对象数 | 备选方案数 | decision-overall.md 中的方案数 |
 | 缺陷密度门槛 | ≤ 2.0 分/方案 | 见 SKILL.md「缺陷密度门槛标定依据」 |
+| 修正 agent | architect agent | 修正后更新 `decisions/decision-overall.md` |
 | \> 30 处回退目标 | 回退到步骤 1.1 | 重新决定 agent 配置和视角切分 |
 
 **成功退出条件**（同时满足）：
 - 所有 reviewer 均已完成独立评审
 - 无 CRITICAL 问题
 - 缺陷密度 ≤ 2.0 分/方案
-- `decision-overall.md` 末尾已写入 `**评审状态**: ✅ PASS` 标记
+- `decision-overall.md` 末尾已写入 `**评审状态**: ✅ PASS` 标记（按 SKILL.md「评审状态标记契约」格式）
 - 所有 HIGH 问题已评估：接受修正 / 接受延期 / 拒绝
 
 ---
@@ -161,30 +178,47 @@
 - [ ] 各维度方案与 decision-overall.md 不冲突
 - [ ] 文档已按模板结构写入 `decision-<维度>.md`
 - [ ] 文件已验证存在
+- [ ] **draft 已清理**：执行 `rm docs/architecture/decisions/*-research-draft-*.md docs/architecture/decisions/decision-*-draft-*.md`，并用 `ls` 确认无残留（按 SKILL.md「draft 清理约束」）
 
 ### 3.4 评审修正循环
 
-> **准入条件**：步骤 3 出口标准已通过（所有维度文档已写入并验证存在）
-> **核心约束**：按 SKILL.md「标准评审修正循环」执行，本文只声明本阶段特有参数和规则。
+> **前置条件**：步骤 3 出口标准已通过（所有维度文档已写入并验证存在）
+> **核心约束**：评审修正循环按 SKILL.md「标准评审修正循环」执行，本文只声明本阶段特有参数和规则，不得重复标准循环内容。
 
-**评审配置**（按维度分别配置）：
+### 3.4.1 评审配置（按维度分别配置）
 
-每个维度 ≥2 个 reviewer，并行独立评审：
+每个维度 **≥2 个 reviewer，并行独立评审**（同一类型可多实例做交叉验证）：
 - 主会话基于域特征动态决定 reviewer 角色组合
 - 评审维度必须包含：**跨维度一致性**（检查该维度方案与其他维度是否存在冲突）
-- **主会话职责**：在派遣评审 agent 的 prompt 中注入文档的系统上下文
+- **特异性子维度由主会话基于本次产品的 `domain_specific` / `quality_attributes.priorities` 前两项 / Non-Goals 与该维度的具体性质动态注入到派遣 prompt**，详见 SKILL.md「视角切分原则 - 评审视角」三层结构
+
+> **主会话职责**：在派遣评审 agent 的 prompt 中注入文档的系统上下文——本文档在架构体系中的位置（维度决策文档，定义单一技术维度的备选方案和 Trade-off）、重要性（维度方案直接影响 ADR 收敛和子系统设计）、可替换性（修正成本评估，维度方案修正成本中等，但跨维度冲突修正成本较高）。
+
+### 3.4.2 独立评审
+
+每个 reviewer agent：
+- 读取对应维度 `decisions/decision-<维度>.md` 执行评审
+- 将评审意见追加到 `decisions/decision-<维度>-review.md`
+- 向主会话返回数字摘要：{issues: N, density: X, critical: Y}
+
+主会话从数字摘要判定通过/修正/回退，不读取完整评审内容。
+
+### 3.4.3 验证与修正
+
+> 按 SKILL.md「标准评审修正循环」步骤 2-7 执行。本阶段特有参数声明如下：
 
 | 参数 | 值 | 说明 |
 |------|-----|------|
 | 评估对象数 | 备选方案数 | 各维度 decision-<维度>.md 中的方案数 |
 | 缺陷密度门槛 | ≤ 1.5 分/方案 | 见 SKILL.md「缺陷密度门槛标定依据」 |
+| 修正 agent | architect agent | 修正后更新对应 `decisions/decision-<维度>.md` |
 | \> 30 处回退目标 | 仅该维度回退到步骤 3.1 | 重新决定 agent 配置，其他维度不受影响 |
 
 **成功退出条件**（同时满足）：
 - 所有维度均已通过独立评审
 - 各维度无 CRITICAL 问题
 - 各维度缺陷密度 ≤ 1.5 分/方案
-- 各 `decision-<维度>.md` 末尾已写入 `**评审状态**: ✅ PASS` 标记
+- 各 `decision-<维度>.md` 末尾已写入 `**评审状态**: ✅ PASS` 标记（按 SKILL.md「评审状态标记契约」格式）
 - 所有 HIGH 问题已评估：接受修正 / 接受延期 / 拒绝
 - **跨维度一致性已验证**（无冲突、接口契约一致、上游输出与下游输入匹配）
 

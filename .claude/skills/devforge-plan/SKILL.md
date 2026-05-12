@@ -1,6 +1,6 @@
 ---
 name: devforge-plan
-description: 制定迭代计划，智能识别当前所处阶段，按顺序推进两阶段规划（里程碑 → 迭代执行计划），每阶段独立评审（architect-reviewer + product-reviewer + project-reviewer 三重视角）
+description: 制定迭代计划，智能识别当前所处阶段，按顺序推进两阶段规划（里程碑 → 迭代执行计划），每阶段独立评审。当用户提到迭代计划、里程碑规划、Sprint 规划、Backlog 排序、团队排期、交付节奏、迭代执行计划时应使用此 skill
 allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
 ---
 
@@ -16,10 +16,20 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
 1. **模板牵引**：所有产出必须严格遵循对应模板，写前先读模板是铁律
 2. **线性推进**：按第 1 阶段 → 第 2 阶段的顺序执行，不跳跃
 3. **一次一文件**：每次执行只产出一个计划文件
-4. **不可逆决策从严**：里程碑划分影响后续全部迭代，缺陷密度门槛从严（≤ 0.3 分/proposal）
+4. **滚动刷新**：里程碑未执行部分可重刷，迭代计划"到跟前才生成"；质量门槛**不必苛求第一版完美**
 5. **Wave 是迭代内部的并行编排单位**，不用于跨迭代编排
 6. **第 1 阶段 Backlog 只列清单，不分配到具体迭代**（迭代分配在第 2 阶段完成）
-7. **长时间迭代**：计划文档需要多轮评审修正才能定稿，禁止一次对话定计划
+7. **产品级颗粒度**：只规划"做什么/何时做/什么顺序做"，特性级细节（接口签名、字段、配置参数等）归 `/opsx:*`，不在 `/df:plan` 提前做
+8. **长时间迭代**：计划文档需要多轮评审修正才能定稿，禁止一次对话定计划
+
+### 计划质量复审触发条件（质量信号驱动，非数量门槛）
+
+| 信号 | 触发条件 | 复审动作 |
+|------|---------|---------|
+| **A：Wave 扁平化** | 所有 proposal 都在 Wave 0（未识别迭代内依赖关系） | 触发"依赖分析是否充分"复审 |
+| **B：容量饱和** | 迭代选入点数 ≥ 容量的 95%（缓冲不足） | 触发"缓冲是否充足"复审 |
+| **C：高风险集中** | 🔴 技术可行性风险 proposal > 50% | 触发"Spike 验证是否充分"复审 |
+| **D：集成测试缺失** | 集成测试占比 < 15% | **强制补充**集成测试 proposal |
 
 ---
 
@@ -40,7 +50,7 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
 
 **判定标准**：CRITICAL 须同时满足「影响核心方向 + 不修正会推倒重来 + 不可逆/高成本」。HIGH 影响局部质量但不改整体方向。MEDIUM 为优化建议。LOW 为非功能性问题。
 
-**常见误判**：里程碑划分不合理但可调整 → HIGH（非 CRITICAL，可滚动更新）；Backlog 遗漏关键路径上的 proposal → CRITICAL（影响后续迭代方向）。
+**常见误判**：里程碑划分不合理但可在下次刷新调整 → HIGH（非 CRITICAL，可滚动更新）；Backlog 遗漏远期里程碑的关键 proposal → HIGH（影响方向但可刷新补救）；遗漏**当前正在规划的迭代**的关键 proposal → CRITICAL（影响即将执行的方向，刷新已来不及）。
 
 ### 标准评审修正循环
 
@@ -59,7 +69,7 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
    基于问题数量决定 agent 配置：
    - < 10 处：1 个对应角色 agent 读取文件 + review 文件后 Edit 修正
    - 10-30 处：2 个 agent 按产出对象/维度分块并行修正，各自 Edit 对应部分
-   - > 30 处：按各阶段规则判断是否回退到对应步骤重新执行多 agent 并行发散（回退规则见各阶段）
+   - \> 30 处：按各阶段规则判断是否回退到对应步骤重新执行多 agent 并行发散（回退规则见各阶段，各阶段不重复定义此处 3 档策略本身）
    - 分工原则：问题集中在某个产出对象 → 针对该对象；问题分散 → 按产出对象并行；问题集中在某个维度 → 按维度分工
    - 修正 agent 直接 Edit 文件，主会话只确认修正完成状态，不中转修正内容
 
@@ -75,20 +85,13 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
 
    - 仅当无 CRITICAL + 缺陷密度达标时写入 `✅ PASS`；评审中或未通过写入 `❌ FAIL` 或不写；接受带债放行写入 `⚠️ ACCEPTED-WITH-DEBT`（不视为 PASS，但允许阶段过渡）
 
-### 缺陷密度门槛标定依据
+### 缺陷密度门槛
 
-> 此节记录各阶段缺陷密度门槛的设定逻辑，供后续校准和质疑参考。
-
-| 阶段 | 门槛 | 估算逻辑 |
+| 阶段 | 门槛 | 评估单位 |
 |------|------|---------|
-| 第 1 阶段（里程碑规划） | ≤ 0.3 分/proposal | 里程碑划分为不可逆决策，影响后续全部迭代，从严。N=10 proposals 时累计 ≤ 3 分（恰好 1 个 HIGH），CRITICAL 单个否决 |
-| 第 2 阶段（迭代执行计划） | ≤ 0.5 分/proposal | 单迭代范围，关键路径编排重要但可调整。N=6 proposals 时累计 ≤ 3 分（1 个 HIGH 到顶） |
-| 维护模式（快速通道） | ≤ 3.0 分/修正点 | 范围有限（单文件单章节），N=1 时 ≤ 3 分（1 个 HIGH 到顶，不可叠加 MEDIUM） |
-
-**校准规则**：
-- 门槛值被持续验证 10 轮后若无误判（假阳性/假阴性），可定为稳定值
-- 任一阶段连续 2 轮以底线通过（刚好不超标，修正 1 次即通过），应考虑下调门槛
-- 任一阶段连续 2 轮在第一轮通过（无任何 HIGH 问题），可讨论该阶段是否仍需评审循环
+| 第 1 阶段（里程碑规划） | ≤ 2.0 分/里程碑，CRITICAL 单个否决 | 里程碑点（3-6 个，非 Backlog 中的 proposal）|
+| 第 2 阶段（迭代执行计划） | ≤ 0.5 分/proposal，CRITICAL 单个否决 | 当前迭代内 proposal |
+| 维护模式（快速通道） | ≤ 3.0 分/修正点，CRITICAL 单个否决 | 修正点（单文件单章节）|
 
 ### 文档写入铁律
 
@@ -108,6 +111,14 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
 - 评审意见统一追加到单 `-review.md` 文件，如 `milestone-plan-review.md`
 - 最终文件不含 `-draft-` 和 `-review` 标记
 
+**draft 清理约束**（每个合并步骤的产出完整性检查通过后必须执行）：
+
+- 时机：合并 agent 写入最终文件 → 主会话执行产出完整性检查 → **通过后立即清理 draft**，再进入评审步骤
+- 命令：主会话用 Bash 执行 `rm <对应目录>/*-draft-*.md`（按各阶段文件的合并目录定位）
+- 验证：清理后用 `ls` 确认 `*-draft-*.md` 已全部移除，且最终文件仍存在
+- 禁止：draft 文件残留进入评审阶段或下一阶段；评审中需回退合并时，回退路径是重新派遣 agent 产出新 draft，不复用旧 draft
+- 例外：若产出完整性检查未通过需回退到合并前的产出 agent 阶段，draft 暂时保留至重新合并并通过检查后再清理
+
 **例外**：步骤内部的工作指令（如调度方案）属于执行中间件，可按对应阶段规则豁免落盘。
 
 ### 主会话职责边界
@@ -121,10 +132,10 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
 
 **已下放给 agent 的职责**（主会话不再执行）：
 - 文件写入：agent 自行 Write/Edit 到 draft/review/最终文件
-- 内容整合：由**同类型新 agent 实例**执行合并去重（project 合并 project 的 draft）
+- 内容整合：由**同类型新 agent 实例**执行合并去重（project 合并 project 的 draft，architect 合并 architect 的 draft 等）
 - 评审记录：reviewer 追加到 `-review.md`，合并 agent 将 PASS 标记写入最终文件
 
-**禁止**：
+**边界警戒**（这些行为会破坏 agent 协作的质量保障机制）：
 - 主会话不得读取 agent 完整产出或实质性修改其核心内容
 - 禁止无记录声称完成或用单 agent 内部发散替代多 agent 独立产出
 - 合并 agent 须与原始 agent 类型一致
@@ -149,22 +160,35 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
 
 #### 评审视角（reviewer agent）
 
-评审视角同样适用动态切分原则，但分层方式不同——区分"骨架 / 模板 / 特异性"三层：
+**核心原则**：评审视角不由 reviewer agent 自带，必须从被评审对象的相关来源获取。reviewer agent 只负责承载"评审思维风格"。三层视角分工如下：
 
-- **类型骨架（固定）**：reviewer agent 类型枚举（`product-reviewer` / `architect-reviewer` / `project-reviewer` 等）是预定义角色，可在 skill 中预声明
-- **通用职责模板（半固定）**：每类 reviewer 的通用职责（如 project-reviewer 看计划编排/里程碑划分/团队容量匹配；architect-reviewer 看技术依赖/关键路径/风险识别）作为派遣 prompt 起点，可在 skill 中预声明
-- **特异性子维度（动态）**：本次评审的具体关注点必须由主会话基于 `domain-config.yaml` / `quality_attributes.priorities` / 里程碑上下文等本次产品的特征动态注入到派遣 prompt，不得在 skill 中预写死
+| 视角层级 | 承担者 | 内容 |
+|---------|------|------|
+| **对象特异视角**（评审项） | 被评审 template | `mandatory-sections` + `checklist-at-end` 段（每个 template 已自带评审锚点） |
+| **场景特异视角**（评审深度） | 主会话派遣 prompt | 基于 `domain-config.yaml` / `quality_attributes.priorities` / 里程碑上下文等动态注入 |
+| **评审思维风格** | reviewer agent 人设 | project-reviewer = 进度/资源视角；architect-reviewer = 技术/架构视角；product-reviewer = 业务/用户视角 |
+| **评审报告格式** | `.claude/templates/review-report.md` | 统一输出格式，**不含**任何评审项；reviewer 按格式产出 |
+
+**派遣 prompt 必备字段**（主会话每次派遣 reviewer 时必须传入）：
+
+1. **被评审对象路径**（如 `docs/iteration-plan/milestone-plan.md`、`docs/iteration-plan/iteration-m*-i*.md`）
+2. **被评审 template 路径**（如 `.claude/templates/plan-milestone.md` / `plan-iteration.md`，指示视角来源 1）
+3. **特异性子维度清单**（基于本次产品上下文动态产出，指示视角来源 2）
+4. **本次评审的复杂度指引**（简单/中等/复杂，对应最低质疑点数 3/5/7）
+5. **评审报告产出路径**（如 `milestone-plan-review.md`、`iteration-m*-i*-review.md`）
+6. **被评审对象在系统中的位置说明**（作为问题分级判定的系统上下文）
 
 **反面约束**：
-- 禁止 skill 中硬编码 reviewer 数量（如"2 个 reviewer"），统一用 ≥N 描述下限
-- 禁止 skill 中把"本次特异性子维度"和"通用职责模板"混在一起写死，应分层呈现
+- 禁止 skill 中硬编码 reviewer 的检查项清单（如"project-reviewer 看计划编排/里程碑划分/团队容量匹配"——这类视角应在被评审 template 中或派遣 prompt 中表达）
+- 禁止 skill 中硬编码 reviewer 数量（统一用 ≥N 描述下限）
 - 禁止默认"三个不同类型 reviewer = 一种分工组合"——同一类型也可多实例做交叉验证
+- 禁止 reviewer agent 在 prompt 之外携带任何评审项
 
 各阶段文件引用本原则，不再重复定义。
 
 ### 评审纪要写作约束
 
-> 此节是写作风格约束，**不计入评审判定项**。状态标记契约见上方「标准评审修正循环」步骤 9。
+> 写作风格约束，**不计入评审判定项**（reviewer 不应据此降级评审结论）。
 
 **写作要求**：
 - 写入评审记录前先读对应模板（`plan-milestone.md` / `plan-iteration.md`）的「评审记录」示例，模板定义了表格列、日期格式等具体要求
@@ -180,36 +204,29 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
 | 阶段 | 内容类型 | 复杂度 | agent 配置 |
 |------|---------|-------|-----------|
 | 第 0 阶段 | 上游文档就绪检查 | 低 | 主会话直接执行（豁免） |
-| 第 1 阶段 | 里程碑规划（结构化规划 + 跨子系统依赖 + 不可逆决策） | 极高 | ≥5 个并行产出 agent + ≥3 个 reviewer |
-| 第 2 阶段 | 迭代执行计划（关键路径编排 + 多角色交叉验证） | 高 | ≥3 个并行产出 agent + ≥3 个 reviewer |
+| 第 1 阶段 步骤 1 | 项目背景收集 | 低 | 主会话直接 AskUserQuestion（豁免评审循环） |
+| 第 1 阶段 步骤 2-3 | 里程碑规划 + 评审 | 高 | ≥3 个并行产出 agent + ≥2 个 reviewer |
+| 第 2 阶段 步骤 1 | 迭代上下文收集 | 低 | 主会话直接 AskUserQuestion（豁免评审循环） |
+| 第 2 阶段 步骤 2-3 | 迭代执行计划 + 评审 | 高 | ≥3 个并行产出 agent + ≥2 个 reviewer |
 | 维护模式 | 滚动更新/单点修正 | 低 | 1 个对应角色 agent |
-
-**说明**：
-- 第 1 阶段基准复杂度「高」（结构化规划），上调属性：跨子系统边界 + 不可逆决策 → **极高**
-- 第 2 阶段基准复杂度「中等」（结构化规划），上调属性：性能/一致性关键路径编排 + 多角色交叉验证 → **高**
 
 ---
 
 ## 启动检测
 
-**核心原则**：状态汇报必须以 `ls`/`wc`/`Read` 扫描文件系统的**实时结果**为准。
+**核心原则**：状态判定以文件系统实时扫描（`ls`/`wc`/`Read`）为准。文件存在性是必要条件，**`✅ PASS` / `⚠️ ACCEPTED-WITH-DEBT` 评审状态标记是阶段过渡的充分条件**。**扫描与汇报范围仅限 `docs/iteration-plan/` 与上游文档目录**。
 
-**状态判定**（按执行流程顺序）：
+**状态机**（按优先级从上到下匹配，命中即停）：
 
-> **判定原则**：文件存在性只是必要条件，**`✅ PASS` 评审状态标记才是阶段过渡的充分条件**。
-
-1. 上游文档（`docs/architecture/` 或 `docs/requirements/`）缺失 → **上游未就绪**，提示先执行 `/df:design` 和 `/df:define`
-2. `milestone-plan.md` 不存在 → **第 1 阶段**（步骤 1-2：项目背景收集 + 多 agent 并行产出）
-3. `milestone-plan.md` 存在：
-   - 读取文件末尾，搜索 `**评审状态**:` 标记
-   - 无 `✅ PASS` 标记（或无标记 / `❌ FAIL`）→ **第 1 阶段步骤 3（评审修正循环）**
-   - 有 `✅ PASS` 标记 → 第 1 阶段准入通过
-4. 第一个未规划的迭代（如 M1-I1）的 `iteration-m1-i1.md` 不存在 → **第 2 阶段**（步骤 1-2：迭代上下文收集 + 多 agent 并行产出）
-5. `iteration-m<x>-i<y>.md` 存在：
-   - 读取文件末尾评审状态，无 `✅ PASS` 标记 → **第 2 阶段步骤 3（评审修正循环）**
-   - 有 `✅ PASS` 标记 → 当前迭代规划完成
-6. 当前里程碑所有迭代已规划完毕，下一个里程碑 Backlog 尚未展开 → **里程碑推进**（滚动更新 milestone-plan.md）
-7. 全部迭代均已规划完毕 → **维护模式**
+| # | 当前文件状态 | 下一步动作 |
+|---|------------|-----------|
+| 1 | 上游文档（`docs/architecture/` 或 `docs/requirements/`）缺失 | → 上游未就绪，提示先执行 `/df:design` 和 `/df:define` |
+| 2 | `milestone-plan.md` 不存在 | → 第 1 阶段步骤 1-2（项目背景收集 + 多 agent 并行产出） |
+| 3 | `milestone-plan.md` 无 PASS 标记 | → 第 1 阶段步骤 3（评审修正循环） |
+| 4 | 第一个未规划的 `iteration-m<x>-i<y>.md` 不存在 | → 第 2 阶段步骤 1-2（迭代上下文收集 + 多 agent 并行产出） |
+| 5 | `iteration-m<x>-i<y>.md` 无 PASS 标记 | → 第 2 阶段步骤 3（评审修正循环） |
+| 6 | 当前里程碑所有迭代已规划完毕，下一里程碑 Backlog 未展开 | → 里程碑推进（滚动更新 milestone-plan.md） |
+| 7 | 全部迭代均已规划完毕 | → 维护模式 |
 
 **行为规则**：主流程未完成时，根据文档状态直接判定并提示唯一的下一步动作，不罗列多个选项让用户选择；主流程已完成后（维护模式），允许给出多个改进方向供用户选择。
 
@@ -233,7 +250,7 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
 
 ### 第 2 阶段：迭代执行计划
 
-- **准入**：第 1 阶段完成并通过评审（无 CRITICAL + 缺陷密度达标）
+- **准入**：第 1 阶段完成并通过评审（无 CRITICAL 问题 + 缺陷密度达标，门槛见「缺陷密度门槛」）
 - **产出**：`docs/iteration-plan/iteration-m<x>-i<y>.md`
 - **规则**：`02-iteration-planning.md`
 
@@ -279,6 +296,8 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
 - 低复杂度文档篇幅 > 400 行（可能信息密度过低）
 - **主会话直接产出原本应由 agent 产出的内容**（如自己编写里程碑规划、自己设计 Backlog）
 - **主会话修改 agent 产出核心内容**（只能确认状态，不动核心内容）
+- **Backlog 中出现 XL 粒度 proposal 且未标注拆解计划** — 强制拆解
+- **迭代计划总点数 > 容量预算** — 不可通过评审
 
 ---
 

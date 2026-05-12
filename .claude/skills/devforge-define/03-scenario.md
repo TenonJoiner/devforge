@@ -51,6 +51,7 @@
 - [ ] 故障模式覆盖矩阵中每个 Feature 至少 5 个 ✅（正常路径 + 4 种故障模式）
 - [ ] 非功能需求有量化指标（具体数字 + 验收方法）
 - [ ] 文档已写入 `docs/requirements/<feature-domain-en>.md`
+- [ ] **draft 已清理**：执行 `rm docs/requirements/<feature-domain-en>-draft-*.md`（每个 domain 独立清理），并用 `ls` 确认无残留（按 SKILL.md「draft 清理约束」）
 
 ---
 
@@ -61,11 +62,26 @@
 
 ### 2.1 评审配置
 
-**按 domain 分别配置 reviewer**（沿用步骤 1 已判定的复杂度）：
+**按 domain 分别配置 reviewer**（沿用步骤 1 已判定的复杂度，同一类型可多实例做交叉验证）：
 
 - 中等复杂度 domain：≥1 个 reviewer，以 product-reviewer 为主，architect-reviewer 可选辅助
-- 高复杂度 domain：product-reviewer（主责）+ architect-reviewer（辅助）并行评审
-- **主会话职责**：在派遣评审 agent 的 prompt 中注入文档的系统上下文——本文档在需求体系中的位置（特性域 Scenario 规格，基于 product-spec.md 中的 Feature 展开）、重要性（定义验收标准和具体用例，直接影响开发和测试）、可替换性（修正成本评估）
+- 高复杂度 domain：≥2 个 reviewer（至少 product-reviewer 主责 + architect-reviewer 辅助），并行评审
+
+**派遣 prompt 字段**（按 SKILL.md「评审视角（reviewer agent）」一节的「派遣 prompt 必备字段」清单组装，本阶段每个 domain 具体取值如下）：
+
+- **被评审对象路径**：`docs/requirements/<feature-domain-en>.md`（每个 domain 一份）
+- **被评审 template 路径**：`.claude/templates/req-feature.md`（视角来源 1：reviewer 从其 mandatory-sections + 自检清单提取评审锚点）
+- **评审报告产出路径**：`docs/requirements/<feature-domain-en>-review.md`
+- **评审报告格式**：`.claude/templates/review-report.md`
+
+**特异性子维度**（视角来源 2：主会话基于本次产品的 `domain_specific` / `quality_attributes.priorities` 前两项 / Non-Goals 与该 domain 的具体性质动态注入到派遣 prompt，禁止套用固定清单）。
+
+**评审思维风格**（视角来源 3：reviewer agent 人设自带，主会话不重复声明）：
+
+- `product-reviewer`：业务/用户视角（本阶段主责）
+- `architect-reviewer`：技术/架构视角（本阶段辅助，仅做技术可行性粗判与"Scenario 是否越界涉及实现细节"识别，禁评跨子系统依赖）
+
+**主会话职责**：在派遣评审 agent 的 prompt 中注入文档的系统上下文——本文档在需求体系中的位置（特性域 Scenario 规格，基于 product-spec.md 中的 Feature 展开）、重要性（定义验收标准和具体用例，直接影响开发和测试）、可替换性（修正成本评估）。
 
 ### 2.2 独立评审
 
@@ -94,7 +110,7 @@
 - 所有 domain 均已通过独立评审
 - 各 domain 无 CRITICAL 问题
 - 各 domain 缺陷密度 ≤ 1.5 分/Feature
-- 各特性域文档末尾已写入 `**评审状态**: ✅ PASS` 标记（按 SKILL.md「评审纪要写作规范」格式）
+- 各特性域文档末尾已写入 `**评审状态**: ✅ PASS` 标记（按 SKILL.md「评审状态标记契约」格式）
 - 各 domain 所有 HIGH 问题已评估：接受修正 / 接受延期 / 拒绝
 
 ---
