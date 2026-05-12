@@ -46,7 +46,7 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
 
 各阶段遵循统一的评审修正循环。具体门槛值（缺陷密度阈值、评估对象数计算方式）见各阶段规则。
 
-1. **独立评审**：并行启动 reviewer，按模板自检清单提出 CRITICAL/HIGH/MEDIUM/LOW 分级问题
+1. **独立评审**：并行启动 ≥2 个 reviewer，按模板自检清单提出 CRITICAL/HIGH/MEDIUM/LOW 分级问题
 2. **计算缺陷密度**：所有问题分数之和 / 评估对象数
 
    问题分值：**CRITICAL=10分, HIGH=3分, MEDIUM=1分, LOW=0.1分**
