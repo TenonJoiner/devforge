@@ -13,7 +13,7 @@
 - **任务独立性标注**：spec-driven-enhanced schema 的 tasks 模板要求每个 task 标注 `[并行: 是/否]`
 - **Wave/Checkpoint/Wave**：独立 task 并行执行 → 合并检查 → 依赖 task 继续（参考 SuperClaude 并行引擎）
 - **冲突检测**：同文件修改标记为不可并行
-- **git worktree 隔离**：每个并行 agent 使用独立 worktree（worktree skill 由 `/opsx:apply` 内部调度，`/ky:switch-worktree` 供手动切换）
+- **git worktree 隔离**：每个并行 agent 使用独立 worktree（worktree skill 由 `/opsx:apply` 内部调度，`/df:switch-worktree` 供手动切换）
 
 ### 11.3 使用方式
 
@@ -44,7 +44,7 @@ teamskills/
 
 ## 十二、变更回溯机制
 
-解决 P5 问题。通过 `/ky:verify`（PS6）按需执行全量双向一致性检查，识别产品级文档与特性级 spec/design/code 之间的不一致，判断同步方向，由人确认后更新。
+解决 P5 问题。通过 `/df:verify`（PS6）按需执行全量双向一致性检查，识别产品级文档与特性级 spec/design/code 之间的不一致，判断同步方向，由人确认后更新。
 
 ### 12.1 四种变更类型
 
@@ -55,9 +55,9 @@ teamskills/
 | 接口变更 | 子系统间接口调整 | 横向 + 向上 |
 | 范围变更 | 特性增减/优先级调整 | 向上（特性 → 产品迭代计划） |
 
-### 12.2 `/ky:verify` 驱动的双向一致性检查
+### 12.2 `/df:verify` 驱动的双向一致性检查
 
-变更回溯通过 `/ky:verify` 按需执行全量检查，不依赖自动化 hook 实时检测：
+变更回溯通过 `/df:verify` 按需执行全量检查，不依赖自动化 hook 实时检测：
 
 1. 对比所有已实现 feature 的 spec/design/code 与产品级文档
 2. 识别不一致点，判断方向：
@@ -76,8 +76,8 @@ teamskills/
 
 产品级变更通过 OpenSpec 的 Delta spec 机制自然向下传播：
 
-1. 产品需求变更 → 使用 `/ky:define` 更新 docs/requirements/
-2. `/ky:product-review` 检查跨文档一致性 → 识别受影响的特性级 proposal
+1. 产品需求变更 → 使用 `/df:define` 更新 docs/requirements/
+2. `/df:product-review` 检查跨文档一致性 → 识别受影响的特性级 proposal
 3. 特性级 spec 更新 → `/opsx:verify` 检查一致性 → tasks 更新
 
 ### 12.4 向上同步
@@ -85,6 +85,6 @@ teamskills/
 特性级实现中发现的问题反馈到产品级：
 
 1. 特性级 spec-driven-enhanced 流程中发现与产品级文档的偏差（proposal/specs/design 的 instruction 均要求标注偏差点）
-2. `/ky:verify` 执行全量双向检查，输出不一致清单和方向建议
+2. `/df:verify` 执行全量双向检查，输出不一致清单和方向建议
 3. 人确认后更新产品级文档（docs/requirements/、docs/interfaces/、docs/architecture/ 等）
 4. 特性级已完成的变更通过 OpenSpec `/opsx:archive` 合并归档

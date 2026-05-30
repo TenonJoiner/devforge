@@ -382,7 +382,7 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
 ## Integration
 
 - **前置 Skill**: 无（可作为起点）
-- **后续 Skill**: `/ky:define`（从产品视角定义需求）、`/ky:plan`（综合需求与架构制定迭代计划）
+- **后续 Skill**: `/df:define`（从产品视角定义需求）、`/df:plan`（综合需求与架构制定迭代计划）
 - **协作 Agent**: `tech-leader`(A1)
 - **相关 Rules**: R1 `workflow`（四层工作流规范）
 ````
@@ -644,8 +644,8 @@ ls docs/requirements/ 2>/dev/null || echo "无现有需求文档"
 
 ## Integration
 
-- **前置 Skill**: `/ky:architect`（架构设计约束需求可行性）
-- **后续 Skill**: `/ky:plan`（综合需求与架构制定迭代计划）
+- **前置 Skill**: `/df:architect`（架构设计约束需求可行性）
+- **后续 Skill**: `/df:plan`（综合需求与架构制定迭代计划）
 - **协作 Agent**: `tech-leader`(A1)
 - **相关 Rules**: R1 `workflow`
 ````
@@ -843,7 +843,7 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
 
 ## Integration
 
-- **前置 Skill**: `/ky:architect`、`/ky:define`、`/ky:test-design`（可选，有则用于细化集成测试 proposal）
+- **前置 Skill**: `/df:architect`、`/df:define`、`/df:test-design`（可选，有则用于细化集成测试 proposal）
 - **后续 Skill**: 特性级 workflow 启动开发
 - **协作 Agent**: `tech-leader`(A1)
 - **相关 Rules**: R1 `workflow`
@@ -938,8 +938,8 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
 
 ## Integration
 
-- **前置 Skill**: `/ky:architect`、`/ky:define`
-- **后续 Skill**: `/ky:plan`（集成测试 proposal 的输入依据）
+- **前置 Skill**: `/df:architect`、`/df:define`
+- **后续 Skill**: `/df:plan`（集成测试 proposal 的输入依据）
 - **协作 Agent**: `tech-leader`(A1)
 - **相关 Rules**: R1 `workflow`
 ````
@@ -1242,16 +1242,16 @@ tools: ["Read", "Write", "Edit", "Bash", "Grep", "Glob", "Agent"]
 
 ### 2.4 Commands
 
-#### 2.4.1 Command: `/ky:architect`
+#### 2.4.1 Command: `/df:architect`
 
-**文件路径**：`.claude/commands/ky/architect.md`
+**文件路径**：`.claude/commands/df/architect.md`
 
 **映射 Skill**: `product/architect`
 
 **Command 格式**：
 
 ````markdown
-# /ky:architect
+# /df:architect
 
 探索产品架构方案、竞品分析、子系统分解。
 
@@ -1286,7 +1286,7 @@ tools: ["Read", "Write", "Edit", "Bash", "Grep", "Glob", "Agent"]
 ## 使用示例
 
 ```
-/ky:architect
+/df:architect
 > 检测到现有架构文档：
 > 1. 继续完善 [storage-engine.md] —— 迭代更新
 > 2. 探索新方向 —— 启动新的架构讨论
@@ -1294,7 +1294,7 @@ tools: ["Read", "Write", "Edit", "Bash", "Grep", "Glob", "Agent"]
 ```
 
 ```
-/ky:architect
+/df:architect
 > 你想探索什么方向？
 > 1. 新的存储引擎架构
 > 2. 一致性协议选择
@@ -1318,16 +1318,16 @@ tools: ["Read", "Write", "Edit", "Bash", "Grep", "Glob", "Agent"]
 
 ---
 
-#### 2.4.2 Command: `/ky:define`
+#### 2.4.2 Command: `/df:define`
 
-**文件路径**：`.claude/commands/ky/define.md`
+**文件路径**：`.claude/commands/df/define.md`
 
 **映射 Skill**: `product/define`
 
 **Command 格式**：
 
 ````markdown
-# /ky:define
+# /df:define
 
 定义产品需求、制定验收标准。
 
@@ -1360,7 +1360,7 @@ tools: ["Read", "Write", "Edit", "Bash", "Grep", "Glob", "Agent"]
 ## 使用示例
 
 ```
-/ky:define
+/df:define
 > 检测到现有需求文档：
 > 1. 新增 Feature —— 扩展现有文档
 > 2. 完善现有定义 —— 迭代更新
@@ -1368,7 +1368,7 @@ tools: ["Read", "Write", "Edit", "Bash", "Grep", "Glob", "Agent"]
 ```
 
 ```
-/ky:define
+/df:define
 > 你想定义什么？
 > 1. 新 Feature 的需求规格
 > 2. 修改现有需求
@@ -1388,16 +1388,16 @@ tools: ["Read", "Write", "Edit", "Bash", "Grep", "Glob", "Agent"]
 
 ---
 
-#### 2.4.3 Command: `/ky:plan`
+#### 2.4.3 Command: `/df:plan`
 
-**文件路径**：`.claude/commands/ky/plan.md`
+**文件路径**：`.claude/commands/df/plan.md`
 
 **映射 Skill**: `product/plan`
 
 **Command 格式**：
 
 ````markdown
-# /ky:plan
+# /df:plan
 
 制定迭代计划和 proposal 清单。
 
@@ -1454,7 +1454,7 @@ tools: ["Read", "Write", "Edit", "Bash", "Grep", "Glob", "Agent"]
 ## 使用示例
 
 ```
-/ky:plan
+/df:plan
 > 未检测到现有计划，开始初始规划（模式 A）：
 >
 > 【第一层：里程碑/迭代规划】
@@ -1487,7 +1487,7 @@ tools: ["Read", "Write", "Edit", "Bash", "Grep", "Glob", "Agent"]
 ```
 
 ```
-/ky:plan
+/df:plan
 > 检测到现有计划：
 >   里程碑：MVP/Alpha/Beta ✅
 >   迭代主题：MVP 迭代 1-4 ✅
@@ -1517,16 +1517,16 @@ iteration-plan.md 的 proposal 名称使用 kebab-case，团队通过特性级 w
 
 ---
 
-#### 2.4.4 Command: `/ky:test-design`
+#### 2.4.4 Command: `/df:test-design`
 
-**文件路径**：`.claude/commands/ky/test-design.md`
+**文件路径**：`.claude/commands/df/test-design.md`
 
 **映射 Skill**: `product/test-design`
 
 **Command 格式**：
 
 ````markdown
-# /ky:test-design
+# /df:test-design
 
 制定测试策略和各级测试方案。
 
@@ -1534,7 +1534,7 @@ iteration-plan.md 的 proposal 名称使用 kebab-case，团队通过特性级 w
 
 - 架构和需求初步就绪后，制定测试策略
 - 架构或需求重大变更后，同步调整测试策略
-- `/ky:plan` 前，为集成测试 proposal 提供输入依据
+- `/df:plan` 前，为集成测试 proposal 提供输入依据
 
 ## 执行流程
 
@@ -1554,7 +1554,7 @@ iteration-plan.md 的 proposal 名称使用 kebab-case，团队通过特性级 w
 ## 使用示例
 
 ```
-/ky:test-design
+/df:test-design
 > 检测到架构文档和需求文档已就绪。
 > 未检测到现有测试策略，开始完整制定：
 >
@@ -1607,7 +1607,7 @@ iteration-plan.md 的 proposal 名称使用 kebab-case，团队通过特性级 w
 
 **四层关系**：
 ```
-产品级（/ky:* 命令，灵活创作）
+产品级（/df:* 命令，灵活创作）
   → 人工决策选择 proposal
     → 特性级（/opsx:* 命令，规范驱动）
       → 代码级（TDD + worktree 隔离）
@@ -1622,7 +1622,7 @@ iteration-plan.md 的 proposal 名称使用 kebab-case，团队通过特性级 w
 | 产品级 | 输出质量 > 流程控制，螺旋式完善 | 无固定顺序，可反复迭代 |
 | 特性级 | 规范驱动，按依赖图推进 | 严格流程控制 |
 | 代码级 | TDD 铁律，worktree 隔离 | 自动化 Hook 守护 |
-| 测试验证级 | 独立测试目录，脚本触发 | 不设 /ky:* 命令 |
+| 测试验证级 | 独立测试目录，脚本触发 | 不设 /df:* 命令 |
 
 **产品级 → 特性级衔接**：
 1. 从 `docs/iteration-plan.md` 选择 proposal
@@ -1863,13 +1863,13 @@ docs/
 1. **Schema 验证**：`openspec schema validate spec-driven-enhanced` — 验证 schema 合法（Phase 1 已完成）
 
 2. **产品级探索验证**：
-   - 执行 `/ky:architect`
+   - 执行 `/df:architect`
    - 验证启发式思考引导有效（生成 ≥3 候选方案、五维评估、产出记录）
    - 验证输出保存到 docs/architecture/ 和 docs/adr.md
    - 验证迭代完善模式：再次执行时检测到现有文档并提供继续选项
 
 3. **工作流集成验证**：
-   - 执行 `/ky:plan` 生成 iteration-plan.md
+   - 执行 `/df:plan` 生成 iteration-plan.md
    - 验证 Proposal Backlog 正确关联产品级文档
    - 验证 `/opsx:new` 能正确读取产品级约束
 

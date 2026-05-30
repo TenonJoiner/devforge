@@ -100,21 +100,21 @@
 
 ```
 产品级（启发式 Skills，可反复迭代）
-  /ky:explore ←→ /ky:define ←→ /ky:plan
+  /df:explore ←→ /df:define ←→ /df:plan
       │               │              │
       ▼               ▼              ▼
   vision.md    requirements/    iteration-plan.md
   architecture/  interfaces/    （含测试相关 proposal）
       │
-      │ /ky:test-design（测试策略 + 各级测试方案）
-      │ /ky:product-review（多维评审 + 红旗检测）
+      │ /df:test-design（测试策略 + 各级测试方案）
+      │ /df:product-review（多维评审 + 红旗检测）
       │
       └── proposal 清单（人工执行）
           ▼
 特性级（OpenSpec spec-driven-enhanced schema，DAG 驱动）
   /opsx:propose <name>          │
           ▼ 特性完成后
-  /ky:verify（全量双向一致性检查，反馈产品级文档）
+  /df:verify（全量双向一致性检查，反馈产品级文档）
 ```
 
 ### 3.2 spec-driven-enhanced schema（特性级，5 个 artifact，fork spec-driven）
@@ -145,7 +145,7 @@ artifacts:
       - 阅读产品级 requirements/ 中相关特性域的需求规格
       - 阅读产品级 architecture/ 中相关子系统的架构设计
       - 阅读产品级 interfaces/ 中相关子系统的接口规格
-      以产品级文档为参考上下文。如发现产品级文档存在缺漏或需要调整，在 proposal 中标注差异点，后续通过 /ky:verify 反馈到产品级。
+      以产品级文档为参考上下文。如发现产品级文档存在缺漏或需要调整，在 proposal 中标注差异点，后续通过 /df:verify 反馈到产品级。
 
       格式要求与 spec-driven 相同（Why / What Changes / Capabilities / Impact）。
 
@@ -165,7 +165,7 @@ artifacts:
 
       前置步骤（必须）：
       - 阅读产品级 requirements/ 中相关特性域的需求规格
-      - 尽量追溯到产品级需求；如发现产品级未覆盖的新行为，在 spec 中标注为「新增发现」，后续通过 /ky:verify 反馈到产品级
+      - 尽量追溯到产品级需求；如发现产品级未覆盖的新行为，在 spec 中标注为「新增发现」，后续通过 /df:verify 反馈到产品级
 
       格式要求与 spec-driven 相同（ADDED/MODIFIED/REMOVED/RENAMED Requirements + Scenarios）。
 
@@ -191,7 +191,7 @@ artifacts:
       - 阅读产品级 architecture/ 中相关子系统的架构设计和专题文档
       - 阅读产品级 adr.md 中相关的架构决策记录
       - 阅读产品级 interfaces/ 中相关子系统的接口规格
-      - 参考产品级架构约束和已有 ADR 决策；如需偏离，在 design 中说明理由并标注为「架构偏离」，后续通过 /ky:verify 反馈到产品级
+      - 参考产品级架构约束和已有 ADR 决策；如需偏离，在 design 中说明理由并标注为「架构偏离」，后续通过 /df:verify 反馈到产品级
 
       格式要求与 spec-driven 相同（Context / Goals / Decisions / Risks）。
 
@@ -324,7 +324,7 @@ artifacts:
         - [ ] N.M.2 VERIFY-RED: 运行测试确认失败（精确命令 + 预期输出）
         - [ ] N.M.3 IMPL: 编写最小实现（精确文件路径 + 代码）
         - [ ] N.M.4 VERIFY-GREEN: 运行测试确认通过（精确命令 + 预期输出）
-        - [ ] N.M.5 REFACTOR: 使用 /ky:refactor 命令进行代码简化重构
+        - [ ] N.M.5 REFACTOR: 使用 /df:refactor 命令进行代码简化重构
         - [ ] N.M.6 REVIEW: 代码检视（通用检视 + C 语言专项）
         - [ ] N.M.7 COMMIT: 提交（conventional commit 格式）
       ```
@@ -364,7 +364,7 @@ apply:
   tracks: tasks.md
   instruction: |
     按 tasks.md 逐条实现。每个实现 task 严格按 TDD 步骤执行：
-    1. 写测试 → 2. 确认红色 → 3. 写实现 → 4. 确认绿色 → 5. /ky:refactor 重构 → 6. 代码检视 → 7. 提交
+    1. 写测试 → 2. 确认红色 → 3. 写实现 → 4. 确认绿色 → 5. /df:refactor 重构 → 6. 代码检视 → 7. 提交
     全部实现 task 完成后，执行质量收尾任务（Q.1-Q.4）。
 
     实现前执行置信度检查：
@@ -437,8 +437,8 @@ rules:
     - CRITICAL 级别必须包含：内存安全、并发正确性、数据一致性问题
     - CRITICAL/HIGH 问题阻塞进入 tasks 阶段
   tasks:
-    - 每个实现 task 必须包含 TDD 步骤（TEST/VERIFY-RED/IMPL/VERIFY-GREEN/REFACTOR[/ky:refactor]/REVIEW/COMMIT）
-    - 所有实现 task 之后必须追加质量收尾任务（全量 /ky:refactor + 全量代码检视 + 单元测试覆盖率 ≥ 80%）
+    - 每个实现 task 必须包含 TDD 步骤（TEST/VERIFY-RED/IMPL/VERIFY-GREEN/REFACTOR[/df:refactor]/REVIEW/COMMIT）
+    - 所有实现 task 之后必须追加质量收尾任务（全量 /df:refactor + 全量代码检视 + 单元测试覆盖率 ≥ 80%）
     - 测试代码使用 CMocka 框架
     - 编译包含 -Wall -Wextra -Werror -fsanitize=address,undefined
 ```
@@ -496,7 +496,7 @@ teamskills/
 │   │   ├── doc-writer.md                  #     A9 文档工程师
 │   │   └── project-manager.md             #     A10 项目经理（反馈闭环编排）
 │   │
-│   ├── commands/                          #   ★ 用户触发命令（13 个，/ky: 前缀）
+│   ├── commands/                          #   ★ 用户触发命令（13 个，/df: 前缀）
 │   │   ├── explore.md                     #     C1 产品级：探索架构方案
 │   │   ├── define.md                      #     C2 产品级：定义需求接口
 │   │   ├── plan.md                        #     C3 产品级：制定迭代计划

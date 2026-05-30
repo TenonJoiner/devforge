@@ -12,7 +12,7 @@
 ## 为什么这些能力集中在 Phase 3？
 
 1. **代码级 Skill 受 R1 `workflow` 约束**：四层体系的流程规则、文档追溯关系、测试分层定义必须在 Phase 2 完成后才能被代码级能力引用。
-2. **TDD 是日常开发的基础循环**：`tasks.md` 模板中的每个 task 默认包含 TDD 步骤（步骤 N.M.5 调用 `/ky:refactor`），因此 `code/tdd-workflow` 和 `code/code-refactor` 必须在特性级大量开发前就绪。
+2. **TDD 是日常开发的基础循环**：`tasks.md` 模板中的每个 task 默认包含 TDD 步骤（步骤 N.M.5 调用 `/df:refactor`），因此 `code/tdd-workflow` 和 `code/code-refactor` 必须在特性级大量开发前就绪。
 3. **并行开发需要隔离机制**：worktree 隔离是后续多 Agent 并行协调（Phase 4 `code/parallel-develop`）的基础设施。
 
 ---
@@ -59,7 +59,7 @@ RED → GREEN → REFACTOR。没有先失败的测试，决不写生产代码。
 - **测试先行**：每个功能增量必须有测试失败作为起点
 - **最小步长**：每个步骤只解决当前测试失败，不超前实现
 - **绿色保障**：REFACTOR 阶段必须保持测试常绿
-- **内存安全**：proposal 收尾及 `/ky:lint --full` 阶段集成 valgrind，确保无泄漏、无越界
+- **内存安全**：proposal 收尾及 `/df:lint --full` 阶段集成 valgrind，确保无泄漏、无越界
 
 ## 何时使用
 
@@ -72,19 +72,19 @@ RED → GREEN → REFACTOR。没有先失败的测试，决不写生产代码。
 spec-driven-enhanced 的 tasks 模板将每个实现 task 拆为 7 步：
 
 ```
-N.M.1 TEST      → /ky:tdd 的 RED 阶段
-N.M.2 VERIFY-RED  → /ky:tdd 的 RED 阶段
-N.M.3 IMPL      → /ky:tdd 的 GREEN 阶段
-N.M.4 VERIFY-GREEN → /ky:tdd 的 GREEN 阶段
-N.M.5 REFACTOR  → /ky:refactor（本 skill 的 REFACTOR 阶段调用）
-N.M.6 REVIEW    → /ky:code-review（输出评审报告）
+N.M.1 TEST      → /df:tdd 的 RED 阶段
+N.M.2 VERIFY-RED  → /df:tdd 的 RED 阶段
+N.M.3 IMPL      → /df:tdd 的 GREEN 阶段
+N.M.4 VERIFY-GREEN → /df:tdd 的 GREEN 阶段
+N.M.5 REFACTOR  → /df:refactor（本 skill 的 REFACTOR 阶段调用）
+N.M.6 REVIEW    → /df:code-review（输出评审报告）
 N.M.7 FIX-REVIEW → developer 读取评审报告，修复 CRITICAL/HIGH 问题
 N.M.8 COMMIT    → git commit
 ```
 
-`/ky:tdd` 覆盖步骤 N.M.1 ~ N.M.4，产出测试代码和生产代码的最小实现。
+`/df:tdd` 覆盖步骤 N.M.1 ~ N.M.4，产出测试代码和生产代码的最小实现。
 
-`/ky:code-review` 输出评审报告后，由 `developer`（或 feedback-loop）在 N.M.7 阶段按 CRITICAL → HIGH 顺序修复，修复后必须通过回归测试。
+`/df:code-review` 输出评审报告后，由 `developer`（或 feedback-loop）在 N.M.7 阶段按 CRITICAL → HIGH 顺序修复，修复后必须通过回归测试。
 
 ## 核心流程
 
@@ -130,7 +130,7 @@ N.M.8 COMMIT    → git commit
 - 优化性能（留在 REFACTOR 阶段）
 - 以“GREEN 允许丑代码”为借口跳过 REFACTOR
 
-### 阶段 3：REFACTOR（调用 `/ky:refactor` 简化重构）
+### 阶段 3：REFACTOR（调用 `/df:refactor` 简化重构）
 
 **成功标准**：测试保持绿色，代码质量提升。
 
@@ -138,14 +138,14 @@ N.M.8 COMMIT    → git commit
 1. 识别代码异味：重复、过长函数、魔法数字、不清晰命名
 2. 执行安全重构（提取函数、重命名变量、消除重复）
 3. 运行测试确认绿色
-4. 如需进一步简化，调用 `/ky:refactor`
+4. 如需进一步简化，调用 `/df:refactor`
 
 **REFACTOR 期间必须检查**：
 - [ ] 所有测试通过
 - [ ] 圈复杂度未显著上升
 - [ ] 每个 C 函数返回值都被检查
 
-> valgrind 内存检测留在 proposal 收尾或 `/ky:lint --full` 阶段执行，不阻塞 TDD 小步循环。
+> valgrind 内存检测留在 proposal 收尾或 `/df:lint --full` 阶段执行，不阻塞 TDD 小步循环。
 
 ## 铁律检查
 
@@ -170,7 +170,7 @@ NO PRODUCTION CODE WITHOUT A FAILING TEST FIRST
 ## Integration
 
 - **前置 Command**: `/opsx:apply`（提供当前 task 上下文）
-- **后续 Command**: `/ky:refactor`（GREEN 后的代码简化）
+- **后续 Command**: `/df:refactor`（GREEN 后的代码简化）
 - **相关 Rules**: R3 `coding-style`, R4 `testing`
 ````
 
@@ -304,8 +304,8 @@ allowed-tools: [Read, Grep, Bash, Agent]
 
 ## Integration
 
-- **前置 Command**: `/ky:tdd`（代码已完成，测试已绿）
-- **后续 Command**: `/ky:refactor`（针对评审意见修改后再次简化）
+- **前置 Command**: `/df:tdd`（代码已完成，测试已绿）
+- **后续 Command**: `/df:refactor`（针对评审意见修改后再次简化）
 - **相关 Rules**: R3 `coding-style`, R4 `testing`
 ````
 
@@ -368,9 +368,9 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob]
 | 成本 | 低（秒级到分钟级） | 中到高（需启动多个 subagent） |
 
 **建议配合方式**：
-- 日常 TDD 循环使用本 skill 完成快速 REFACTOR（`/ky:refactor` 的默认轻量模式）
-- 当单个 task 或一组 task 的变更较大（>200 行）时，`/ky:refactor` 会自动切换到深度模式（调用 `code/simplify` skill），或手动通过 `/ky:refactor --deep` 强制触发
-- archive 前的最终整理可调用 `/ky:refactor --deep` 确保没有遗漏的复用机会和效率问题
+- 日常 TDD 循环使用本 skill 完成快速 REFACTOR（`/df:refactor` 的默认轻量模式）
+- 当单个 task 或一组 task 的变更较大（>200 行）时，`/df:refactor` 会自动切换到深度模式（调用 `code/simplify` skill），或手动通过 `/df:refactor --deep` 强制触发
+- archive 前的最终整理可调用 `/df:refactor --deep` 确保没有遗漏的复用机会和效率问题
 
 ## 重构清单
 
@@ -405,7 +405,7 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob]
 1. **绿色确认**：运行全部测试，确认通过
 2. **选择目标**：从上述清单中挑选最显著的一个异味
 3. **执行重构**：修改代码
-4. **快速验证**：运行测试确认绿色（valgrind 留到 proposal 收尾或 `/ky:lint --full`）
+4. **快速验证**：运行测试确认绿色（valgrind 留到 proposal 收尾或 `/df:lint --full`）
 5. **循环或退出**：如还有明显异味，返回步骤 2；否则停止
 
 ## 红旗信号
@@ -416,7 +416,7 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob]
 
 ## Integration
 
-- **前置 Command**: `/ky:tdd` 或 `/ky:code-review`
+- **前置 Command**: `/df:tdd` 或 `/df:code-review`
 - **相关 Rules**: R3 `coding-style`
 ````
 
@@ -431,7 +431,7 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob]
 **设计思路**：
 - 直接借鉴 Claude 官方 `/simplify` 的三 agent 并行评审模式，将其内建为 teamskills 自建 skill
 - 面向 C 语言 + 分布式存储场景，对复用、质量、效率三个维度做深度检查
-- 与 `/ky:refactor` 形成互补：refactor 做小步高频简化，simplify 做批量低频深度清理
+- 与 `/df:refactor` 形成互补：refactor 做小步高频简化，simplify 做批量低频深度清理
 
 **SKILL.md 结构**：
 
@@ -457,7 +457,7 @@ allowed-tools: [Read, Bash, Grep, Glob, Agent]
 
 - 单个 task 或一组 task 的变更量较大（>200 行）
 - archive 前最终整理
-- `/ky:refactor` 后发现仍有明显异味
+- `/df:refactor` 后发现仍有明显异味
 - 特性级 `/opsx:apply` 的 Q.4 阶段（全量 diff 评审后）
 
 ## 执行流程
@@ -576,8 +576,8 @@ allowed-tools: [Read, Bash, Grep, Glob, Agent]
 
 ## Integration
 
-- **前置 Command**: `/ky:code-review` 或 `/ky:refactor`（本 Skill 由 `/ky:refactor --deep` 触发）
-- **后续 Command**: `/ky:lint`
+- **前置 Command**: `/df:code-review` 或 `/df:refactor`（本 Skill 由 `/df:refactor --deep` 触发）
+- **后续 Command**: `/df:lint`
 - **Agent**: `developer` 调度，`code-reviewer` 作为 subagent
 ````
 
@@ -593,8 +593,8 @@ allowed-tools: [Read, Bash, Grep, Glob, Agent]
 
 **设计思路**：
 - 面向 C 语言项目，提供编译检查、clang-tidy、valgrind 的集成调用方式
-- 作为 `/ky:lint` 命令的底层 skill，也可以被其他 skill/agent 调用
-- **只检查，不自动修复**：本 skill 仅输出检查报告，修复工作由 developer 在 `/ky:tdd` 或 `/ky:refactor` 中按需完成
+- 作为 `/df:lint` 命令的底层 skill，也可以被其他 skill/agent 调用
+- **只检查，不自动修复**：本 skill 仅输出检查报告，修复工作由 developer 在 `/df:tdd` 或 `/df:refactor` 中按需完成
 
 **SKILL.md 结构**：
 
@@ -622,7 +622,7 @@ allowed-tools: [Read, Bash, Grep, Glob]
 
 - 编写或修改 C 代码后（fast 模式）
 - 提交前最终检查（fast 模式）
-- `/ky:tdd` GREEN 后快速验证（fast 模式）
+- `/df:tdd` GREEN 后快速验证（fast 模式）
 - 特性级 archive 前或 Q.1 质量收尾（`--full` 模式）
 
 ## 检查层级
@@ -696,16 +696,16 @@ ctest -D ExperimentalMemCheck
 
 ## 输出解读与问题路由
 
-**lint-check 的职责是验证而非修复**。它期望 0 错误，因为此时代码应已在 `/ky:tdd`、refactor 和 review 阶段被 developer 修复完毕。
+**lint-check 的职责是验证而非修复**。它期望 0 错误，因为此时代码应已在 `/df:tdd`、refactor 和 review 阶段被 developer 修复完毕。
 
 若发现问题：
-- **编译错误** → 停止提交，返回 developer 修复（通常在 /ky:tdd GREEN 就应消除）
+- **编译错误** → 停止提交，返回 developer 修复（通常在 /df:tdd GREEN 就应消除）
 - **clang-tidy 告警** → 返回 developer 修复；确认为误报的可经评估后在 .clang-tidy 中 suppress
 - **valgrind 内存错误** → 返回 developer 修复，通常需在 TDD 中补充测试复现后再修复
 
 ## Integration
 
-- **前置 Command**: /ky:tdd 或 /ky:refactor
+- **前置 Command**: /df:tdd 或 /df:refactor
 - **执行时机**：
   - 高频（fast 模式）：单个 task 完成后的最终检查（在 git commit 前）
   - 中频（`--full` 模式）：/opsx:apply 的 Q.1 质量收尾阶段、archive 前
@@ -791,7 +791,7 @@ git worktree add .claude/worktrees/wt-<name> -b feat/<name>
 
 ### 切换 worktree
 
-使用 `/ky:switch-worktree <name>` 快速切换：
+使用 `/df:switch-worktree <name>` 快速切换：
 1. 保存当前 context（可选）
 2. `cd .claude/worktrees/wt-<name>`（当前 shell session 的工作目录切换到该 worktree）
 3. 更新 `~/.claude/projects/<repo-name>/active-worktree` 状态文件
@@ -800,17 +800,17 @@ git worktree add .claude/worktrees/wt-<name> -b feat/<name>
 **会话中断恢复**：
 - Claude 重开后默认 CWD 为仓库根目录，不会自动进入活跃 worktree
 - 此时 H3 `worktree-guard` 仍会拦截写操作
-- **必须再次执行 `/ky:switch-worktree <name>`** 恢复 CWD 和完整上下文
+- **必须再次执行 `/df:switch-worktree <name>`** 恢复 CWD 和完整上下文
 
 ### 清理 worktree
 
-**自动清理入口**：使用 `/ky:finish-worktree` 完成开发工作并自动清理。参考 superpowers `finishing-a-development-branch` skill 的流程：
+**自动清理入口**：使用 `/df:finish-worktree` 完成开发工作并自动清理。参考 superpowers `finishing-a-development-branch` skill 的流程：
 1. **验证测试**：运行全量单元测试，通过后方可继续
 2. **呈现选项**：本地 merge / 推送创建 PR / 保持状态 / 丢弃
 3. **执行选择**：根据选项执行对应 git 操作
 4. **清理 worktree**：本地 merge 或丢弃后，自动执行下述清理命令；创建 PR 时**保留** worktree
 
-**手动清理**（当选择本地 merge 或丢弃时，由 `/ky:finish-worktree` 自动执行）：
+**手动清理**（当选择本地 merge 或丢弃时，由 `/df:finish-worktree` 自动执行）：
 
 ```bash
 git worktree remove .claude/worktrees/wt-<name>
@@ -838,15 +838,15 @@ rm ~/.claude/projects/<repo-name>/active-worktree  # 同步清除状态文件
 ## Integration
 
 - **前置 Command**: `/opsx:apply`（获取 task 信息）
-- **创建/切换 Command**: `/ky:switch-worktree`
-- **完成/清理 Command**: `/ky:finish-worktree`
-- **后续 Command**: `/opsx:archive`（必须在 `/ky:finish-worktree` 合并代码后执行）
+- **创建/切换 Command**: `/df:switch-worktree`
+- **完成/清理 Command**: `/df:finish-worktree`
+- **后续 Command**: `/opsx:archive`（必须在 `/df:finish-worktree` 合并代码后执行）
 - **Hook**: H3 `worktree-guard`
 
 ### 与 OpenSpec workflow 的顺序
 
 一个 proposal 的完整收尾推荐顺序：
-1. `/ky:finish-worktree` — 代码合并到 `main`，清理本地 worktree
+1. `/df:finish-worktree` — 代码合并到 `main`，清理本地 worktree
 2. （可选）`/opsx:verify` — 验证实现符合规范
 3. `/opsx:archive` — 归档 delta specs 到主规范
 
@@ -904,7 +904,7 @@ tools: ["Read", "Write", "Edit", "Bash", "Grep", "Glob"]
 2. 编写最小测试用例（RED）
 3. 写最小实现使测试通过（GREEN）
 4. 执行简化重构（REFACTOR）
-5. proposal 收尾时运行 valgrind 确认内存安全（或在 `/ky:lint --full` 阶段覆盖）
+5. proposal 收尾时运行 valgrind 确认内存安全（或在 `/df:lint --full` 阶段覆盖）
 
 ### 模式 2：Task 收尾
 
@@ -913,7 +913,7 @@ tools: ["Read", "Write", "Edit", "Bash", "Grep", "Glob"]
 1. 确认所有相关测试通过
 2. 执行 `clang-format` 格式化
 3. 执行 `clang-tidy` 检查并修复问题
-4. （可选）当本次变更量较大（>200 行）或涉及多个模块时，调用 `/ky:refactor --deep` 进行复用/质量/效率三维度深度清理
+4. （可选）当本次变更量较大（>200 行）或涉及多个模块时，调用 `/df:refactor --deep` 进行复用/质量/效率三维度深度清理
 5. 清理本 proposal 的临时评审报告（如 `/tmp/devforge-code-review-*.md`）
 6. 汇总变更，准备提交
 
@@ -930,7 +930,7 @@ tools: ["Read", "Write", "Edit", "Bash", "Grep", "Glob"]
 ### 模式 4：质量收尾（Q.1–Q.4）
 
 在 `/opsx:apply` 的所有实现 task 完成后，执行 proposal 级质量收尾：
-- **Q.1**：全量 diff 代码评审收尾。若变更量较大（>200 行），调用 `/ky:refactor --deep` 进行复用/质量/效率三维度深度清理
+- **Q.1**：全量 diff 代码评审收尾。若变更量较大（>200 行），调用 `/df:refactor --deep` 进行复用/质量/效率三维度深度清理
 - **Q.2**：全量编译 + clang-tidy 静态分析
 - **Q.3**：全量单元测试（确保无回归）
 - **Q.4**：覆盖率检查（通用模块单元测试行覆盖率 ≥85%，核心模块 ≥90%，新增代码 ≥95%；100% 作为努力方向，显著低于 95% 需在 Q.4 补充说明并增加测试）
@@ -938,11 +938,11 @@ tools: ["Read", "Write", "Edit", "Bash", "Grep", "Glob"]
 ### 模式 5：Proposal 完整收尾
 
 代码实现及质量检查全部完成后：
-1. 执行 `/ky:finish-worktree` 将代码合并到 `main`
+1. 执行 `/df:finish-worktree` 将代码合并到 `main`
 2. 执行 `/opsx:verify`（如需要）
 3. 执行 `/opsx:archive` 归档 delta specs
 
-> developer 在引导用户时应确保 `/ky:finish-worktree` 完成后，再推进到 `/opsx:archive`。
+> developer 在引导用户时应确保 `/df:finish-worktree` 完成后，再推进到 `/opsx:archive`。
 
 ## 关键规则
 
@@ -963,7 +963,7 @@ tools: ["Read", "Write", "Edit", "Bash", "Grep", "Glob"]
 ## 成功指标
 
 - 测试先红后绿
-- valgrind 报告 0 错误（proposal/PR 收尾阶段通过 `/ky:lint --full` 覆盖）
+- valgrind 报告 0 错误（proposal/PR 收尾阶段通过 `/df:lint --full` 覆盖）
 - clang-tidy 无严重警告
 - 代码变更与 task 目标精确对齐（无镀金）
 - 在 feedback-loop 中：修复回归测试通过，不引入新问题
@@ -1086,16 +1086,16 @@ tools: ["Read", "Grep", "Bash", "Agent"]
 
 ### 3.3 Commands
 
-#### 3.3.1 Command: `/ky:tdd`
+#### 3.3.1 Command: `/df:tdd`
 
-**文件路径**：`.claude/commands/ky/tdd.md`
+**文件路径**：`.claude/commands/df/tdd.md`
 
 **映射 Skill**: `code/tdd-workflow`
 
 **Command 格式**：
 
 ````markdown
-# /ky:tdd
+# /df:tdd
 
 执行 TDD 开发循环（RED-GREEN-REFACTOR）。
 
@@ -1112,13 +1112,13 @@ tools: ["Read", "Grep", "Bash", "Agent"]
 3. 进入 `code/tdd-workflow` Skill：
    - RED：编写失败测试（对应 tasks.md N.M.1 ~ N.M.2）
    - GREEN：写最小实现使测试通过（对应 tasks.md N.M.3 ~ N.M.4）
-   - REFACTOR：调用 `/ky:refactor` 简化代码（对应 tasks.md N.M.5）
-5. 运行测试确认绿色（valgrind 留到 proposal 收尾或 `/ky:lint --full` 阶段）
+   - REFACTOR：调用 `/df:refactor` 简化代码（对应 tasks.md N.M.5）
+5. 运行测试确认绿色（valgrind 留到 proposal 收尾或 `/df:lint --full` 阶段）
 
 ## 参数
 
 ```
-/ky:tdd [step-description]
+/df:tdd [step-description]
 ```
 
 - `step-description`（可选）：本次要实现的步骤简述
@@ -1126,7 +1126,7 @@ tools: ["Read", "Grep", "Bash", "Agent"]
 ## 使用示例
 
 ```
-/ky:tdd 实现 WAL 写入接口的追加逻辑
+/df:tdd 实现 WAL 写入接口的追加逻辑
 > RED：编写 test_wal_append.c，断言写入后 offset 增加
 > 测试失败：assertion failed: offset == 0
 >
@@ -1146,16 +1146,16 @@ tools: ["Read", "Grep", "Bash", "Agent"]
 
 ---
 
-#### 3.3.2 Command: `/ky:code-review`
+#### 3.3.2 Command: `/df:code-review`
 
-**文件路径**：`.claude/commands/ky/code-review.md`
+**文件路径**：`.claude/commands/df/code-review.md`
 
 **映射 Skill**: `code/code-review`
 
 **Command 格式**：
 
 ````markdown
-# /ky:code-review
+# /df:code-review
 
 执行三级代码评审管线。
 
@@ -1180,13 +1180,13 @@ tools: ["Read", "Grep", "Bash", "Agent"]
 
 ## 与 `/opsx:apply` 的衔接
 
-- **N.M.6 REVIEW**：单个 task 完成后执行 `/ky:code-review`
+- **N.M.6 REVIEW**：单个 task 完成后执行 `/df:code-review`
 - **Q.4 代码评审收尾**：所有实现 task 完成后，由 `code-reviewer`(A3) 执行全量 diff 评审
 
 ## 参数
 
 ```
-/ky:code-review [file-pattern]
+/df:code-review [file-pattern]
 ```
 
 - `file-pattern`（可选）：只评审匹配的文件，如 `src/storage/*.c`
@@ -1194,7 +1194,7 @@ tools: ["Read", "Grep", "Bash", "Agent"]
 ## 使用示例
 
 ```
-/ky:code-review
+/df:code-review
 > 评审 3 个文件，+120 -45
 > 发现 1 个 HIGH：wal.c:89 缺少错误返回值检查
 > 发现 2 个 MEDIUM：`storage_engine.c:2100` 函数长度 980 行且包含两类资源操作，建议拆分为 `wal_init()` 和 `index_init()`
@@ -1210,16 +1210,16 @@ tools: ["Read", "Grep", "Bash", "Agent"]
 
 ---
 
-#### 3.3.3 Command: `/ky:refactor`
+#### 3.3.3 Command: `/df:refactor`
 
-**文件路径**：`.claude/commands/ky/refactor.md`
+**文件路径**：`.claude/commands/df/refactor.md`
 
 **映射 Skill**: `code/code-refactor`
 
 **Command 格式**：
 
 ````markdown
-# /ky:refactor
+# /df:refactor
 
 执行测试护航下的代码简化重构。支持轻量重构（默认）和深度清理（`--deep`）两种模式。
 
@@ -1239,13 +1239,13 @@ tools: ["Read", "Grep", "Bash", "Agent"]
 4. 进入对应 Skill 执行重构/清理：
    - 轻量模式：`code/code-refactor`，每次处理一种最明显异味，循环 until 无明显异味
    - 深度模式：`code/simplify`，Phase 1 识别变更 → Phase 2 三 agent 并行评审 → Phase 3 `developer` 汇总修复
-5. 再次运行测试确认绿色（深度模式完成后可接 `/ky:lint --full` 跑 valgrind）
+5. 再次运行测试确认绿色（深度模式完成后可接 `/df:lint --full` 跑 valgrind）
 6. 输出重构摘要
 
 ## 参数
 
 ```
-/ky:refactor [--deep] [focus]
+/df:refactor [--deep] [focus]
 ```
 
 - `--deep`：强制进入深度模式，调用 `code/simplify` Skill 进行复用/质量/效率三维度清理
@@ -1254,7 +1254,7 @@ tools: ["Read", "Grep", "Bash", "Agent"]
 ## 使用示例
 
 ```
-/ky:refactor
+/df:refactor
 > 轻量模式
 > 测试绿色 ✅
 > 发现 wal.c 有两处重复的错误处理逻辑
@@ -1263,7 +1263,7 @@ tools: ["Read", "Grep", "Bash", "Agent"]
 ```
 
 ```
-/ky:refactor --deep
+/df:refactor --deep
 > 深度模式（变更量 +380 -120，涉及 5 个文件）
 > 启动三 agent 并行评审...
 > 复用 agent：发现 1 处可复用现有 `utils/buffer.c:buf_append()`
@@ -1282,16 +1282,16 @@ tools: ["Read", "Grep", "Bash", "Agent"]
 
 ---
 
-#### 3.3.4 Command: `/ky:lint`
+#### 3.3.4 Command: `/df:lint`
 
-**文件路径**：`.claude/commands/ky/lint.md`
+**文件路径**：`.claude/commands/df/lint.md`
 
 **映射 Skill**: `code/lint-check`
 
 **Command 格式**：
 
 ````markdown
-# /ky:lint
+# /df:lint
 
 执行编译检查和静态分析。默认 fast 模式只跑编译 + clang-tidy；`--full` 模式额外跑 valgrind 全量内存检测。
 
@@ -1299,7 +1299,7 @@ tools: ["Read", "Grep", "Bash", "Agent"]
 
 - 修改 C 代码后快速验证（fast 模式）
 - 提交前最终检查（fast 模式）
-- `/ky:tdd` 后的补充验证（fast 模式）
+- `/df:tdd` 后的补充验证（fast 模式）
 - 特性级 archive 前或 Q.1 质量收尾（`--full` 模式）
 
 ## 执行流程
@@ -1315,7 +1315,7 @@ tools: ["Read", "Grep", "Bash", "Agent"]
 ## 参数
 
 ```
-/ky:lint [--full] [target]
+/df:lint [--full] [target]
 ```
 
 - `--full`：同时执行 valgrind 内存检测
@@ -1324,13 +1324,13 @@ tools: ["Read", "Grep", "Bash", "Agent"]
 ## 使用示例
 
 ```
-/ky:lint
+/df:lint
 > 编译 ✅ 0 error, 0 warning
 > clang-tidy ⚠️ 2 个 readability Warning
 ```
 
 ```
-/ky:lint --full
+/df:lint --full
 > 编译 ✅ 0 error, 0 warning
 > clang-tidy ⚠️ 2 个 readability Warning
 > valgrind ✅ 0 errors
@@ -1346,16 +1346,16 @@ tools: ["Read", "Grep", "Bash", "Agent"]
 
 ---
 
-#### 3.3.5 Command: `/ky:switch-worktree`
+#### 3.3.5 Command: `/df:switch-worktree`
 
-**文件路径**：`.claude/commands/ky/switch-worktree.md`
+**文件路径**：`.claude/commands/df/switch-worktree.md`
 
 **映射 Skill**: `code/git-worktree`
 
 **Command 格式**：
 
 ````markdown
-# /ky:switch-worktree
+# /df:switch-worktree
 
 切换或创建 Git worktree，实现隔离并行开发。
 
@@ -1376,7 +1376,7 @@ tools: ["Read", "Grep", "Bash", "Agent"]
 ## 参数
 
 ```
-/ky:switch-worktree [proposal-name]
+/df:switch-worktree [proposal-name]
 ```
 
 - `proposal-name`（可选）：目标 proposal 名称，对应 worktree 为 `wt-<proposal-name>`
@@ -1384,7 +1384,7 @@ tools: ["Read", "Grep", "Bash", "Agent"]
 ## 使用示例
 
 ```
-/ky:switch-worktree storage-wal
+/df:switch-worktree storage-wal
 > 已切换到 .claude/worktrees/wt-storage-wal
 > 当前分支：feat/storage-wal
 ```
@@ -1398,16 +1398,16 @@ tools: ["Read", "Grep", "Bash", "Agent"]
 
 ---
 
-#### 3.3.6 Command: `/ky:finish-worktree`
+#### 3.3.6 Command: `/df:finish-worktree`
 
-**文件路径**：`.claude/commands/ky/finish-worktree.md`
+**文件路径**：`.claude/commands/df/finish-worktree.md`
 
 **映射 Skill**: `code/git-worktree`
 
 **Command 格式**：
 
 ````markdown
-# /ky:finish-worktree
+# /df:finish-worktree
 
 完成当前 worktree 的开发工作：验证测试 → 呈现合并选项 → 执行选择 → 清理。
 
@@ -1434,19 +1434,19 @@ tools: ["Read", "Grep", "Bash", "Agent"]
    - **选项 4**：丢弃当前分支和 worktree（需 typed 确认）
 6. **执行选择**：执行对应 git 操作
 7. **清理 worktree**（选项 1、4）：执行 `git worktree remove` 并删除 `~/.claude/projects/<repo-name>/active-worktree`
-   - **选项 2 的后续**：PR 合并后再次执行 `/ky:finish-worktree`，将通过前置状态检测自动进入快速清理流程
+   - **选项 2 的后续**：PR 合并后再次执行 `/df:finish-worktree`，将通过前置状态检测自动进入快速清理流程
 8. **后序引导**：清理完成后提示用户继续执行 `/opsx:verify`（如需）→ `/opsx:archive`
 
 ## 参数
 
 ```
-/ky:finish-worktree    # 处理当前所在 worktree
+/df:finish-worktree    # 处理当前所在 worktree
 ```
 
 ## 使用示例
 
 ```
-/ky:finish-worktree
+/df:finish-worktree
 > 测试通过 ✅
 > 选择：2. 推送并创建 PR
 > PR 已创建：#42
@@ -1584,7 +1584,7 @@ Refs: <proposal-name>/<task-id>
 
 - 每个公开的 API 函数至少有一个直接测试
 - 每个错误路径至少有一个测试
-- proposal/PR 级别通过 `/ky:lint --full` 或项目 CI 集成 valgrind
+- proposal/PR 级别通过 `/df:lint --full` 或项目 CI 集成 valgrind
 - 新增代码必须被测试覆盖
 
 ## 测试文件组织
@@ -1752,11 +1752,11 @@ FILE="$CLAUDE_EDITED_FILE"
 1. 读取 `~/.claude/projects/<repo-name>/active-worktree` 状态文件（如存在）
 2. 若存在活跃 worktree，仅放行**活跃 worktree 目录内**和**项目外**的写操作
 3. 若写操作目标不在活跃 worktree 内，拦截并根据当前位置给出差异化提示：
-   - 当前在仓库根目录（非任何 worktree）：提示"⚠️ 当前不在活跃 worktree 内，建议执行 `/ky:switch-worktree <name>` 恢复上下文"
-   - 当前在另一个 worktree：提示"🚫 当前在另一个 worktree，建议执行 `/ky:switch-worktree <name>` 切换"
+   - 当前在仓库根目录（非任何 worktree）：提示"⚠️ 当前不在活跃 worktree 内，建议执行 `/df:switch-worktree <name>` 恢复上下文"
+   - 当前在另一个 worktree：提示"🚫 当前在另一个 worktree，建议执行 `/df:switch-worktree <name>` 切换"
 4. 无活跃 worktree 时（如在 main 分支且未创建 worktree），直接放行
 
-> `/ky:switch-worktree` 执行时自动更新 `~/.claude/projects/<repo-name>/active-worktree`，guard 随之切换守护范围。防止会话中断或上下文丢失后误写主干或其他非活跃 worktree。
+> `/df:switch-worktree` 执行时自动更新 `~/.claude/projects/<repo-name>/active-worktree`，guard 随之切换守护范围。防止会话中断或上下文丢失后误写主干或其他非活跃 worktree。
 
 **Hook 配置片段**：
 
@@ -1800,13 +1800,13 @@ if [ -z "$CURRENT_WORKTREE" ] || [ "$CURRENT_WORKTREE" = "$(git -C "$ACTIVE_WORK
     echo "⚠️  worktree 守护：当前不在活跃 worktree 内"
     echo "   当前目录：$CWD"
     echo "   活跃 worktree：$ACTIVE_WORKTREE"
-    echo "   建议执行 /ky:switch-worktree $(basename "$ACTIVE_WORKTREE" | sed 's/^wt-//') 恢复上下文"
+    echo "   建议执行 /df:switch-worktree $(basename "$ACTIVE_WORKTREE" | sed 's/^wt-//') 恢复上下文"
 else
     # 在另一个 worktree 中
     echo "🚫 worktree 守护：当前在另一个 worktree（$CURRENT_WORKTREE），但活跃 worktree 是 $ACTIVE_WORKTREE"
     echo "   建议："
-    echo "     1. 执行 /ky:switch-worktree $(basename "$ACTIVE_WORKTREE" | sed 's/^wt-//') 切换"
-    echo "     2. 若已废弃该 worktree，执行 /ky:finish-worktree 完成清理"
+    echo "     1. 执行 /df:switch-worktree $(basename "$ACTIVE_WORKTREE" | sed 's/^wt-//') 切换"
+    echo "     2. 若已废弃该 worktree，执行 /df:finish-worktree 完成清理"
 fi
 exit 1
 ```
@@ -1856,53 +1856,53 @@ exit 1
 ## 验证计划
 
 1. **TDD 验证**：
-   - 在示例 C 项目中执行 `/ky:tdd`
+   - 在示例 C 项目中执行 `/df:tdd`
    - 验证 RED → GREEN → REFACTOR 三阶段完整运行
    - 验证 "NO PRODUCTION CODE WITHOUT A FAILING TEST FIRST" 被强制执行
-   - 验证 TDD 循环内不阻塞跑 valgrind，proposal 收尾时通过 `/ky:lint --full` 覆盖 valgrind
+   - 验证 TDD 循环内不阻塞跑 valgrind，proposal 收尾时通过 `/df:lint --full` 覆盖 valgrind
 
 2. **代码评审验证**：
-   - 执行 `/ky:code-review` 对一组已知有问题的代码
+   - 执行 `/df:code-review` 对一组已知有问题的代码
    - 验证三级评审管线能发现内存泄漏、错误处理遗漏、安全漏洞
    - 验证输出格式为 CRITICAL/HIGH/MEDIUM/LOW 分级
 
 3. **重构验证**：
-   - 执行 `/ky:refactor`
+   - 执行 `/df:refactor`
    - 验证重构前后测试保持绿色
    - 验证代码质量指标改善（重复减少、函数缩短）
 
 4. **Simplify 验证**：
-   - 在一组 >200 行的变更后执行 `/ky:refactor --deep`
+   - 在一组 >200 行的变更后执行 `/df:refactor --deep`
    - 验证 3 个 subagent（复用/质量/效率）并行启动并返回结构化问题
    - 验证 `developer` 汇总修复后测试保持绿色
 
 5. **Lint 验证**：
-   - 执行 `/ky:lint`（fast 模式）：验证编译通过、clang-tidy 无严重警告
-   - 执行 `/ky:lint --full`：额外验证 valgrind 无内存错误
+   - 执行 `/df:lint`（fast 模式）：验证编译通过、clang-tidy 无严重警告
+   - 执行 `/df:lint --full`：额外验证 valgrind 无内存错误
 
 6. **Worktree 验证**：
-   - 执行 `/ky:switch-worktree test-proposal`
+   - 执行 `/df:switch-worktree test-proposal`
    - 验证 worktree 创建和分支切换正确
-   - 执行 `/ky:finish-worktree`，验证四种选项（本地 merge / 创建 PR / 保持 / 丢弃）能正确执行并清理 worktree
+   - 执行 `/df:finish-worktree`，验证四种选项（本地 merge / 创建 PR / 保持 / 丢弃）能正确执行并清理 worktree
 
 7. **Hook 验证**：
-   - 使用 `/ky:switch-worktree test-proposal` 创建 worktree，验证 `~/.claude/projects/<repo-name>/active-worktree` 被更新
+   - 使用 `/df:switch-worktree test-proposal` 创建 worktree，验证 `~/.claude/projects/<repo-name>/active-worktree` 被更新
    - 退出 worktree 后尝试 Edit `.c` 文件，验证 H3 `worktree-guard` 基于 `active-worktree` 拦截
    - 使用 Edit 修改 `.c` 文件后，验证 H2 `post-edit-format` 自动格式化
    - 在 feature 分支 `git commit`，验证 H1 `pre-commit-lint` 增量扫描 staged 文件
 
 8. **任务步骤映射验证**：
-   - 验证 `/ky:tdd` 的执行输出与 tasks.md 的 N.M.1 ~ N.M.4 对应
-   - 验证 `/ky:refactor` 的输出与 tasks.md 的 N.M.5 对应
-   - 验证 `/ky:code-review` 的输出与 tasks.md 的 N.M.6 / Q.4 对应
+   - 验证 `/df:tdd` 的执行输出与 tasks.md 的 N.M.1 ~ N.M.4 对应
+   - 验证 `/df:refactor` 的输出与 tasks.md 的 N.M.5 对应
+   - 验证 `/df:code-review` 的输出与 tasks.md 的 N.M.6 / Q.4 对应
 
 ---
 
 ## 与 Phase 2 的关系
 
 Phase 3 的所有代码级能力在 R1 `workflow` 的约束下运行：
-- `/ky:tdd` 实现的是特性级 tasks.md 中定义的 task 步骤
-- `/ky:code-review` 在代码实现完成后执行，是进入测试验证级前的质量门
+- `/df:tdd` 实现的是特性级 tasks.md 中定义的 task 步骤
+- `/df:code-review` 在代码实现完成后执行，是进入测试验证级前的质量门
 - worktree 隔离是四层工作流中"代码级 → 测试验证级"的并行基础
 
 ## 与 Phase 4 的关系

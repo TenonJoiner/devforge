@@ -33,19 +33,19 @@
 | | A9 | `doc-writer` | 5 | P6 |
 | | A10 | `project-manager` | 5 | P3,P4 |
 | **Commands（13）** | | | | |
-| | C1 | `/ky:explore` | 2 | P1 |
-| | C2 | `/ky:define` | 2 | P1 |
-| | C3 | `/ky:plan` | 2 | P1 |
-| | C4 | `/ky:product-review` | 5 | P1,P6 |
-| | C5 | `/ky:test-design` | 5 | P4 |
-| | C6 | `/ky:verify` | 5 | P5 |
-| | C7 | `/ky:tdd` | 3 | P3 |
-| | C8 | `/ky:review` | 3 | P3,P6 |
-| | C9 | `/ky:spec-review` | 4 | P2,P6 |
-| | C10 | `/ky:refactor` | 3 | P3 |
-| | C11 | `/ky:lint` | 3 | P3 |
-| | C12 | `/ky:switch-worktree` | 3 | P3 |
-| | C13 | `/ky:debug` | 4 | P3 |
+| | C1 | `/df:explore` | 2 | P1 |
+| | C2 | `/df:define` | 2 | P1 |
+| | C3 | `/df:plan` | 2 | P1 |
+| | C4 | `/df:product-review` | 5 | P1,P6 |
+| | C5 | `/df:test-design` | 5 | P4 |
+| | C6 | `/df:verify` | 5 | P5 |
+| | C7 | `/df:tdd` | 3 | P3 |
+| | C8 | `/df:review` | 3 | P3,P6 |
+| | C9 | `/df:spec-review` | 4 | P2,P6 |
+| | C10 | `/df:refactor` | 3 | P3 |
+| | C11 | `/df:lint` | 3 | P3 |
+| | C12 | `/df:switch-worktree` | 3 | P3 |
+| | C13 | `/df:debug` | 4 | P3 |
 | **Rules（4）** | | | | |
 | | R1 | `workflow` | 2 | P1-P5 |
 | | R2 | `git-workflow` | 3 | P3 |
@@ -111,9 +111,9 @@ Commands（3 个产品级命令）：
 
 | # | 交付物 | 文件路径 |
 |---|--------|---------|
-| 2.5 | C1 `/ky:explore` | `.claude/commands/explore.md` |
-| 2.6 | C2 `/ky:define` | `.claude/commands/define.md` |
-| 2.7 | C3 `/ky:plan` | `.claude/commands/plan.md` |
+| 2.5 | C1 `/df:explore` | `.claude/commands/explore.md` |
+| 2.6 | C2 `/df:define` | `.claude/commands/define.md` |
+| 2.7 | C3 `/df:plan` | `.claude/commands/plan.md` |
 
 Rule（1 个骨架规则）：
 
@@ -129,7 +129,7 @@ Rule（1 个骨架规则）：
 | 2.10 | 产品级交付物目录骨架 | `docs/{vision.md, architecture/, requirements/, interfaces/, adr.md, iteration-plan.md}` |
 
 **验证**：
-- `/ky:explore` 执行一轮架构探索，启发式思考引导有效，输出 ADR 和架构文档
+- `/df:explore` 执行一轮架构探索，启发式思考引导有效，输出 ADR 和架构文档
 - 验证 Claude Code 正确识别并加载 skills/agents/commands/rules
 
 ---
@@ -140,7 +140,7 @@ Rule（1 个骨架规则）：
 
 **前置依赖**：Phase 2（R1 workflow 规范已建立）
 
-> **为什么 S4 code-refactor 在 Phase 3 而非 Phase 4？** 每个 TDD 循环的步骤 N.M.5 调用 `/ky:refactor` 进行代码简化重构，S4 是日常开发循环的必需组件，不是补充能力。
+> **为什么 S4 code-refactor 在 Phase 3 而非 Phase 4？** 每个 TDD 循环的步骤 N.M.5 调用 `/df:refactor` 进行代码简化重构，S4 是日常开发循环的必需组件，不是补充能力。
 
 **交付物**：
 
@@ -165,11 +165,11 @@ Commands（5 个代码级日常命令）：
 
 | # | 交付物 | 文件路径 |
 |---|--------|---------|
-| 3.8 | C7 `/ky:tdd` | `.claude/commands/tdd.md` |
-| 3.9 | C8 `/ky:review` | `.claude/commands/review.md` |
-| 3.10 | C10 `/ky:refactor` | `.claude/commands/refactor.md` |
-| 3.11 | C11 `/ky:lint` | `.claude/commands/lint.md` |
-| 3.12 | C12 `/ky:switch-worktree` | `.claude/commands/switch-worktree.md` |
+| 3.8 | C7 `/df:tdd` | `.claude/commands/tdd.md` |
+| 3.9 | C8 `/df:review` | `.claude/commands/review.md` |
+| 3.10 | C10 `/df:refactor` | `.claude/commands/refactor.md` |
+| 3.11 | C11 `/df:lint` | `.claude/commands/lint.md` |
+| 3.12 | C12 `/df:switch-worktree` | `.claude/commands/switch-worktree.md` |
 
 Rules（3 个代码级规范）：
 
@@ -188,9 +188,9 @@ Hooks（3 条自动化守护，统一配置于 `.claude/hooks.json`）：
 | 3.18 | H3 `worktree-guard` | PreToolUse(Edit/Write)：worktree 写操作守护，防止误写主干 |
 
 **验证**：
-- `/ky:tdd` 在 C 项目中执行完整 RED-GREEN-REFACTOR 循环，测试先红后绿
-- `/ky:review` 执行三级评审管线（通用 → C 语言专项 → 安全审计），输出分级评审意见
-- `/ky:refactor` 对代码执行简化重构，保持测试绿色
+- `/df:tdd` 在 C 项目中执行完整 RED-GREEN-REFACTOR 循环，测试先红后绿
+- `/df:review` 执行三级评审管线（通用 → C 语言专项 → 安全审计），输出分级评审意见
+- `/df:refactor` 对代码执行简化重构，保持测试绿色
 - H1 提交前触发 clang-tidy，H2 编辑后触发 clang-format，H3 在 worktree 外写操作时拦截
 
 ---
@@ -221,12 +221,12 @@ Commands（2 个代码级补充命令）：
 
 | # | 交付物 | 文件路径 |
 |---|--------|---------|
-| 4.5 | C9 `/ky:spec-review` | `.claude/commands/spec-review.md` |
-| 4.6 | C13 `/ky:debug` | `.claude/commands/debug.md` |
+| 4.5 | C9 `/df:spec-review` | `.claude/commands/spec-review.md` |
+| 4.6 | C13 `/df:debug` | `.claude/commands/debug.md` |
 
 **验证**：
-- `/ky:spec-review` 对一个 OpenSpec proposal/spec/design 执行质量检查，输出格式完整性和产品级追溯结果
-- `/ky:debug` 执行系统化调试四阶段（根因调查→多分量诊断→数据流追踪→验证修复）
+- `/df:spec-review` 对一个 OpenSpec proposal/spec/design 执行质量检查，输出格式完整性和产品级追溯结果
+- `/df:debug` 执行系统化调试四阶段（根因调查→多分量诊断→数据流追踪→验证修复）
 
 ---
 
@@ -263,14 +263,14 @@ Commands（3 个产品级质量命令）：
 
 | # | 交付物 | 文件路径 |
 |---|--------|---------|
-| 5.10 | C4 `/ky:product-review` | `.claude/commands/product-review.md` |
-| 5.11 | C5 `/ky:test-design` | `.claude/commands/test-design.md` |
-| 5.12 | C6 `/ky:verify` | `.claude/commands/verify.md` |
+| 5.10 | C4 `/df:product-review` | `.claude/commands/product-review.md` |
+| 5.11 | C5 `/df:test-design` | `.claude/commands/test-design.md` |
+| 5.12 | C6 `/df:verify` | `.claude/commands/verify.md` |
 
 **验证**：
-- `/ky:product-review` 评审产品级文档，跨文档一致性检查和红旗检测正常工作
-- `/ky:test-design` 输出 test-strategy.md，含测试分层定义和各级测试方案
-- `/ky:verify` 执行产品级 vs 特性级一致性检查，输出不一致清单和方向建议
+- `/df:product-review` 评审产品级文档，跨文档一致性检查和红旗检测正常工作
+- `/df:test-design` 输出 test-strategy.md，含测试分层定义和各级测试方案
+- `/df:verify` 执行产品级 vs 特性级一致性检查，输出不一致清单和方向建议
 
 ---
 

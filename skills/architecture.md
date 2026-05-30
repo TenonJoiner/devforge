@@ -20,15 +20,15 @@
 ├─────────────────────────────────────────────────────────────────┤
 │ 第二层：Claude Code 原生扩展（代码级 + 评审 + 反馈闭环）                │
 │                                                                 │
-│   8 个 skills · 10 个 agents · 13 个 commands（/ky: 前缀）         │
+│   8 个 skills · 10 个 agents · 13 个 commands（/df: 前缀）         │
 │   3 个 hooks · 4 个 rules                                        │
 ├─────────────────────────────────────────────────────────────────┤
 │ 第三层：四层工作流串联                                               │
 │                                                                 │
-│   产品级（启发式 skills + /ky:explore、/ky:define、/ky:plan、        │
-│          /ky:product-review、/ky:test-design、/ky:verify）         │
+│   产品级（启发式 skills + /df:explore、/df:define、/df:plan、        │
+│          /df:product-review、/df:test-design、/df:verify）         │
 │   特性级（spec-driven-enhanced schema + /opsx:* 命令）              │
-│   代码级（teamskills /ky:* skills）                                │
+│   代码级（teamskills /df:* skills）                                │
 │   测试验证级（独立测试仓专用 workflow（待定义）+ 脚本执行）             │
 └─────────────────────────────────────────────────────────────────┘
 ```
