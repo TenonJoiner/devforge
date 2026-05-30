@@ -1,6 +1,6 @@
 ---
 name: devforge-tdd-workflow
-description: TDD 铁律开发工作流——RED-GREEN-REFACTOR，根据 domain-config.yaml 自动适配语言和测试框架
+description: TDD 铁律开发工作流——RED-GREEN-REFACTOR。从项目文件系统自动推断语言与测试框架
 allowed-tools: [Read, Write, Edit, Bash, Grep, Glob]
 ---
 

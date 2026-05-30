@@ -2,6 +2,11 @@
 name: devforge-code-review
 description: 五维度代码评审——Correctness / Readability / Architecture / Security / Performance，根据变更规模自动选择轻量或深度评审
 allowed-tools: [Read, Write, Edit, Grep, Bash, Agent]
+parameters:
+  - name: autofix
+    description: 评审后自动修复代码（默认只评审不修复）
+    required: false
+    default: false
 ---
 
 # devforge-code-review — 五维度代码评审
@@ -13,19 +18,21 @@ allowed-tools: [Read, Write, Edit, Grep, Bash, Agent]
 **评审哲学**：像导师一样评审，不是像看门人一样。每个发现都 teach something —— 解释为什么有问题，而不只是指出问题。评审是为了提升代码质量和开发者能力，不只是找出错误。
 
 **核心原则**：
-- **审修闭环**：`code-reviewer` 评审 → `developer` 修复 → `code-reviewer` 验证修复，skill 内完整闭环。角色分离由 agent 分离保证（`code-reviewer` 不写代码，`developer` 按报告修复），不是靠拆成两次调用
+- **审修可控**：默认只评审不修复（`autofix` 未设置时），输出评审报告后结束；带 `autofix` 参数时 `code-reviewer` 评审 → `developer` 修复 → `code-reviewer` 验证修复，skill 内完整闭环。角色分离由 agent 分离保证（`code-reviewer` 不写代码，`developer` 按报告修复），不是靠拆成两次调用
 - **分级明确**：CRITICAL 必须修，HIGH 强烈建议修，MEDIUM 优化建议，LOW 轻微问题可延期。风格问题不进入评审管线（由 `post-edit-format` hook 自动处理）
 - **证据说话**：每个问题必须引用代码行、说明影响、提供改进方案
-- **领域适配**：根据 domain-config.yaml 的语言和质量属性优先级调整评审侧重
+- **领域适配**：根据项目文件系统自动推断的主语言，以及代码结构中的领域特征调整评审侧重
 
 **风格问题不进入评审**：命名风格、格式、minor 文档缺失等由 `coding-style` rule + `post-edit-format` hook（对应语言的格式化工具，如 `clang-format`/`gofmt`/`rustfmt`/`black`）在编辑时自动处理。code-reviewer 聚焦于 correctness / security / maintainability，不讨论 tabs vs spaces。
 
 ## 何时使用
 
 - **被 `/opsx:apply` 调用**：
-  - 一个 task group 完成后（N.M.6 REVIEW，task group 级轻量评审）
-  - 全部实现 task 完成后、`/opsx:verify` 之前（Q.4 全量收尾评审）
+  - 一个 task group 完成后（N.M.6 REVIEW，task group 级轻量评审）— 带 `autofix`
+  - 全部实现 task 完成后、`/opsx:verify` 之前（Q.4 全量收尾评审）— 带 `autofix`
 - **独立使用**：日常开发中完成一组相关修改后、或提交前需要外部视角检查代码质量的时刻
+  - `/df:code-review` — 只评审不修复
+  - `/df:code-review autofix` — 评审并自动修复
 
 ## 评审范围
 
@@ -147,9 +154,13 @@ allowed-tools: [Read, Write, Edit, Grep, Bash, Agent]
 
 #### 语言特定规则引用
 
-Correctness 和 Security 维度中的部分检查项引用 `coding-style-<lang>.md` 规则文件：
+Correctness 和 Security 维度中的部分检查项引用 `coding-style-<lang>.md` 规则文件。主语言由项目文件系统推断，而非外部配置：
 
-1. 读取 `domain-config.yaml` 的 `languages.primary` 确定主语言
+1. **推断主语言**：按以下优先级扫描项目文件系统
+   - 源码文件后缀：`.c`/`.h` 最多 → C；`.cpp`/`.cc`/`.hpp` 最多 → C++；`.rs` → Rust；`.go` → Go；`.py` → Python；`.java` → Java；`.js`/`.ts` → JS/TS
+   - 构建文件：存在 `Cargo.toml` → Rust；`go.mod` → Go；`CMakeLists.txt`/`Makefile` + 大量 `.c`/`.h` → C/C++；`pyproject.toml`/`setup.py` → Python；`pom.xml`/`build.gradle` → Java；`package.json` → JS/TS
+   - 存在多语言混用时，以变更涉及的主要源文件语言为准
+   - 推断结果在评审报告中记录，供人工复核
 2. 加载对应的 `coding-style-<lang>.md`
 3. 按以下章节验证本次变更是否遵守规则：
 
@@ -194,7 +205,9 @@ Correctness 和 Security 维度中的部分检查项引用 `coding-style-<lang>.
 
 ## 审修闭环输出格式
 
-### Round 1：初始评审报告
+### Round 1：初始评审报告（所有模式）
+
+> 以下输出格式在 `autofix` 未设置（默认）和已设置时均使用。区别在于：默认模式输出报告后即结束，`autofix` 模式继续进入修复和验证轮。
 
 ```markdown
 # Code Review Report — [timestamp] — Round 1
@@ -232,7 +245,9 @@ Correctness 和 Security 维度中的部分检查项引用 `coding-style-<lang>.
 ...
 ```
 
-### Round 1.5：修复确认
+### Round 1.5：修复确认（仅 `autofix` 模式）
+
+> 仅在 `autofix` 已设置时执行此轮。默认模式在 Round 1 后即结束。
 
 Developer 按报告逐项修复后输出：
 
@@ -253,7 +268,7 @@ Developer 按报告逐项修复后输出：
 - **SKIPPED** — LOW 类发现，记录后不修复
 - **ACCEPTED_RISK** — MEDIUM 及以下，经评估后决定不修复，需标注理由
 
-### Round 2+：验证报告（仅深度评审）
+### Round 2+：验证报告（仅 `autofix` + 深度评审）
 
 ```markdown
 # Code Review Report — [timestamp] — Round N
@@ -298,6 +313,13 @@ Developer 按报告逐项修复后输出：
 
 ## 闭环流程
 
+### `autofix` 未设置（默认）— 只评审
+
+1. **评审**：`code-reviewer` 输出结构化评审报告
+2. **结束**：输出评审报告和最终结论，不执行修复
+
+### `autofix` 已设置 — 评审 + 自动修复
+
 1. **评审**：`code-reviewer` 输出结构化评审报告
 2. **修复**：`developer` 按报告逐项修复（CRITICAL → HIGH → MEDIUM）
 3. **验证轮**（仅深度评审）：修复完成后再执行一轮评审。最多 3 轮：
@@ -308,6 +330,12 @@ Developer 按报告逐项修复后输出：
 **收敛条件**：新一轮评审无新增 CRITICAL/HIGH。**轻量评审单轮即止。深度评审最多 3 轮。**
 
 ## 结束条件
+
+### `autofix` 未设置（默认）— 只评审
+
+- 输出评审报告和最终结论后结束，不执行修复
+
+### `autofix` 已设置 — 评审 + 自动修复
 
 - **轻量评审**：单轮评审 + 修复后结束
 - **深度评审**：

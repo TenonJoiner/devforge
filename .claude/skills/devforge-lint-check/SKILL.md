@@ -2,6 +2,11 @@
 name: devforge-lint-check
 description: 编译检查与静态分析——零 warning 验证 + 多语言静态分析工具链，按项目配置自动探测
 allowed-tools: [Read, Bash, Grep, Glob, Edit]
+parameters:
+  - name: autofix
+    description: 检测后自动修复问题（默认只检测不修复）
+    required: false
+    default: false
 ---
 
 # devforge-lint-check — 编译检查与静态分析
@@ -10,7 +15,7 @@ allowed-tools: [Read, Bash, Grep, Glob, Edit]
 
 编译通过（零 warning）→ 静态分析（深层缺陷检测）。两层防护，提前拦截问题。
 
-**技能边界**：本 skill 执行检测，发现问题后自动派遣 developer 修复并回归检查，最多 5 轮。
+**技能边界**：默认只检测不修复，输出检查报告后结束；带 `autofix` 参数时，发现问题后自动派遣 developer 修复并回归检查，最多 5 轮。
 
 ## 启动检测
 
@@ -61,6 +66,17 @@ git diff --name-only HEAD
 - 头文件变更时，应确保其影响被静态分析工具捕获（如 C/C++ 的 `clang-tidy --header-filter` 等语言特定机制）
 
 ## 执行流程
+
+### `autofix` 未设置（默认）— 只检测
+
+1. **执行 L1 编译检查**
+   - 通过 → 进入步骤 2
+   - 失败（存在 error/warning）→ 输出问题清单，结束
+2. **执行 L2 静态分析**（L2a Type Check + L2b Lint）
+   - 通过 → 输出通过报告，结束
+   - 发现问题 → 输出问题清单，结束
+
+### `autofix` 已设置 — 检测 + 自动修复
 
 ```
 执行检查 → 发现问题 → 派遣 developer 修复 → 再次检查 → ... → 全部通过
@@ -201,6 +217,12 @@ L2 静态分析
 
 ## 问题路由
 
+### `autofix` 未设置（默认）— 只检测
+
+所有问题输出到问题清单，不执行修复。
+
+### `autofix` 已设置 — 检测 + 自动修复
+
 所有问题统一处理：派遣 developer 修复 → 回归检查。
 
 | 问题类型 | 处理方式 |
@@ -223,6 +245,13 @@ L2 静态分析
 - 每轮执行记录：问题类型、文件、行号、修复建议，在对话中逐轮输出
 
 ## 出口标准
+
+### `autofix` 未设置（默认）— 只检测
+
+- 检查完成即输出报告，无论是否通过
+- 报告包含所有发现的问题（文件、行号、错误类型）
+
+### `autofix` 已设置 — 检测 + 自动修复
 
 检查通过必须同时满足：
 
@@ -248,8 +277,9 @@ L2 静态分析
 ## Integration
 
 - **执行时机**：
-  - 高频：单个 task 完成后的最终检查（在 git commit 前）
-  - 中频：`/opsx:apply` 的 LINT/QA 阶段、archive 前
-  - 自动：H1 pre-commit-lint 拦截存在严重问题的提交
-- **问题修复方**：developer（A2）自动修复并回归检查，最多 5 轮
+  - 高频：单个 task 完成后的最终检查（在 git commit 前）— 自动带 `autofix`
+  - 中频：`/opsx:apply` 的 LINT/QA 阶段、archive 前 — 自动带 `autofix`
+  - 自动：H1 pre-commit-lint 拦截存在严重问题的提交 — 自动带 `autofix`
+  - 手动：`/df:lint`（只检测）或 `/df:lint autofix`（检测+修复）
+- **问题修复方**：developer（A2）自动修复并回归检查（仅 `autofix` 模式），最多 5 轮
 - **相关 Rules**: `.claude/rules/coding-style.md`（通用）、`.claude/rules/coding-style-<lang>.md`（语言特定）
