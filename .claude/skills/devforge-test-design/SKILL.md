@@ -116,7 +116,7 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
 
 ## Integration
 
-- **前置 Skill**: `/df:design`、`/df:define`
+- **前置 Skill**: `/df:product-design`、`/df:product-define`
 - **后续 Skill**: `/df:plan`（集成测试 proposal 的输入依据）
 - **协作 Agent**: `architect`
 - **相关 Rules**: R1 `workflow`

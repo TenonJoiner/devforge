@@ -68,22 +68,61 @@ artifacts:
       - 🚩 Product Traceability 留空（应填写关联文档或"不适用 + 原因"）
     requires: []
 
+  - id: research
+    generates: research.md
+    description: 特性级研究文档——约束清单、标杆方案空间、设计空间地图
+    template: research.md
+    instruction: |
+      生成 research.md：用 Skill 工具调用 `devforge-feature-research` skill 完成。
+
+      research.md 是 spec 与 design 的共同输入：
+      - 约束清单：本特性必须遵守的架构、协议、性能、范围约束（来自产品级文档与本 proposal）
+      - 标杆方案空间：按取舍维度组织的标杆方案研究（不按产品维度并列）
+      - 设计空间地图：标杆 × 约束过滤后的可行候选空间
+
+      跑完 skill 后，research.md 落到 `openspec/changes/<change-name>/research.md`。
+      若 research.md 已存在，skill 会反问「修订 / 补全」并按指定模式运行。
+
+      详细流程见 `.claude/skills/devforge-feature-research/SKILL.md`。
+    requires: [proposal]
+
   - id: specs
     generates: "specs/**/*.md"
     description: 规范文件，定义系统行为的 Delta 变更
     template: spec.md
     instruction: |
-      创建规范文件，定义系统应该做什么（WHAT），而非怎么做（HOW）。
+      生成 specs/*.md：用 Skill 工具调用 `devforge-feature-define` skill 完成。
 
-      ## 输入来源
+      spec 描述系统应该做什么（WHAT），不涉及如何实现（HOW）。
+      按 proposal 的 Capabilities 拆解，每个 Capability 一个 spec 文件。
+      使用 Delta 格式（ADDED / MODIFIED / REMOVED / RENAMED）—— archive 引擎依赖这套语义。
 
-      动手写 spec 之前，MUST 阅读以下输入文档：
+      skill 会读取 proposal.md、research.md（约束清单 + 设计空间）、design.md（如已存在）
+      和产品级 requirements，派遣 product agent 生成、product-reviewer + architect-reviewer
+      双视角评审。spec.md 已存在时，skill 反问「修订 / 补全」。
+
+      详细流程见 `.claude/skills/devforge-feature-define/SKILL.md`。
+
+      ## OpenSpec 模板硬约束（不可破坏）
+
+      - Delta 章节名必须精确匹配：`## ADDED Requirements` / `## MODIFIED Requirements` /
+        `## REMOVED Requirements` / `## RENAMED Requirements`
+      - Requirement 用 `### Requirement: <name>`，Scenario 用 `#### Scenario: <name>`
+      - **CRITICAL**：Scenario 必须 4 个 hashtag（####），3 个或 bullet 会静默失败
+      - 每条 Requirement 至少一个 Scenario
+      - MODIFIED 必须复制完整 Requirement block，不能只写差异部分
+
+      ## 旧版输入参考（保留供 fallback）
+
+      若 skill 调用失败，按以下输入手工生成。下方「## 文件组织」「## Delta 规范格式」
+      「## Requirement 格式」「## 质量要求」「## 反模式检查」是手工生成时的具体规则。
 
       1. **proposal.md**：proposal 的 Capabilities 定义了 spec 的边界和范围——本 spec
          只覆盖对应 Capability 描述的行为，不超出、不遗漏
-      2. **docs/requirements/**：查找本 Capability 对应的产品级需求文档，提取该 Feature
+      2. **research.md**：约束清单 + 设计空间地图，作为 Requirement 边界依据
+      3. **docs/requirements/**：查找本 Capability 对应的产品级需求文档，提取该 Feature
          的详细描述、验收标准和场景，作为 Requirement 和 Scenario 的编写依据
-      3. 查找不到对应产品级需求文档时，在 Requirement 的追溯字段中填写"不适用"并说明
+      4. 查找不到对应产品级需求文档时，在 Requirement 的追溯字段中填写"不适用"并说明
          原因，不阻塞流程
 
       ## 文件组织
@@ -135,26 +174,37 @@ artifacts:
       - 🚩 Scenario 只有正常路径，没有异常路径
       - 🚩 THEN 的预期结果不可判断（如"系统正常工作"）
       - 🚩 追溯字段为空（应填写关联需求或"不适用 + 原因"）
-    requires: [proposal]
+    requires: [proposal, research]
 
   - id: design
     generates: design.md
     description: 技术设计文档，说明如何实现
     template: design.md
     instruction: |
-      创建设计文档，说明如何（HOW）实现 specs 中定义的需求。
+      生成 design.md：用 Skill 工具调用 `devforge-feature-design` skill 完成。
 
-      ## 输入来源
+      design 描述如何（HOW）实现 specs 中定义的需求。
+      skill 注入「特性级在既有架构内展开，不新建子系统」语境，派遣 architect agent 生成、
+      architect-reviewer 评审。强制图示触发条件（结构图 / 时序图 / 状态机图 / 数据流图）。
 
-      动手写 design 之前，MUST 阅读以下输入文档：
+      skill 会读取 proposal.md、research.md（约束 + 标杆 + 设计空间）、spec.md（如已存在）
+      与产品级 architecture/ADR。design.md 已存在时，skill 反问「修订 / 补全」。
+
+      详细流程见 `.claude/skills/devforge-feature-design/SKILL.md`。
+
+      ## 旧版输入参考（保留供 fallback）
+
+      若 skill 调用失败，按以下输入手工生成。下方「## 各部分要求」「## 质量要求」
+      「## 反模式检查」是手工生成时的具体规则。
 
       1. **proposal.md**：了解变更动机和范围
-      2. **specs/*.md**（如已生成）：了解行为规范的详细定义，设计方案应与之对齐
-      3. **docs/architecture/**：查找相关子系统的架构设计文档，了解架构约束、已有决策和
+      2. **research.md**：约束清单、标杆方案、设计空间地图——为 Decision 提供候选与过滤依据
+      3. **specs/*.md**（如已生成）：了解行为规范的详细定义，设计方案应与之对齐
+      4. **docs/architecture/**：查找相关子系统的架构设计文档，了解架构约束、已有决策和
          模块边界，确保本设计方案与产品级架构一致
-      4. **docs/requirements/**：查找相关 Feature 的产品级需求，了解更广泛的业务上下文
+      5. **docs/requirements/**：查找相关 Feature 的产品级需求，了解更广泛的业务上下文
          和非功能性约束（性能指标、可用性要求等）
-      5. 查找不到对应文档时，在 Architecture Traceability 中填写"不适用"并说明原因，
+      6. 查找不到对应文档时，在 Architecture Traceability 中填写"不适用"并说明原因，
          不阻塞流程
 
       ## 各部分要求（按模板章节顺序）
@@ -201,15 +251,29 @@ artifacts:
       - 🚩 Decisions 没有 trade-off 分析，只说"使用 X"
       - 🚩 Risk 没有 Mitigation
       - 🚩 Architecture Traceability 为空（应填写关联文档或"不适用 + 原因"）
-    requires: [proposal]
+    requires: [proposal, research]
 
   - id: review
     generates: review.md
-    description: 设计评审报告，在任务分解前做结构化质量检查
+    description: 设计评审报告——单轮全维度扫描 + 人工决策门禁
     template: review.md
     instruction: |
-      对 proposal、specs、design 三类文档进行结构化评审，同时检查与产品级文档的一致性。
-      评审采用「评审 → 修复 → 再评审」迭代循环，最多 5 轮，直到各文档缺陷密度达标。
+      生成 review.md：用 Skill 工具调用 `devforge-spec-review` skill 完成。
+
+      review.md 包含两部分：
+      1. **AI 评审报告**：单轮扫描，输出问题清单（按 CRITICAL/HIGH/MEDIUM/LOW 分级）+ AI 建议决策。**不做修复**
+      2. **Tech Leader 最终决策**：留空，等人工填写
+
+      详细流程见 `.claude/skills/devforge-spec-review/SKILL.md`。
+
+      ## 与 skill 内化评审的关系
+
+      feature-research / feature-define / feature-design 三个 skill 内部已经做过深度
+      评审循环（最多 3 轮自修），保证基础质量。本 review artifact 是「质量体检 + 人工
+      门槛」：单轮扫描 21 项维度，发现问题不修复，输出清单交人决策。
+
+      若发现 CRITICAL 问题，AI 建议给 REJECT，由主人决定是直接对话改 artifact、
+      重跑对应 skill 修订模式、或在人工决策时说明问题不成立。
 
       ## 缺陷密度计分规则
 
@@ -219,26 +283,26 @@ artifacts:
       - **MEDIUM**（1 分）：改进建议——命名不清晰、描述可更精确
       - **LOW**（0.1 分）：风格建议——格式、措辞
 
-      **通过标准**：每个文档的缺陷总分 ≤ 2.0
-      - proposal.md：≤ 2.0
-      - specs/ 中每个 spec 文件：各自 ≤ 2.0
-      - design.md：≤ 2.0
+      AI 建议门槛（仅供参考，最终决策权在 Tech Leader）：
+      - 所有文档缺陷总分 ≤ 2.0 → 建议 PASS
+      - 仅有 MEDIUM/LOW 累积超标，无 CRITICAL/HIGH → 建议 PASS WITH CONDITIONS
+      - 任一文档有 CRITICAL，或多文档总分严重超标 → 建议 REJECT
 
-      ## 评审标准
+      ## 评审标准（21 项）
 
-      以下为评审的单一权威标准，迭代评审和最终输出均以此为准。
+      以下为评审的单一权威标准。skill 内化评审与本 artifact 评审都以此为准。
 
       **跨文档一致性**：
       - proposal/specs/design 三者是否一致——Capability、Requirement、Decision 之间无矛盾
       - 与产品级文档（docs/requirements/、docs/architecture/）是否一致
       - 追溯链完整：产品级需求 → proposal Capability → specs Requirement → design Decision
 
-      **Proposal 质量**：
+      **Proposal 质量（3 项）**：
       - **动机合理性**：Why 是否清晰说明了问题或机会，有根因分析而非表面描述；问题是否值得解决（业务价值、影响范围）
       - **方案合理性**：提出的 Capabilities 是否是解决该问题的合理方案，有无更优替代方案未考虑
       - **范围完整性**：Capabilities 是否完整覆盖变更范围，粒度是否合理
 
-      **Specs 质量**：
+      **Specs 质量（7 项）**：
       - **需求合理性**：每条 Requirement 本身是否合理——不过度（镀金）、不遗漏（关键场景缺失）、不矛盾（需求间冲突）
       - **需求必要性**：每条 Requirement 是否必要——能否追溯到 proposal 的 Capability 或产品级需求，无凭空增加的需求
       - **需求完整性**：Requirement 集合是否完整覆盖问题域——不只是"支撑 proposal"，而是从领域视角审视是否有遗漏
@@ -247,7 +311,7 @@ artifacts:
       - **异常路径质量**：每条 Requirement 的异常路径 Scenario 是否从业务语义出发（如权限、配额、冲突等）
       - **安全覆盖**：安全相关的行为是否有对应 Requirement 覆盖
 
-      **Design 质量**：
+      **Design 质量（11 项）**：
       - **方案可行性**：技术方案是否可行——能否满足 specs 的每条 Requirement，有无技术风险未评估
       - **方案竞争力**：方案是否具备竞争力——对比业界标准或已知方案，在性能、可扩展性、成本等关键维度是否有说服力
       - **方案合理性**：技术决策是否合理——trade-off 权衡是否得当（不只是列出备选，而是选择合理）
@@ -260,50 +324,30 @@ artifacts:
       - **状态机表达**：涉及多状态组件是否有状态转换表
       - **性能评估**：性能影响评估是否充分——关键路径延迟和吞吐量是否有量化分析
 
-      ## 迭代评审流程（最多 5 轮）
-
-      每轮执行以下步骤：
+      ## 单轮扫描流程
 
       1. **并行评审**：启动两个独立 agent 并行评审，各自按评审标准中对应维度检查：
-         - **product-reviewer agent**：
-           - 跨文档一致性：proposal/specs/design 从产品视角的一致性（Capability → Requirement 是否对齐）、与 docs/requirements/ 的一致性、产品级追溯链
-           - Proposal 质量（全部 3 项）
-           - Specs 质量（全部 7 项）
-         - **architect-reviewer agent**：
-           - 跨文档一致性：proposal/specs/design 从架构视角的一致性（Requirement → Decision 是否对齐）、与 docs/architecture/ 的一致性、架构追溯链
-           - Design 质量（全部 11 项）
-         两个 agent 独立工作，互不可见对方的评审结果，确保视角独立
+         - **product-reviewer agent**：跨文档一致性（产品视角）+ Proposal 质量（3 项）+ Specs 质量（7 项）
+         - **architect-reviewer agent**：跨文档一致性（架构视角）+ Design 质量（11 项）
+         两个 agent 独立工作，互不可见对方的评审结果
       2. **汇总计分**：主会话收集两个 agent 的评审结果，合并问题清单，去重后分别计算
          proposal.md、specs/ 中每个 spec 文件、design.md 的缺陷总分
-      3. **修复**：缺陷密度超标的文档（> 2.0）由主会话直接修改，在 review.md 的
-         AI Review Rounds 中记录问题来源（哪个 agent）、问题内容、修复动作、修改的文件和位置
-      4. **判断**：
-         - 所有文档（proposal.md、specs/ 中每个 spec 文件、design.md）缺陷密度均 ≤ 2.0 → 停止迭代，进入 Review Conclusion
-         - 任一文档缺陷密度 > 2.0 且未达 5 轮 → 回到步骤 1 对所有三类交付件做全量重新评审
-         - 达到 5 轮上限仍有文档超标 → 停止迭代，在 review.md 中标注未达标文档及其缺陷密度
+      3. **写入 review.md**：问题清单 + 缺陷总分 + AI 建议决策。**不做修复**
+      4. **STOP**：提示用户由 Tech Leader 在「人工评审决策」区域填写最终决策
 
-      **⚠️ 关键规则：修复 ≠ 验证通过**。即使步骤 3 已修复所有问题，仍然 MUST 进入下一轮全量评审。原因：
-      1. 修复动作本身可能引入新问题
-      2. 首轮评审不保证无遗漏，后续轮次是查漏补缺的机会
-      3. 停止条件是「某一轮评审所有文档缺陷密度均达标」，而非「某一轮修复后缺陷归零」
+      ## 人工评审门禁（强制）
 
-      ## Review Conclusion
-
-      **AI 建议**：AI 输出评审报告并给出建议结论（PASS / PASS WITH CONDITIONS / REJECT），仅作为参考。
-
-      **⚠️ 人工评审门禁（强制）**：
       - AI 完成评审报告和 AI 建议后，MUST 将 review.md 的「人工评审决策」区域留空，然后 **STOP**
       - 提示用户：review.md 已生成，请组织交叉评审并由 tech leader 在「人工评审决策」区域填写最终决策
       - **只有人工决策为 PASS 或 PASS WITH CONDITIONS 时，才允许进入 tasks 阶段**
-      - 人工决策为 REJECT 时，根据评审反馈修改文档，然后删除 review.md 执行 `/opsx:continue` 重新触发评审
+      - 人工决策为 REJECT 时，根据评审反馈修改文档（直接对话改 / 重跑 skill 修订模式），
+        然后删除 review.md 执行 `/opsx:continue` 重新触发评审
       - 禁止跳过人工评审直接生成 tasks——即使 AI 评估为 PASS，「人工评审决策」区域未填写的 review 视为未完成
 
-      ## 重新评审
+      ## 手动调用
 
-      以下情况需要重新评审：
-      1. 评审人决策为 REJECT：根据反馈修改文档，删除 review.md 后执行 `/opsx:continue` 重新触发
-      2. 评审完成后手动修改了 specs/design：同上，删除 review.md 重新触发
-      OpenSpec 会重新检测到 review 为 ready 并重新执行完整评审流程。
+      除 OpenSpec workflow 自动触发外，主人可在任意时刻直接调用 `/df:spec-review`
+      做临时体检（例如对话散改后的引用断裂检查）。两种调用方式共享同一 skill 实现。
     requires: [specs, design]
 
   - id: tasks

@@ -1,10 +1,10 @@
 ---
-name: devforge-design
-description: 架构探索与决策 skill，产出系统架构总纲、子系统设计、ADR 与标杆研究。采用多 agent 深度思考模式，标杆先行、方案对比、独立评审验证，支持长时间螺旋式迭代完善。适用于需要深度思考的复杂架构设计场景。当用户提到系统架构、子系统设计、架构决策、ADR、标杆调研、技术选型、不可逆决策、架构文档时应使用此 skill。
+name: devforge-product-design
+description: 产品级架构探索与决策 skill，产出系统架构总纲、子系统设计、ADR 与标杆研究。采用多 agent 深度思考模式，标杆先行、方案对比、独立评审验证，支持长时间螺旋式迭代完善。适用于需要深度思考的复杂架构设计场景。当用户提到系统架构、子系统设计、架构决策、ADR、标杆调研、技术选型、不可逆决策、架构文档时应使用此 skill。特性级架构设计请使用 devforge-feature-design。
 allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
 ---
 
-# devforge-design — 架构探索与决策
+# devforge-product-design — 产品级架构探索与决策
 
 ## 概述
 
@@ -246,7 +246,7 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
 - **产出**：`.claude/domain-config.yaml`
 - **规则**：`00-research-prep.md`
 
-> **两 skill 协作**：/df:define 和 /df:design 共用 T1-T6 主题清单。define 主导 T1-T5，design 主导 T6，双方互相校验。场景 B 时 design 跳过已闭合的 T1-T5，执行 T6 并从架构视角校验。
+> **两 skill 协作**：/df:product-define 和 /df:product-design 共用 T1-T6 主题清单。define 主导 T1-T5，design 主导 T6，双方互相校验。场景 B 时 design 跳过已闭合的 T1-T5，执行 T6 并从架构视角校验。
 
 ### 第 1 阶段：标杆研究
 
@@ -289,7 +289,7 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
 
 | 目录/文件 | 归属命令 |
 |-----------|---------|
-| `docs/requirements/` | `/df:define` |
+| `docs/requirements/` | `/df:product-define` |
 | `docs/iteration-plan/` | `/df:plan` |
 | `docs/test-strategy.md` | `/df:test-design` |
 

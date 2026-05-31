@@ -1,20 +1,18 @@
 # /df:define
 
-定义产品需求、制定验收标准。多 agent 深度思考，标杆研究先行，Feature-Scenario 分层展开，螺旋式迭代完善。
+特性级需求定义——Requirement + Scenario（Delta 格式）。用于 OpenSpec workflow 的 specs artifact 生成。
 
-## 使用示例
+> 产品级需求定义使用 `/df:product-define`。
 
-```
-/df:define                    # 首次启动，从产品定位确认开始
-/df:define                    # 再次调用，自动检测状态并继续
-```
+## 使用场景
+
+- **OpenSpec workflow 自动触发**：`/opsx:continue` 走到 specs artifact 时自动调用
+- **手动触发**：任意时刻直接 `/df:define` 做临时定义或修订
 
 ## 输出物
 
-- `docs/requirements/product-spec.md` — 全局需求总纲
-- `docs/requirements/<feature-domain>.md` — 按特性域组织的需求规格
-- `docs/requirements/reference/<product>.md` — 标杆需求分析
+- `openspec/changes/<change-name>/specs/*.md` — Delta 格式 Requirement + Scenario
 
 ## 调用方式
 
-调用 Skill 工具加载 `devforge-define`
+调用 Skill 工具加载 `devforge-feature-define`

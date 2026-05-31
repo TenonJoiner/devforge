@@ -1,10 +1,10 @@
 ---
-name: devforge-define
-description: 定义产品需求、制定验收标准，产出 Actor-Feature 清单与 Scenario 规格。采用多 agent 深度思考模式，标杆研究先行、Feature-Scenario 分层展开、独立评审验证。适用于需要深度思考的复杂需求定义场景，支持螺旋式迭代完善。当用户提到需求定义、产品规格、Feature 拆解、验收标准、用户故事设计、Actor 识别时应使用此 skill。
+name: devforge-product-define
+description: 产品级需求定义与验收标准制定 skill，产出 Actor-Feature 清单与 Scenario 规格。采用多 agent 深度思考模式，标杆研究先行、Feature-Scenario 分层展开、独立评审验证。适用于需要深度思考的复杂需求定义场景，支持螺旋式迭代完善。当用户提到需求定义、产品规格、Feature 拆解、验收标准、用户故事设计、Actor 识别时应使用此 skill。特性级需求定义请使用 devforge-feature-define。
 allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
 ---
 
-# devforge-define — 定义性思考
+# devforge-product-define — 产品级需求定义
 
 ## 概述
 
@@ -269,7 +269,7 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
 - **产出**：`.claude/domain-config.yaml`
 - **规则**：`00-positioning.md`
 
-> **两 skill 协作**：/df:define 和 /df:design 共用 T1-T6 主题清单。define 主导 T1-T5，design 主导 T6，双方互相校验。场景 B 时 define 跳过已闭合主题，从需求视角校验 design 已填的 T6；场景 C 时 define 完整执行 T1-T6。
+> **两 skill 协作**：/df:product-define 和 /df:product-design 共用 T1-T6 主题清单。define 主导 T1-T5，design 主导 T6，双方互相校验。场景 B 时 define 跳过已闭合主题，从需求视角校验 design 已填的 T6；场景 C 时 define 完整执行 T1-T6。
 
 ### 第 1 阶段：标杆研究
 
@@ -310,7 +310,7 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
 
 | 目录/文件 | 归属命令 |
 |-----------|---------|
-| `docs/architecture/` | `/df:design` |
+| `docs/architecture/` | `/df:product-design` |
 | `docs/iteration-plan/` | `/df:plan` |
 | `docs/test-strategy.md` | `/df:test-design` |
 

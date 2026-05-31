@@ -15,6 +15,12 @@ parameters:
 
 五个评审维度，两种评审深度。轻量评审聚焦正确性和可读性，深度评审覆盖全部五个维度。
 
+**与 spec-review 的区别**：
+- **评审对象**：code-review 评审代码（git diff 或指定文件），spec-review 评审 OpenSpec 文档（proposal/specs/design）
+- **评审时机**：code-review 在代码实现后，spec-review 在 tasks 分解前
+- **评审维度**：code-review 五维度（Correctness / Readability / Architecture / Security / Performance），spec-review 21 项维度（跨文档一致性 + Proposal/Specs/Design 质量）
+- **修复模式**：code-review 可选 autofix（默认只评审），spec-review 不做修复（只输出问题清单）
+
 **评审哲学**：像导师一样评审，不是像看门人一样。每个发现都 teach something —— 解释为什么有问题，而不只是指出问题。评审是为了提升代码质量和开发者能力，不只是找出错误。
 
 **核心原则**：

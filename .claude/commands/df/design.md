@@ -1,22 +1,20 @@
 # /df:design
 
-探索产品架构方案、竞品分析、子系统分解。多 Agent 深度思考，标杆研究先行。
+特性级架构设计——HOW 实现 specs（强制图示）。用于 OpenSpec workflow 的 design artifact 生成。
 
-## 使用示例
+> **产品级 vs 特性级**：
+> - 产品级（`/df:product-design`）：子系统分解、ADR、系统架构总纲，产出 `docs/architecture/*.md`，可新建子系统
+> - 特性级（本命令）：在既有架构内展开，不新建子系统，产出 `openspec/changes/<name>/design.md`
 
-```
-/df:design                    # 首次启动，从前置调研开始
-/df:design                    # 再次调用，自动检测状态并继续
-```
+## 使用场景
+
+- **OpenSpec workflow 自动触发**：`/opsx:continue` 走到 design artifact 时自动调用
+- **手动触发**：任意时刻直接 `/df:design` 做临时设计或修订
 
 ## 输出物
 
-- `docs/architecture/reference/*.md` — 标杆分析
-- `docs/architecture/decisions/decision-*.md` — 决策过程文档
-- `docs/architecture/adr.md` — 架构决策记录
-- `docs/architecture/design.md` — 系统架构总纲
-- `docs/architecture/<subsystem>/design.md` — 子系统架构主文档
+- `openspec/changes/<change-name>/design.md` — Context + Decisions + Interface Changes + Risks + Migration Plan
 
 ## 调用方式
 
-调用 Skill 工具加载 `devforge-design`
+调用 Skill 工具加载 `devforge-feature-design`

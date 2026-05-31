@@ -13,7 +13,7 @@
 
 ```
 产品级（启发式 Skills + /df:* 命令）
-  /df:design ←→ /df:define ←→ /df:plan
+  /df:product-design ←→ /df:product-define ←→ /df:plan
       │               │              │
       ▼               ▼              ▼
   architecture/   requirements/   iteration-plan/
@@ -64,8 +64,8 @@
 - `docs/test-strategy.md` — 测试策略
 
 **触发命令**：
-- `/df:design` — 架构探索（检测现有文档，支持迭代完善）
-- `/df:define` — 需求定义（Feature-Scenario 结构）
+- `/df:product-design` — 架构探索（检测现有文档，支持迭代完善）
+- `/df:product-define` — 需求定义（Feature-Scenario 结构）
 - `/df:plan` — 迭代计划（两阶段：里程碑+Backlog → 迭代执行计划，每阶段三重评审）
 - `/df:test-design` — 测试策略设计（测试分层 → 覆盖率目标 → 各级方案）
 
@@ -137,7 +137,7 @@
 特性级开发中发现的产品级文档问题：
 - 在 spec/design 中使用 `[[发现]]` 标注
 - `/opsx:archive` 时汇总未处理发现
-- 累计超过 3 个时，提示执行 `/df:design` 或 `/df:define` 更新产品级文档
+- 累计超过 3 个时，提示执行 `/df:product-design` 或 `/df:product-define` 更新产品级文档
 
 ## 文档对齐
 
@@ -176,12 +176,12 @@
 ### 产品级（数月周期）
 
 ```
-第 1-2 周：/df:design → 系统级架构框架
-第 2-4 周：/df:define → 核心 Feature 需求
+第 1-2 周：/df:product-design → 系统级架构框架
+第 2-4 周：/df:product-define → 核心 Feature 需求
 第 3-5 周：/df:test-design → 测试策略设计
 第 4-6 周：/df:plan → 初始迭代计划
 ...
-第 N 周：/df:design → 基于新认知调整架构
+第 N 周：/df:product-design → 基于新认知调整架构
 ```
 
 ### 特性级（数周周期）

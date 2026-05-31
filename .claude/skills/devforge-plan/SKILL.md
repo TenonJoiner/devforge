@@ -220,7 +220,7 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
 
 | # | 当前文件状态 | 下一步动作 |
 |---|------------|-----------|
-| 1 | 上游文档（`docs/architecture/` 或 `docs/requirements/`）缺失 | → 上游未就绪，提示先执行 `/df:design` 和 `/df:define` |
+| 1 | 上游文档（`docs/architecture/` 或 `docs/requirements/`）缺失 | → 上游未就绪，提示先执行 `/df:product-design` 和 `/df:product-define` |
 | 2 | `milestone-plan.md` 不存在 | → 第 1 阶段步骤 1-2（项目背景收集 + 多 agent 并行产出） |
 | 3 | `milestone-plan.md` 无 PASS 标记 | → 第 1 阶段步骤 3（评审修正循环） |
 | 4 | 第一个未规划的 `iteration-m<x>-i<y>.md` 不存在 | → 第 2 阶段步骤 1-2（迭代上下文收集 + 多 agent 并行产出） |
@@ -240,7 +240,7 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
 
 - **准入**：无
 - **产出**：确认上游就绪状态
-- **规则**：主会话检查 `docs/architecture/` 和 `docs/requirements/` 是否存在有效文档；缺失则提示先执行 `/df:design` 和 `/df:define`
+- **规则**：主会话检查 `docs/architecture/` 和 `docs/requirements/` 是否存在有效文档；缺失则提示先执行 `/df:product-design` 和 `/df:product-define`
 
 ### 第 1 阶段：里程碑规划 + Backlog
 
@@ -273,8 +273,8 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
 
 | 目录/文件 | 归属命令 |
 |-----------|---------|
-| `docs/architecture/` | `/df:design` |
-| `docs/requirements/` | `/df:define` |
+| `docs/architecture/` | `/df:product-design` |
+| `docs/requirements/` | `/df:product-define` |
 | `docs/test-strategy.md` | `/df:test-design` |
 
 ---

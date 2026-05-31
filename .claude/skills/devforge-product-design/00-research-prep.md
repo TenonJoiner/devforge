@@ -11,7 +11,7 @@
 
 不调研清楚背景和约束就开始标杆研究，标杆选择可能偏离方向。通过**交互式提问**逐层深入，禁止一次性抛出所有问题。
 
-> **两 skill 协作**：/df:define 和 /df:design 共用 T1-T6 主题清单。define 主导 T1-T5，design 主导 T6，双方互相校验。场景 B 时 design 跳过已闭合的 T1-T5，执行 T6 并从架构视角校验。
+> **两 skill 协作**：/df:product-define 和 /df:product-design 共用 T1-T6 主题清单。define 主导 T1-T5，design 主导 T6，双方互相校验。场景 B 时 design 跳过已闭合的 T1-T5，执行 T6 并从架构视角校验。
 
 ---
 
@@ -19,17 +19,17 @@
 
 交互式前置调研由**主会话直接执行**，不派遣 agent。主会话首先检查 `.claude/domain-config.yaml` 是否存在：
 
-**场景 A：文件不存在**（首次执行，/df:define 未执行）
+**场景 A：文件不存在**（首次执行，/df:product-define 未执行）
 - 执行完整的领域信息收集（所有主题）
 - 最终由主会话生成新的 domain-config.yaml
 
-**场景 B：文件已存在**（/df:define 已执行过）
+**场景 B：文件已存在**（/df:product-define 已执行过）
 - 主会话读取现有配置，向用户展示
 - 询问："这些信息是否仍然准确？架构视角下是否有需要调整的？"
 - 如果准确：跳过已有字段对应的主题，只收集 design 负责的 T6
 - 如果需要修正：逐项确认需要修改的字段
 
-**场景 C：文件已存在**（/df:design 先前已执行过）
+**场景 C：文件已存在**（/df:product-design 先前已执行过）
 - 读取现有配置，向用户展示
 - 从架构视角校验已填的 T1-T6：
   - T1-T5：目标用户是否准确？痛点表述是否到位？规模量级是否合理？边界是否完整？
@@ -53,7 +53,7 @@
 |------|------|---------|------|---------|
 | T1 | 系统类型与定位 | primary_type 已落到枚举 + sub_type 视情况追问 | `primary_type`、`sub_type` 枚举 | 第 1 阶段标杆筛选、架构模式预选 |
 | T2 | 目标用户与核心痛点 | 核心痛点收敛到一句话 + 主要用户类型已确认 | 自由文本（汇入 description） | 第 2 阶段 Actor 识别基线 |
-| T3 | 系统规模的量级表征 | 部署/数据/并发三档位均已落到枚举；条件性的并发拆分按系统类型完成 | `deployment`、`data_scale`、`concurrency.peak`（+ 条件性拆分字段）枚举 | 第 1 阶段标杆筛选、/df:design 规模约束 |
+| T3 | 系统规模的量级表征 | 部署/数据/并发三档位均已落到枚举；条件性的并发拆分按系统类型完成 | `deployment`、`data_scale`、`concurrency.peak`（+ 条件性拆分字段）枚举 | 第 1 阶段标杆筛选、/df:product-design 规模约束 |
 | T4 | 质量属性优先级 | 5 项已排序 + 排序原因已说明 | `quality_attributes.priorities` 1-5 排序 | 标杆研究权重、架构权衡 |
 | T5 | 明确的边界约束 | >=2 个"不做的事"已列出 | 自由文本（汇入 description） | 第 2 阶段 Feature 识别的禁区 |
 | T6 | 质量属性量化目标 | 量化指标已明确（latency/throughput/SLA/consistency_model） | `quality_attributes.targets` | 第 2-3 阶段架构设计约束 |
@@ -101,12 +101,12 @@
 - T2 + T5 自由文本：综合为 `system.description` 一段（不做结构化拆分）
 - 条件性 concurrency 拆分字段：不属于当前系统类型的直接删除，不留空
 - 场景 B/C：仅更新 design 负责的 T6 字段（保留 define 已生成字段）
-- 场景 A：`metadata.created_at` 填当前日期，`metadata.contributors` 填 `["/df:design"]`
-- 场景 B/C：`metadata.contributors` 追加 `"/df:design"`（如尚未包含），`metadata.last_updated` 填当前日期
+- 场景 A：`metadata.created_at` 填当前日期，`metadata.contributors` 填 `["/df:product-design"]`
+- 场景 B/C：`metadata.contributors` 追加 `"/df:product-design"`（如尚未包含），`metadata.last_updated` 填当前日期
 
 写入 `.claude/domain-config.yaml`，用 `ls` 验证文件存在。
 
-> **职责边界**：本文件由 /df:define 和 /df:design 共同维护。define 主导 T1-T5（`system` 全部 + `quality_attributes.priorities`），design 主导 T6（`quality_attributes.targets`）。`system` 和 `quality_attributes` 中 design 需要补充的字段由 design 更新，但不覆盖 define 已填充的值。实现细节（languages / architecture / tech_stack / development / benchmarks）不写入本文件，由 ADR 和后续阶段产出维护。
+> **职责边界**：本文件由 /df:product-define 和 /df:product-design 共同维护。define 主导 T1-T5（`system` 全部 + `quality_attributes.priorities`），design 主导 T6（`quality_attributes.targets`）。`system` 和 `quality_attributes` 中 design 需要补充的字段由 design 更新，但不覆盖 define 已填充的值。实现细节（languages / architecture / tech_stack / development / benchmarks）不写入本文件，由 ADR 和后续阶段产出维护。
 
 ---
 
