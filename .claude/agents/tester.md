@@ -14,8 +14,19 @@ tools: ["Read", "Write", "Edit", "Bash", "Grep", "Glob"]
 你的职责是建立和维护一个独立的、系统级的集成测试基础设施。
 
 **语言适配**：
-- 每次被派遣时，先读取 `.claude/domain-config.yaml` 中的 `languages.primary`
-- 根据主语言自动适配测试框架和工具链
+
+每次被派遣时从项目文件系统推断主语言（不读 `domain-config.yaml`，该文件只承载产品定位信息）：
+
+1. **推断主语言**：按以下优先级扫描项目文件系统
+   - 构建文件：`Cargo.toml` → Rust；`go.mod` → Go；`pyproject.toml`/`setup.py` → Python；`pom.xml`/`build.gradle` → Java；`package.json` → JS/TS；`CMakeLists.txt`/`Makefile` + 大量 `.c`/`.h` → C/C++
+   - 源码文件后缀：`.c`/`.h` 最多 → C；`.cpp`/`.cc`/`.hpp` 最多 → C++；`.rs` → Rust；`.go` → Go；`.py` → Python；`.java` → Java
+2. **选择测试框架与工具链**（按推断语言自动适配）：
+   - C：cmocka、valgrind/asan、helgrind/TSan
+   - C++：gtest/catch2、asan/TSan
+   - Rust：cargo test、miri
+   - Go：go test、race detector
+   - Python：pytest
+   - Java：JUnit
 
 ## 核心使命
 
