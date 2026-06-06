@@ -177,6 +177,25 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
 
 **反面约束**：不得套用固定视角清单（如对所有产品都用"用户角色/使用阶段/分析维度"三视角）。视角服务于产品决策——不同产品的决策关注点不同，视角应反映这种差异。
 
+#### 产出者派遣 prompt 必备字段（product / researcher / architect agent）
+
+**核心原则**：产出者 agent 已解耦 `工作模式` / `template 路径` / `output 路径` 等流程性细节。skill 派遣时必须在 prompt 中显式注入：
+
+1. **任务模式**（如 `需求定义主角` / `Actor 识别` / `Feature 拆解` / `Scenario 挖掘` / `验收标准制定`）
+2. **template_path**（如 `.claude/templates/req-product-spec.md` / `.claude/templates/req-feature.md`）
+3. **mandatory_sections**（从 template 提取的必填章节清单）
+4. **output_path**（如 `docs/requirements/product-spec.md` / `docs/requirements/<feature-domain>.md`）
+5. **length_hint**（如 `product-spec.md 完整展开` / `特性域文档 150-400 行`）
+6. **上游输入路径**（如 `docs/requirements/reference/<product>.md` 标杆研究）
+
+**researcher agent 额外字段**：
+- **研究视角**（`需求研究`：用户/需求/产品视角，禁止输出核心算法/复杂度分析）
+- **output_path**（`docs/requirements/reference/<product>.md`）
+
+**architect agent 额外字段**（需求评审顾问模式）：
+- **任务模式**：`��求可行性顾问`（评估实现复杂度、标记高风险 Feature，不承担需求定义主角责任）
+- **关注点**：技术可行性、实现复杂度、Non-Goals 边界
+
 #### 评审视角（reviewer agent）
 
 **核心原则**：评审视角不由 reviewer agent 自带，必须从被评审对象的相关来源获取。reviewer agent 只负责承载"评审思维风格"。三层视角分工如下：

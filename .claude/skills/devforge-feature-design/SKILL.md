@@ -12,7 +12,7 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
 
 **与产品级 design 的区别**：
 - 产品级（`/df:product-design`）：子系统分解 + ADR + 系统架构总纲，产出 `docs/architecture/*.md`
-- 特性级（本 skill）：在既有架构内展开，不新建子系统，产出 `openspec/changes/<name>/design.md`
+- 特性级（本 skill）：在既有架构内展开，不新建子系统，产出当前工作目录的 `design.md`
 
 **核心原则**：
 1. **在既有架构内展开**：不新建子系统，不改变系统级架构决策
@@ -22,11 +22,24 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
 
 ---
 
+## 工作目录约定
+
+skill 在**当前工作目录**查找输入文件、输出产出文件：
+- **输入**：`proposal.md`（必需）、`research.md`（必需）、`specs/*.md`（如已存在）
+- **输出**：`design.md`
+- **产品级文档**：通过项目根目录的 CLAUDE.md#产品级文档索引定位
+
+**调用方式**：
+- **OpenSpec workflow 调用**：workflow 先 `cd openspec/changes/<name>/`，然后调用 skill
+- **手动调用**：用户先 `cd` 到包含 `proposal.md` 的目录，然后调用 `/df:design`
+
 ## 启动检测
 
-读取 `openspec/changes/<change-name>/design.md`：
+检查当前工作目录的 `design.md`：
 - **不存在** → 进入「初次生成」模式
 - **已存在** → 反问主人「修订 / 补全」，按指定模式运行
+
+如果当前工作目录无 `proposal.md` 或 `research.md`，立即报错并提示主人 `cd` 到正确目录或先完成前置 artifact。
 
 ---
 
@@ -114,16 +127,19 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
 ### architect agent（Decision 生成）
 
 ```
-当前是特性级 design 阶段，为 OpenSpec change「<change-name>」生成 design.md。
+当前是特性级 design 阶段，生成 design.md。
 
+**任务模式**：特性级架构决策主角（既有架构内展开 Decisions）
 **任务**：生成 Decisions 章节。
 
 **输入**：
-- proposal.md：<路径>
-- research.md：<路径>（读设计空间地图，识别关键决策点）
-- specs/*.md：<路径>（如已存在）
+- proposal.md：当前工作目录
+- research.md：当前工作目录（读设计空间地图，识别关键决策点）
+- specs/*.md：当前工作目录（如已存在）
 - 产品级架构文档：docs/architecture/<相关子系统>/design.md
-- design.md template：openspec/schemas/spec-driven-enhanced/templates/design.md
+- design.md template_path：openspec/schemas/spec-driven-enhanced/templates/design.md
+
+**output_path**：`design-draft.md`（当前工作目录）
 
 **输出**：
 每个 Decision：
@@ -148,7 +164,10 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
 当前是特性级 design 阶段，评审 design-draft.md。
 
 **被评审对象**：<路径>
-**被评审 template**：openspec/schemas/spec-driven-enhanced/templates/design.md
+**被评审 template_path**：openspec/schemas/spec-driven-enhanced/templates/design.md
+**review_output_path**：`design-review.md`（当前工作目录，多轮追加同一文件）
+**report_template_path**：`.claude/templates/review-report.md`（如存在）
+**复杂度档位**：复杂（≥7 个质疑点，覆盖 11 项维度）
 
 **评审维度**（11 项）：
 - 方案可行性：技术方案是否可行（能否满足 specs 的每条 Requirement）

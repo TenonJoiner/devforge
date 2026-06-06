@@ -151,8 +151,12 @@ OpenSpec 文档评审是 design 完成后、tasks 分解前的质量体检 + 人
 - specs/*.md：<路径列表>
 - design.md：<路径>
 
-**评审维度**：
-- 跨文档一致性（产品视角）：Capability → Requirement 是否对齐、与 docs/requirements/ 的一致性、产品级追溯链
+**review_output_path**：`openspec/changes/<change-name>/review.md`（多视角合并到同一文件）
+**report_template_path**：`.claude/templates/review-report.md`（如存在）
+**复杂度档位**：复杂（≥7 个质疑点，覆盖以下视角清单的 10 项维度）
+
+**评审维度**（视角清单）：
+- 跨文档一致性（产品视角）：Capability → Requirement 是否对齐、与 docs/requirements/ 的一致性、产品���追���链
 - Proposal 质量（3 项）：动机合理性、方案合理性、范围完整性
 - Specs 质量（7 项）：需求合理性、需求必要性、需求完整性、需求清晰性、需求可验收性、异常路径质量、安全覆盖
 
@@ -172,7 +176,11 @@ OpenSpec 文档评审是 design 完成后、tasks 分解前的质量体检 + 人
 - specs/*.md：<路径列表>
 - design.md：<路径>
 
-**评审维度**：
+**review_output_path**：`openspec/changes/<change-name>/review.md`（多视角合并到同一文件）
+**report_template_path**：`.claude/templates/review-report.md`（如存在）
+**复杂度档位**：复杂（≥7 个质疑点，覆盖以下视角清单的 12 项维度）
+
+**评审维度**（视角清单）：
 - 跨文档一致性（架构视角）：Requirement → Decision 是否对齐、与 docs/architecture/ 的一致性、架构追溯链
 - Design 质量（11 项）：方案可行性、方案竞争力、方案合理性、架构一致性、设计内部一致性、可维护性、故障处理、决策备选方案、并发模型、状态机表达、性能评估
 

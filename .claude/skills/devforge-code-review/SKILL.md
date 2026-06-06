@@ -194,6 +194,22 @@ Correctness 和 Security 维度中的部分检查项引用 `coding-style-<lang>.
   - 轻量评审（< 300 行且模块 ≤ 2）
   - 深度评审（≥ 300 行，或 3+ 模块）
 
+### `code-reviewer` 派遣字段（必填，由 skill 注入）
+
+`code-reviewer` agent 已解耦语言推断/工作模式/git 命令——skill 派遣时必须在 prompt 中显式注入以下字段：
+
+| 字段 | 说明 | 示例 |
+|------|------|------|
+| `任务模式` | 轻量评审（D1+D2）/ 深度评审（D1-D5）/ 单维度 subagent | `深度评审-D3-Architecture` |
+| `主语言` | skill 从项目文件系统探测后注入 | `C` / `Rust` / `Go` |
+| `coding_style_path` | 对应语言规范文件 | `.claude/rules/coding-style-c.md` |
+| `评审维度` | 本次评审覆盖的维度子集（D1-D5 子集） | `D1, D2` / `D3` 单维度 |
+| `diff_range` | skill 计算后注入的 git diff 命令或范围 | `git diff HEAD` / `git diff $(git merge-base HEAD main)..HEAD` |
+| `领域信号` | 从代码结构/架构文档识别的领域特征 | `存储/WAL` / `高性能服务` |
+| `report_output_path` | 评审报告写入路径 | `/tmp/code-review-report-<ts>.md` |
+| `report_template_path` | 报告模板（如存在） | `.claude/templates/code-review-report.md` |
+| `subagent_dimension` | 深度评审多实例时，每个 subagent 负责的单一维度 | `D4-Security` |
+
 ## 假阳性排除规则（硬规则）
 
 以下类别的发现**无条件排除**，不进入评审报告：

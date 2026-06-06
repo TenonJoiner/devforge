@@ -158,9 +158,20 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
 
 **反面约束**：不得套用固定视角清单（如"容量/依赖/价值"三视角适用于所有项目）。视角服务于产品决策——不同产品的决策关注点不同，视角应反映这种差异。
 
+#### 产出者派遣 prompt 必备字段（project agent）
+
+**核心原则**：`project` agent 已解耦四种「工作模式」、`milestone-plan.md` 等硬编码文件名、SKILL.md 模板读取。skill 派遣时必须在 prompt 中显式注入：
+
+1. **任务模式**（`初始规划` / `滚动更新` / `快速调整` / `评审顾问`）
+2. **template_path**（如 `.claude/templates/plan-milestone.md` / `.claude/templates/plan-iteration.md`）
+3. **mandatory_sections**（从 template 提取的必填章节清单）
+4. **output_path**（如 `docs/iteration-plan/milestone-plan.md` / `docs/iteration-plan/iteration-m<N>-i<M>.md`）
+5. **length_hint**（如 `milestone-plan.md 300-600 行` / `iteration 150-300 行`）
+6. **上游输入路径**（如 `docs/architecture/design.md` 架构约束、`docs/requirements/product-spec.md` 需求优先级）
+
 #### 评审视角（reviewer agent）
 
-**核心原则**：评审视角不由 reviewer agent 自带，必须从被评审对象的相关来源获取。reviewer agent 只负责承载"评审思维风格"。三层视角分工如下：
+**核心原则**：评审视角不由 reviewer agent 自带，必须从被评审对象的���关来源获取。reviewer agent 只负责承载"评审思维风格"。三层视角分工如下：
 
 | 视角层级 | 承担者 | 内容 |
 |---------|------|------|

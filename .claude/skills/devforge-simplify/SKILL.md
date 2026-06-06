@@ -106,6 +106,17 @@ allowed-tools: [Read, Bash, Grep, Glob, Agent]
 
 同时启动 3 个 `code-reviewer` subagent，各获得完整 diff 和以下指令约束。通过 prompt 限定各自的评审维度，重载 code-reviewer 的默认评审视角。
 
+**code-reviewer 派遣字段（必填，由 skill 注入）**：
+
+| 字段 | 说明 |
+|------|------|
+| `任务模式` | `simplify 三维度评审`（复用/质量/效率 之一） |
+| `主语言` | skill 从项目文件系统探测后注入（如 `C`/`Rust`/`Go`） |
+| `coding_style_path` | 对应语言规范文件（如 `.claude/rules/coding-style-c.md`） |
+| `评审维度` | 本 subagent 负责的单一维度（`code-reuse` / `code-quality` / `code-efficiency`） |
+| `diff_range` | skill 计算后注入的完整 diff 范围 |
+| `report_output_path` | 本 subagent 的报告路径（如 `/tmp/simplify-reuse-<ts>.md`） |
+
 **所有 agent 的通用约束**：
 - 对于看起来"不合理"的代码，先检查 git blame 或注释确认是否有意为之，再标记为问题
 - 遇到 `simplify-ignore` 标记的代码块，直接跳过
