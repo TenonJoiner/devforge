@@ -75,9 +75,21 @@ artifacts:
     instruction: |
       生成 research.md：用 Skill 工具调用 `devforge-feature-research` skill 完成。
 
+      **调用方式**：
+      - 默认模式：`devforge-feature-research`（2 个必须确认点：标杆产品 + 带债推进决策）
+      - 全确认模式：`devforge-feature-research --confirm-topics --confirm-constraints`（4 个确认点）
+
+      **确认环节**：
+      - **必须确认**（默认启用）：
+        - 标杆产品确认：标杆识别后，确认 3-5 个标杆是否合适
+        - 带债推进确认：3 轮评审仍未通过时，决定是否接受带债推进
+      - **可选确认**（需参数启用）：
+        - 技术关注点确认（`--confirm-topics`）：提取技术关注点后，确认是否覆盖核心问题
+        - 产品约束确认（`--confirm-constraints`）：收集产品约束后，确认是否完整
+
       research.md 是 spec 与 design 的共同输入：
-      - 约束清单：本特性必须遵守的架构、协议、性能、范围约束（来自产品级文档与本 proposal）
-      - 标杆方案空间：按取舍维度组织的标杆方案研究（不按产品维度并列）
+      - 产品约束：本特性必须遵守的架构、协议、性能、范围约束（来自产品级文档与本 proposal）
+      - 标杆方案空间：按技术关注点组织的标杆方案研究（不按产品维度并列）
       - 设计空间地图：标杆 × 约束过滤后的可行候选空间
 
       跑完 skill 后，research.md 落到 `openspec/changes/<change-name>/research.md`。
