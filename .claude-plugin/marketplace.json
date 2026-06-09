@@ -15,8 +15,9 @@
       },
       "category": "workflow",
       "source": {
-        "source": "self",
-        "path": "."
+        "source": "url",
+        "url": "https://github.com/TenonJoiner/devforge.git",
+        "ref": "main"
       },
       "homepage": "https://github.com/TenonJoiner/devforge"
     }
