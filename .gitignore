@@ -1,20 +1,24 @@
-# 参考仓库（不上传 Git）
+# Claude Code project-local config (developer's working state, not part of plugin)
+.claude/
+
+# Reference repos (large, third-party material — not part of plugin)
 reference/
 
-# 旧版本文档备份
+# Framework design notes (kept locally, not distributed in plugin)
+docs-design/
+
+# Skill trial output (not part of plugin)
+docs/
 docs-v0.1/
+openspec/
+test-skill/
 
-# 系统文件
+# OS
 .DS_Store
-*.swp
-*.swo
-*~
 
-# IDE
-.idea/
-.vscode/
-*.iml
+# Python
+__pycache__/
+*.pyc
 
-# 日志
-*.log
-
+# Node
+node_modules/

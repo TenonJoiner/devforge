@@ -1,0 +1,22 @@
+{
+  "name": "devforge",
+  "version": "0.1.0",
+  "description": "复杂基础软件开发 TeamSkills 框架 — 三层工作流（产品级/特性级/代码级）+ OpenSpec 规范驱动 + 多 Agent 协作 + 自动化质量守护",
+  "author": {
+    "name": "TenonJoiner",
+    "email": "jarekzhang1024@gmail.com"
+  },
+  "homepage": "https://github.com/TenonJoiner/devforge",
+  "repository": "https://github.com/TenonJoiner/devforge",
+  "license": "MIT",
+  "keywords": [
+    "teamskills",
+    "openspec",
+    "architecture",
+    "requirements",
+    "tdd",
+    "code-review",
+    "complex-systems",
+    "distributed-systems"
+  ]
+}

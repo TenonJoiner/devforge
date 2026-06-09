@@ -1,83 +1,236 @@
 # DevForge
 
-面向分布式存储团队的 AI 辅助开发工作流体系。
+> 复杂基础软件开发 TeamSkills 框架 — Claude Code Plugin
 
-## 项目定位
+DevForge 是一个面向复杂基础软件（分布式存储、数据库、操作系统内核等）的三层 TeamSkills 开发框架，提供产品级到代码级的完整工作流支持。
 
-覆盖产品规划到代码交付全流程的 skill 体系，解决团队级 AI 辅助开发的标准化问题。
+## 特性
 
-**核心目标**：
-- 团队整体提效和高效协作，减少并行开发冲突
-- 上层约束下层，下层变更反馈上层的四层闭环
-- 单代码仓库（Monorepo）组织，所有子系统在同一仓库中管理
+- **三层工作流**：产品级（架构/需求/计划）→ 特性级（OpenSpec 规范驱动）→ 代码级（TDD/评审/重构）
+- **多 Agent 协作**：10 个预定义专业化 Agent（architect、product、developer、tester、reviewer 等）
+- **OpenSpec 集成**：基于 OpenSpec 的 spec-driven-enhanced schema，严格的依赖链管理
+- **自动化质量守护**：通过 hooks 和 agents 实现编码规范、测试覆盖、代码质量的自动化保障
+- **多语言支持**：C、C++、Rust、Go、Python、Java 编码规范与工具链
 
-## 设计思路
+## 安装
 
-### 1. 分层驱动
+```bash
+# 添加 marketplace（如果还未添加）
+claude plugin marketplace add https://github.com/TenonJoiner/devforge
 
-| 层级 | 驱动方式 | 关注重点 |
+# 安装 plugin
+claude plugin install devforge
+```
+
+## 快速开始
+
+### 产品级工作流
+
+```bash
+# 架构探索与设计
+/df:product-design
+
+# 需求定义（Feature-Scenario 结构）
+/df:product-define
+
+# 迭代规划（里程碑 + 执行计划）
+/df:plan
+
+# 测试策略设计
+/df:test-design
+```
+
+### 特性级工作流（OpenSpec 集成）
+
+```bash
+# 创建新特性（从 iteration-plan 选择）
+/opsx:new <proposal-name>
+
+# 继续下一阶段（specs → design → tasks）
+/opsx:continue
+
+# 执行实现任务
+/opsx:apply
+
+# 验证实现
+/opsx:verify
+
+# 归档变更
+/opsx:archive
+```
+
+### 代码级工作流
+
+```bash
+# TDD 开发工作流
+/df:tdd
+
+# 代码评审（五维度：Correctness/Readability/Architecture/Security/Performance）
+/df:code-review
+
+# 代码简化重构（深度清理）
+/df:simplify
+
+# 系统化调试
+/df:debug
+
+# 编译检查与静态分析
+/df:lint
+
+# Git Worktree 管理
+/df:switch-worktree
+/df:finish-worktree
+```
+
+## 核心概念
+
+### 三层工作流
+
+```
+产品级（数月周期）
+  ├── 架构设计（ADR + 子系统设计）
+  ├── 需求定义（Actor-Feature-Scenario）
+  ├── 迭代规划（里程碑 + Backlog）
+  └── 测试策略（分层 + 覆盖率目标）
+        ↓
+特性级（数周周期）
+  ├── proposal（变更提案）
+  ├── specs（规格定义）
+  ├── design（架构设计）
+  └── tasks（任务分解）
+        ↓
+代码级（数天周期）
+  ├── TDD（RED-GREEN-REFACTOR）
+  ├── 代码评审（五维度评审）
+  └── 质量守护（hooks + linters）
+```
+
+### 10 个预定义 Agent
+
+| Agent | 职责 | 主要 Skills |
+|-------|------|------------|
+| **architect** | 架构设计与技术选型 | product-design, feature-design |
+| **architect-reviewer** | 架构评审（技术视角） | product-design, feature-design |
+| **product** | 需求定义与 Feature 拆解 | product-define, feature-define |
+| **product-reviewer** | 需求评审（业务视角） | product-define, feature-define |
+| **project** | 迭代规划与资源编排 | plan |
+| **project-reviewer** | 计划评审（进度/资源视角） | plan |
+| **researcher** | 标杆研究与技术调研 | feature-research |
+| **developer** | 代码实现（TDD 铁律） | tdd |
+| **tester** | 测试执行与覆盖率验证 | tdd, test-design |
+| **code-reviewer** | 代码评审（五维度） | code-review |
+
+### 编码规范分层
+
+- **R1** - 通用原则（跨语言）
+- **R2** - Git 工作流（Conventional Commits + worktree 规范）
+- **R3** - 语言特定（C/C++/Rust/Go/Python/Java）
+- **R4** - 测试分层（单元/集成/性能 + TDD 铁律）
+
+## Plugin 结构
+
+```
+devforge/
+├── .claude-plugin/
+│   └── plugin.json              # Plugin 元数据
+├── agents/                      # 预定义 Agent（10 个角色）
+│   ├── architect.md
+│   ├── architect-reviewer.md
+│   ├── product.md
+│   ├── developer.md
+│   ├── tester.md
+│   ├── code-reviewer.md
+│   └── ...
+├── skills/                      # 所有 Skills
+│   ├── devforge-product-design/
+│   ├── devforge-product-define/
+│   ├── devforge-tdd-workflow/
+│   ├── devforge-code-review/
+│   ├── openspec-*/
+│   └── ...
+├── rules/                       # 编码规范与工作流规则
+│   ├── coding-style.md          # R3 通用规范
+│   ├── coding-style-c.md        # R3 C 语言规范
+│   ├── coding-style-rust.md     # R3 Rust 规范
+│   ├── git-workflow.md          # R2 Git 规范
+│   ├── testing.md               # R4 测试规范
+│   └── workflow.md              # 四层工作流定义
+├── hooks/                       # 自动化 Hooks
+│   ├── hooks.json               # Hook 配置
+│   ├── post-edit-format.sh      # H2 代码格式化
+│   ├── post-edit-quality-gate.sh # H3 质量门禁
+│   └── pre-commit-lint.sh       # H1 提交前检查
+├── commands/                    # 用户可见命令（legacy）
+│   ├── df/
+│   └── opsx/
+└── README.md                    # 本文件
+```
+
+## 配置
+
+### 项目配置（`.claude/` 目录）
+
+```yaml
+# .claude/domain-config.yaml
+domain: distributed-storage
+languages:
+  primary: c
+  secondary: [python]
+test_framework: cmocka
+```
+
+### Hook 配置
+
+Hooks 在 `hooks/hooks.json` 中定义，支持：
+- **PostEdit** - 代码格式化（clang-format/rustfmt/black 等）
+- **PreCommit** - 提交前编译检查与静态分析
+- **PostTest** - 测试后覆盖率验证
+
+## 与 OpenSpec 的分工
+
+| 能力 | OpenSpec | DevForge |
 |------|----------|----------|
-| 产品级 | 启发式 Skills | 输出质量（explore/define/plan/review/test-design/verify） |
-| 特性级 | OpenSpec 引擎 | 流程控制（proposal → specs → design → tasks → implement → archive）|
-| 代码级 | Claude Code 原生 | 写对代码（单元测试/TDD/代码检视） |
-| 测试验证级 | 自动化工具链 | 集成正确（集成/系统/性能测试） |
+| Artifact 依赖图 | ✅ | — |
+| Delta 规范格式 | ✅ | — |
+| 命令系统 | ✅ (`/opsx:*`) | — |
+| 产品级 Skills | — | ✅ (`/df:product-*`, `/df:plan`, `/df:test-design`) |
+| 特性级 Artifacts | — | ✅ (`/df:research`, `/df:define`, `/df:design`) |
+| 代码级 Skills | — | ✅ (`/df:tdd`, `/df:code-review`, `/df:simplify`) |
+| Agents | — | ✅ (10 个预定义角色) |
+| Rules | — | ✅ (R1-R4 分层规范) |
+| Hooks | — | ✅ (H1-H3 自动化守护) |
 
-产品级是持续数月的创意迭代过程，**重输出质量**；特性级是短期交付闭环，**重流程控制**。
+## 适用场景
 
-### 2. 四层闭环
+DevForge 特别适合以下项目：
+- **复杂基础软件**：分布式存储、数据库、操作系统、编译器、虚拟化平台
+- **长期迭代项目**：需要架构设计、需求管理、迭代规划的系统级软件
+- **多人协作**：需要标准化 workflow、代码规范、评审流程的团队项目
+- **质量敏感**：对测试覆盖率、代码质量、安全性有严格要求的项目
 
-```
-产品级文档 ──约束──┐
-    ▲              ▼
-  反馈           特性级 Spec
-    │              │
-  追踪             ▼
-    │           代码实现
-    │              │
-    └────────── 测试验证
-```
+## 文档
 
-- 上层约束下层：产品级文档指导特性级设计，特性级 spec 约束代码实现
-- 下层反馈上层：代码变更触发 spec 更新，特性调整同步到产品级规划
+- [CLAUDE.md](CLAUDE.md) - 框架设计核心规范
+- [rules/workflow.md](rules/workflow.md) - 四层工作流详解
+- [rules/testing.md](rules/testing.md) - 测试分层与 TDD 规范
+- [rules/git-workflow.md](rules/git-workflow.md) - Git 工作流规范
 
-### 3. 团队协作为核心
+## 致谢与第三方组件
 
-所有设计围绕多人并行开发场景：
-- Git worktree 隔离并行开发
-- 多 Agent 代码检视与重构
-- 统一规范避免代码冲突
+DevForge 集成了以下第三方组件，遵循各自原始 license：
 
-### 4. 不造轮子
+- **OpenSpec**（MIT License）— 源码：https://github.com/Fission-AI/OpenSpec
+  - `skills/openspec-*/`（10 个 skill）
+  - `commands/opsx/*`（10 个命令）
 
-所有 skill/hook/command/agent 使用现成工具：
-- Claude Code 内置能力
-- Linux 系统工具（gcc/make/git/grep/sed/awk 等）
-- 外部成熟工具（cppcheck、valgrind、clang-format、perf 等）
+  这些组件用于在 DevForge 内提供特性级 spec-driven workflow。`/opsx:*` 命令依赖外部 `openspec` CLI，需要先安装：`npm install -g @fission-ai/openspec`。
 
-**不自研工具链**，避免长期维护负担。
+DevForge 自身代码（`agents/`、`rules/`、`templates/`、`hooks/`、`skills/devforge-*`、`commands/df/`）以 MIT 协议发布。
 
-### 5. 面向 C + Linux + 分布式存储
+## License
 
-针对分布式存储的核心诉求设计：
+MIT
 
-**数据一致性**：强一致/最终一致、副本一致性、故障后数据完整性
-**性能指标**：低延迟、高吞吐、高并发
-**代码质量**：内存安全（无泄漏、无越界）、并发正确性（锁序、无锁结构、竞态检测）、错误处理完备性（每个返回值必须检查）
+## 贡献
 
-## 目录结构
-
-- .claude/ - Claude Code 配置
-  - agents/ - 自定义 Agent
-  - commands/ - 自定义命令
-  - skills/ - 自定义 Skills
-  - rules/ - 规则文件
-- docs/ - 产品级文档
-- openspec/ - OpenSpec 配置和 schema
-- src/ - 各子系统源代码
-- tests/ - 测试代码
-- reference/ - 参考仓库（不上传，见 .gitignore）
-
-## 使用方式
-
-本仓库采用 Monorepo 模式，所有子系统代码位于同一仓库中。teamskills 提供统一的 skill/agent/command/hook，通过 `.claude/` 目录直接使用。
-
+欢迎提交 Issue 和 Pull Request。贡献前请阅读 [CLAUDE.md](CLAUDE.md) 了解框架设计原则。
