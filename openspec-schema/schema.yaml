@@ -222,11 +222,11 @@ apply:
     |---------|--------|---------|
     | SCENARIO | developer agent | `/df:tdd` skill（RED → GREEN → REFACTOR） |
     | CHORE | developer agent | 直接处理，无 skill |
-    | LINT | code-reviewer agent → developer agent | `/df:lint autofix` 检查 → developer 修复 |
+    | LINT | developer agent | `/df:lint autofix` 编译+静态分析 → developer 修复 |
     | REVIEW | code-reviewer agent → developer agent | `/df:code-review autofix` 评审 → developer 修复 |
-    | DEEP-REFACTOR | developer agent | `/df:simplify` skill |
+    | DEEP-REFACTOR | developer agent + code-reviewer subagents | `/df:simplify` skill（三维度并行评审 → developer 汇总修复） |
     | FULL-REVIEW | code-reviewer agent → developer agent | `/df:code-review autofix` 全量评审 → developer 修复 |
-    | FULL-LINT | code-reviewer agent → developer agent | `/df:lint autofix` → developer 修复 |
+    | FULL-LINT | developer agent | `/df:lint autofix` 全量编译+静态分析 → developer 修复 |
     | UNIT-COVERAGE | developer agent | 运行测试套件，验收覆盖率达标 |
     | INTEGRATION-TEST | developer agent | feature 级别集成测试编写与验证 |
 
