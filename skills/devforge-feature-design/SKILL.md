@@ -1,6 +1,6 @@
 ---
 name: devforge-feature-design
-description: 特性级架构设计 skill，产出 design.md（HOW 实现 specs）。用于 OpenSpec workflow 的 design artifact 生成。派遣 architect agent 生成、architect-reviewer 评审（最多 3 轮）。强制图示触发条件。当 OpenSpec 引擎触发 design artifact 生成时自动调用。
+description: 特性级架构设计 skill，产出 design.md（HOW 实现 specs）。派遣 architect agent 生成、architect-reviewer 评审（最多 3 轮）。强制图示触发条件。
 allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
 ---
 
@@ -8,7 +8,7 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
 
 ## 概述
 
-特性级架构设计是 OpenSpec workflow 中 specs + research 之后的实现方案阶段。本 skill 产出 design.md，说明如何（HOW）实现 specs 中定义的需求。
+特性级架构设计是 specs + research 之后的实现方案阶段。本 skill 产出 design.md，说明如何（HOW）实现 specs 中定义的需求。
 
 **与产品级 design 的区别**：
 - 产品级（`/df:product-design`）：子系统分解 + ADR + 系统架构总纲，产出 `docs/architecture/*.md`
@@ -30,7 +30,6 @@ skill 在**当前工作目录**查找输入文件、输出产出文件：
 - **产品级文档**：通过项目根目录的 CLAUDE.md#产品级文档索引定位
 
 **调用方式**：
-- **OpenSpec workflow 调用**：workflow 先 `cd openspec/changes/<name>/`，然后调用 skill
 - **手动调用**：用户先 `cd` 到包含 `proposal.md` 的目录，然后调用 `/df:design`
 
 ## 启动检测
@@ -52,7 +51,7 @@ skill 在**当前工作目录**查找输入文件、输出产出文件：
 2. **research.md**：约束清单 + 标杆方案空间 + 设计空间地图
 3. **specs/*.md**（如已存在）：行为规范的详细定义
 4. **产品级架构文档**（按需）：`docs/architecture/` 下相关子系统设计、ADR
-5. **design.md template**：`openspec/schemas/spec-driven-enhanced/templates/design.md`
+5. **design.md template**：`templates/design.md`
 
 ### [2] Decision 生成
 
@@ -137,7 +136,7 @@ skill 在**当前工作目录**查找输入文件、输出产出文件：
 - research.md：当前工作目录（读设计空间地图，识别关键决策点）
 - specs/*.md：当前工作目录（如已存在）
 - 产品级架构文档：docs/architecture/<相关子系统>/design.md
-- design.md template_path：openspec/schemas/spec-driven-enhanced/templates/design.md
+- design.md template_path：`templates/design.md`
 
 **output_path**：`design-draft.md`（当前工作目录）
 
@@ -164,7 +163,7 @@ skill 在**当前工作目录**查找输入文件、输出产出文件：
 当前是特性级 design 阶段，评审 design-draft.md。
 
 **被评审对象**：<路径>
-**被评审 template_path**：openspec/schemas/spec-driven-enhanced/templates/design.md
+**被评审 template_path**：`templates/design.md`
 **review_output_path**：`design-review.md`（当前工作目录，多轮追加同一文件）
 **report_template_path**：`templates/review-report.md`（如存在）
 **复杂度档位**：复杂（≥7 个质疑点，覆盖 11 项维度）
@@ -208,6 +207,6 @@ skill 在**当前工作目录**查找输入文件、输出产出文件：
 
 ## 与其他 skill 的协作
 
-- **上游**：proposal.md + research.md + specs/*.md（由 OpenSpec 引擎或主人创建）
-- **下游**：tasks.md（由 OpenSpec 引擎读取 design.md 生成任务清单）
+- **上游**：proposal.md + research.md + specs/*.md（由主人创建）
+- **下游**：tasks.md（由主人基于 design.md 生成任务清单）
 - **并行**：无（design 是 tasks 的前置依赖）

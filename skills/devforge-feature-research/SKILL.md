@@ -1,6 +1,6 @@
 ---
 name: devforge-feature-research
-description: 特性级研究 skill，产出标杆方案分析与关键决策维度对比。用于 OpenSpec workflow 的 research artifact 生成。派遣 researcher + architect-reviewer 评审循环（最多 3 轮）。当 OpenSpec 引擎触发 research artifact 生成时自动调用。
+description: 特性级研究 skill，产出标杆方案分析与关键决策维度对比。派遣 researcher + architect-reviewer 评审循环（最多 3 轮）。
 allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
 ---
 
@@ -8,7 +8,7 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
 
 ## 概述
 
-特性级研究是 OpenSpec workflow 中 proposal 与 design 之间的桥梁。本 skill 产出**标杆方案分析报告**，包含：
+特性级研究是 proposal 与 design 之间的桥梁。本 skill 产出**标杆方案分析报告**，包含：
 1. **背景与目标**：从 proposal 提炼问题与标杆选择理由
 2. **标杆方案分析**：按产品组织，每个标杆的完整方案（含模块架构图）
 3. **关键决策维度对比**：横向对比 + 约束影响分析
@@ -34,7 +34,6 @@ skill 在**当前工作目录**查找输入文件、输出产出文件：
 - **产品级文档**：通过项目根目录的 CLAUDE.md#产品级文档索引定位
 
 **调用方式**：
-- **OpenSpec workflow 调用**：workflow 先 `cd openspec/changes/<name>/`，然后调用 skill
 - **手动调用**：用户先 `cd` 到包含 `proposal.md` 的目录，然后调用 `/df:research`
 
 ## 启动检测
@@ -68,7 +67,7 @@ skill 在**当前工作目录**查找输入文件、输出产出文件：
 准备以下输入（无需 Read 工具，只是明确路径）：
 1. **proposal.md**：本特性的动机、范围、Capabilities
 2. **产品级文档索引**：CLAUDE.md#产品级文档索引（已在上下文）
-3. **research.md template**：`openspec/schemas/spec-driven-enhanced/templates/research.md`
+3. **research.md template**：`templates/research.md`
 
 ### [2] 标杆产品识别
 
@@ -442,7 +441,7 @@ rm -f research-review.md
 当前是特性级 research 阶段，评审 research.md。
 
 **被评审对象**：research.md（当前工作目录）
-**被评审 template_path**：openspec/schemas/spec-driven-enhanced/templates/research.md
+**被评审 template_path**：`templates/research.md`
 **review_output_path**：`research-review.md`（当前工作目录，多轮追加同一文件）
 
 **评审维度**（视角清单）：
@@ -495,6 +494,6 @@ rm -f research-review.md
 
 ## 与其他 skill 的协作
 
-- **上游**：proposal.md（由 OpenSpec 引擎或主人创建）
+- **上游**：proposal.md（由主人创建）
 - **下游**：design.md（由 `devforge-feature-design` 读取 research.md，做方案选择和实现细化）
 - **并行**：无（research 是 design 的前置依赖）

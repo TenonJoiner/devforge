@@ -1,14 +1,14 @@
 ---
 name: devforge-spec-review
-description: OpenSpec 文档评审 skill，单轮全维度扫描 + 人工决策门禁。评审 proposal/specs/design 三类文档，输出问题清单（CRITICAL/HIGH/MEDIUM/LOW）+ AI 建议决策。不做修复。用于 OpenSpec workflow 的 review artifact 生成或手动临时体检。
+description: 文档评审 skill，单轮全维度扫描 + 人工决策门禁。评审 proposal/specs/design 三类文档，输出问题清单（CRITICAL/HIGH/MEDIUM/LOW）+ AI 建议决策。不做修复。用于特性级 workflow 的 review artifact 生成或手动临时体检。
 allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
 ---
 
-# devforge-spec-review — OpenSpec 文档评审
+# devforge-spec-review — 文档评审
 
 ## 概述
 
-OpenSpec 文档评审是 design 完成后、tasks 分解前的质量体检 + 人工门槛。本 skill 产出 review.md，包含两部分：
+文档评审是 design 完成后、实现前的质量体检 + 人工门槛。本 skill 产出 review.md，包含两部分：
 1. **AI 评审报告**：单轮扫描，输出问题清单（按 CRITICAL/HIGH/MEDIUM/LOW 分级）+ AI 建议决策。**不做修复**
 2. **Tech Leader 最终决策**：留空，等人工填写
 
@@ -20,13 +20,13 @@ OpenSpec 文档评审是 design 完成后、tasks 分解前的质量体检 + 人
 1. **单轮扫描**：不做修复循环，只输出问题清单
 2. **21 项维度**：跨文档一致性（3 项）+ Proposal 质量（3 项）+ Specs 质量（7 项）+ Design 质量（11 项）
 3. **人工门禁**：AI 建议仅供参考，最终决策权在 Tech Leader
-4. **双模式触发**：OpenSpec workflow 自动触发 + 手动临时体检
+4. **双模式触发**：workflow 自动触发 + 手动临时体检
 
 ---
 
 ## 启动检测
 
-读取 `openspec/changes/<change-name>/review.md`：
+读取当前工作目录的 `review.md`：
 - **不存在** → 进入「初次评审」模式
 - **已存在** → 反问主人「重新评审 / 查看现有评审」
 
@@ -41,7 +41,7 @@ OpenSpec 文档评审是 design 完成后、tasks 分解前的质量体检 + 人
 2. **specs/*.md**：Requirement + Scenario（Delta 格式）
 3. **design.md**：Context + Decisions + Interface Changes + Risks
 4. **产品级文档**（按需）：`docs/requirements/` 和 `docs/architecture/` 下相关文档
-5. **review.md template**：`openspec/schemas/spec-driven-enhanced/templates/review.md`
+5. **review.md template**：`templates/review.md`
 
 ### [2] 并行评审
 
@@ -142,7 +142,7 @@ OpenSpec 文档评审是 design 完成后、tasks 分解前的质量体检 + 人
 ### product-reviewer agent
 
 ```
-当前是 OpenSpec review 阶段，评审 proposal/specs/design 三类文档。
+当前是 review 阶段，评审 proposal/specs/design 三类文档。
 
 **任务**：从产品视角评审。
 
@@ -151,7 +151,7 @@ OpenSpec 文档评审是 design 完成后、tasks 分解前的质量体检 + 人
 - specs/*.md：<路径列表>
 - design.md：<路径>
 
-**review_output_path**：`openspec/changes/<change-name>/review.md`（多视角合并到同一文件）
+**review_output_path**：`review.md`（当前工作目录，多视角合并到同一文件）
 **report_template_path**：`templates/review-report.md`（如存在）
 **复杂度档位**：复杂（≥7 个质疑点，覆盖以下视角清单的 10 项维度）
 
@@ -167,7 +167,7 @@ OpenSpec 文档评审是 design 完成后、tasks 分解前的质量体检 + 人
 ### architect-reviewer agent
 
 ```
-当前是 OpenSpec review 阶段，评审 proposal/specs/design 三类文档。
+当前是 review 阶段，评审 proposal/specs/design 三类文档。
 
 **任务**：从架构视角评审。
 
@@ -176,7 +176,7 @@ OpenSpec 文档评审是 design 完成后、tasks 分解前的质量体检 + 人
 - specs/*.md：<路径列表>
 - design.md：<路径>
 
-**review_output_path**：`openspec/changes/<change-name>/review.md`（多视角合并到同一文件）
+**review_output_path**：`review.md`（当前工作目录，多视角合并到同一文件）
 **report_template_path**：`templates/review-report.md`（如存在）
 **复杂度档位**：复杂（≥7 个质疑点，覆盖以下视角清单的 12 项维度）
 
@@ -193,5 +193,5 @@ OpenSpec 文档评审是 design 完成后、tasks 分解前的质量体检 + 人
 ## 与其他 skill 的协作
 
 - **上游**：proposal.md + specs/*.md + design.md（由 feature-research / feature-define / feature-design 生成）
-- **下游**：tasks.md（由 OpenSpec 引擎读取 review.md 的 Tech Leader 决策，决策为 PASS 或 PASS WITH CONDITIONS 时才允许进入 tasks 阶段）
+- **下游**：tasks.md（由主人基于 review.md 的 Tech Leader 决策生成，决策为 PASS 或 PASS WITH CONDITIONS 时才允许进入实现阶段）
 - **并行**：无（review 是 tasks 的前置依赖）

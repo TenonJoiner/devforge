@@ -16,7 +16,7 @@ parameters:
 五个评审维度，两种评审深度。轻量评审聚焦正确性和可读性，深度评审覆盖全部五个维度。
 
 **与 spec-review 的区别**：
-- **评审对象**：code-review 评审代码（git diff 或指定文件），spec-review 评审 OpenSpec 文档（proposal/specs/design）
+- **评审对象**：code-review 评审代码（git diff 或指定文件），spec-review 评审文档（proposal/specs/design）
 - **评审时机**：code-review 在代码实现后，spec-review 在 tasks 分解前
 - **评审维度**：code-review 五维度（Correctness / Readability / Architecture / Security / Performance），spec-review 21 项维度（跨文档一致性 + Proposal/Specs/Design 质量）
 - **修复模式**：code-review 可选 autofix（默认只评审），spec-review 不做修复（只输出问题清单）
@@ -33,9 +33,8 @@ parameters:
 
 ## 何时使用
 
-- **被 `/opsx:apply` 调用**：
-  - 一个 task group 完成后（N.M.6 REVIEW，task group 级轻量评审）— 带 `autofix`
-  - 全部实现 task 完成后、`/opsx:verify` 之前（Q.4 全量收尾评审）— 带 `autofix`
+- **task group 完成后**：轻量评审，带 `autofix`
+- **批量收尾**：全部实现完成后全量深度评审，带 `autofix`
 - **独立使用**：日常开发中完成一组相关修改后、或提交前需要外部视角检查代码质量的时刻
   - `/df:code-review` — 只评审不修复
   - `/df:code-review autofix` — 评审并自动修复
@@ -45,7 +44,7 @@ parameters:
 | 场景 | 评审范围 | 触发方式 |
 |------|---------|---------|
 | 日常轻量评审 | `git diff HEAD` + `git diff --cached`（工作区未提交变更） | `/df:code-review` |
-| task group 完成后 | 当前 task group 对应的 `git diff`（自上次 N.M.6 以来的变更） | `/opsx:apply` N.M.6 |
+| task group 完成后 | 当前 task group 对应的 `git diff`（自上次评审以来的变更） | 自动触发 |
 | Q.4 全量收尾 | `git diff $(git merge-base HEAD main)..HEAD`（完整 proposal 变更） | 质量收尾阶段 |
 | 指定文件 | `file-pattern` 匹配的文件 | `/df:code-review <pattern>` |
 
@@ -65,7 +64,7 @@ parameters:
 | **竞态条件** | 并发场景下的状态一致性、off-by-one、时序问题 |
 | **错误处理** | 所有可能失败的操作（系统调用、库函数、分配操作）返回值是否被检查；错误路径是否有日志或错误码传播；无静默吞错 |
 
-> **注意**：此处检查"写够了没有"，不是"写了没有"。OpenSpec tasks.md 已确保测试代码被写出，本 skill 验证测试是否覆盖了所有关键路径。
+> **注意**：此处检查"写够了没有"，不是"写了没有"。本 skill 验证测试是否覆盖了所有关键路径。
 
 **测试覆盖检查**（轻量评审）：
 

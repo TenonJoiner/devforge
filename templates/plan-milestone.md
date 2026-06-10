@@ -141,7 +141,7 @@ checklist-at-end: true
 ### Proposal Backlog（M1）
 
 > **写什么**：按类别分组的 proposal 清单（基础设施、Spike 验证、各子系统、集成测试），每行包含名称、估算、大小、依赖、风险、说明。命名遵循 `<subsystem>-<action>-<object>` 规范，粒度 1-4 周。
-> **不写什么**：不分配 proposal 到具体迭代，不展开设计细节（一个 proposal 对应一个后续的 OpenSpec change），不包含非 M1 的 proposal，不合并不同子系统到同一 proposal。
+> **不写什么**：不分配 proposal 到具体迭代，不展开设计细节，不包含非 M1 的 proposal，不合并不同子系统到同一 proposal。
 > **最低深度**：至少包含基础设施、Spike、子系统、集成测试四类，proposal 无 XL（如有必须拆解），每个 proposal 的依赖列标注完整，集成测试独立立项。
 
 > **命名规范**：`<subsystem>-<action>-<object>`（kebab-case）

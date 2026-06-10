@@ -7,7 +7,7 @@
 - 一批 task 完成后的跨 scenario 深度重构（提取公共抽象、接口重设计、模块解耦）
 - 任务组末尾的 REVIEW 之后，作为代码质量提升环节
 - QA 阶段 `DEEP-REFACTOR` 任务的执行
-- OpenSpec archive 前的最终整理
+- 批量变更归档前的最终整理
 - `/df:code-review` 后发现仍有明显异味
 
 ## 何时不使用

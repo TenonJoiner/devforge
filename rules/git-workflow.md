@@ -41,7 +41,7 @@ Refs: <proposal-name>/<task-id>
 
 **scope**：子系统名，如 `storage`、`metadata`、`network`
 
-**Refs**：关联的 OpenSpec proposal 或 task（如 `Refs: storage-wal-impl/step-2`）
+**Refs**：关联的 proposal 或 task（如 `Refs: storage-wal-impl/step-2`）
 
 **commit message 中的 `task-id`**：使用 tasks.md 中的任务组编号（如 `1`、`2a`），表示该 commit 对应哪个 Requirement 任务组
 

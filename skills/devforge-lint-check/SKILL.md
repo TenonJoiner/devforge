@@ -278,7 +278,7 @@ L2 静态分析
 
 - **执行时机**：
   - 高频：单个 task 完成后的最终检查（在 git commit 前）— 自动带 `autofix`
-  - 中频：`/opsx:apply` 的 LINT/QA 阶段、archive 前 — 自动带 `autofix`
+  - 中频：LINT/QA 阶段、archive 前 — 自动带 `autofix`
   - 自动：H1 pre-commit-lint 拦截存在严重问题的提交 — 自动带 `autofix`
   - 手动：`/df:lint`（只检测）或 `/df:lint autofix`（检测+修复）
 - **问题修复方**：developer（A2）自动修复并回归检查（仅 `autofix` 模式），最多 5 轮

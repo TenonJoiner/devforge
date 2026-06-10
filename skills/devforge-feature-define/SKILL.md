@@ -1,6 +1,6 @@
 ---
 name: devforge-feature-define
-description: 特性级需求定义 skill，产出 specs/*.md（Delta 格式 Requirement + Scenario）。用于 OpenSpec workflow 的 specs artifact 生成。派遣 product agent 生成、product-reviewer + architect-reviewer 双视角评审（最多 3 轮）。当 OpenSpec 引擎触发 specs artifact 生成时自动调用。
+description: 特性级需求定义 skill，产出 specs/*.md（Delta 格式 Requirement + Scenario）。派遣 product agent 生成、product-reviewer + architect-reviewer 双视角评审（最多 3 轮）。
 allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
 ---
 
@@ -8,7 +8,7 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
 
 ## 概述
 
-特性级需求定义是 OpenSpec workflow 中 proposal + research 之后的规范化阶段。本 skill 产出 specs/*.md，使用 Delta 格式（ADDED / MODIFIED / REMOVED / RENAMED Requirements）。
+特性级需求定义是 proposal + research 之后的规范化阶段。本 skill 产出 specs/*.md，使用 Delta 格式（ADDED / MODIFIED / REMOVED / RENAMED Requirements）。
 
 **与产品级 define 的区别**：
 - 产品级（`/df:product-define`）：Actor 识别 + Feature-Scenario 分层展开，产出 `docs/requirements/*.md`
@@ -31,7 +31,6 @@ skill 在**当前工作目录**查找输入文件、输出产出文件：
 - **产品级文档**：通过项目根目录的 CLAUDE.md#产品级文档索引定位
 
 **调用方式**：
-- **OpenSpec workflow 调用**：workflow 先 `cd openspec/changes/<name>/`，然后调用 skill
 - **手动调用**：用户先 `cd` 到包含 `proposal.md` 的目录，然后调用 `/df:define`
 
 ## 启动检测
@@ -53,7 +52,7 @@ skill 在**当前工作目录**查找输入文件、输出产出文件：
 2. **research.md**：约束清单 + 设计空间地图（作为 Requirement 边界依据）
 3. **产品级需求文档**（按需）：`docs/requirements/` 下相关 Feature 规格，获取 Actor 清单和验收标准
 4. **design.md**（如已存在）：了解实现方案，避免 spec 与 design 矛盾
-5. **spec.md template**：`openspec/schemas/spec-driven-enhanced/templates/spec.md`
+5. **spec.md template**：`templates/spec.md`
 
 ### [2] Capability 拆解
 
@@ -122,7 +121,7 @@ skill 在**当前工作目录**查找输入文件、输出产出文件：
 - proposal.md：当前工作目录（读该 Capability 的描述）
 - research.md：当前工作目录（读约束清单，作为 Requirement 边界）
 - 产品级需求文档：docs/requirements/<相关 Feature>.md（获取 Actor 清单和验收标准）
-- spec.md template_path：openspec/schemas/spec-driven-enhanced/templates/spec.md
+- spec.md template_path：`templates/spec.md`
 
 **output_path**：`specs/<capability>/spec-draft.md`（当前工作目录）
 
@@ -149,7 +148,7 @@ skill 在**当前工作目录**查找输入文件、输出产出文件：
 当前是特性级 specs 阶段，评审 specs/<capability>/spec-draft.md。
 
 **被评审对象**：<路径>
-**被评审 template_path**：openspec/schemas/spec-driven-enhanced/templates/spec.md
+**被评审 template_path**：`templates/spec.md`
 **review_output_path**：`specs/<capability>/spec-review.md`（多轮追加同一文件）
 **report_template_path**：`templates/review-report.md`（如存在）
 **复杂度档位**：中等（≥5 个质疑点，覆盖 7 项维度）
@@ -173,7 +172,7 @@ skill 在**当前工作目录**查找输入文件、输出产出文件：
 当前是特性级 specs 阶段，评审 specs/<capability>/spec-draft.md。
 
 **被评审对象**：<路径>
-**被评审 template_path**：openspec/schemas/spec-driven-enhanced/templates/spec.md
+**被评审 template_path**：`templates/spec.md`
 **review_output_path**：`specs/<capability>/spec-review.md`（多轮追加同一文件）
 **report_template_path**：`templates/review-report.md`（如存在）
 **复杂度档位**：中等（≥5 个质疑点）
@@ -181,7 +180,7 @@ skill 在**当前工作目录**查找输入文件、输出产出文件：
 **评审维度**（3 项）：
 - 与 research.md 约束的一致性：Requirement 是否违反约束清单中的约束
 - 与产品级需求的追溯链：每条 Requirement 的追溯字段是否正确填写
-- Delta 格式正确性：ADDED / MODIFIED / REMOVED / RENAMED 章节是否符合 OpenSpec 语义
+- Delta 格式正确性：ADDED / MODIFIED / REMOVED / RENAMED 章节是否符合 Delta 语义
 
 **输出**：
 问题清单（CRITICAL / HIGH / MEDIUM / LOW），计算缺陷密度。
@@ -201,6 +200,6 @@ skill 在**当前工作目录**查找输入文件、输出产出文件：
 
 ## 与其他 skill 的协作
 
-- **上游**：proposal.md + research.md（由 OpenSpec 引擎或主人创建）
+- **上游**：proposal.md + research.md（由主人创建）
 - **下游**：design.md（由 `devforge-feature-design` 读取 specs/*.md）
 - **并行**：无（specs 是 design 的前置依赖）

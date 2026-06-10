@@ -21,7 +21,7 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
    - **合并 4 法则**：同类合并 / 技能边界 / 机制边界 / SLA 边界（详见下表）
 4. **分层产出**：先产出 Actor-Feature 清单并评审定稿，再进入 Scenario 挖掘
 5. **可验收性**：每个 Scenario 可独立验证，验收标准必须量化
-6. **产品级颗粒度**：只定义 Feature-Scenario 结构和验收标准，特性级实现细节（API 签名、配置参数、UI 布局等）归 `/opsx:*`
+6. **产品级颗粒度**：只定义 Feature-Scenario 结构和验收标准，特性级实现细节（API 签名、配置参数、UI 布局等）不在本 skill 展开
 7. **长时间迭代**：需求文档需要 3-10 个阶段才能定稿，禁止一次对话定需求
 
 ### Actor 合并 4 法则

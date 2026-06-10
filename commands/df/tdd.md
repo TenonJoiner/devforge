@@ -4,16 +4,16 @@
 
 ## 何时使用
 
-- 实现单个 OpenSpec task 的步骤
+- 实现单个 task 的步骤
 - 为现有代码补充测试
 - 需要测试保驾护航的重构
 
 ## 执行流程
 
 1. 激活 `developer` Agent
-2. 读取当前 task 上下文（如由 `/opsx:apply` 触发）
+2. 读取当前 task 上下文
 3. 进入 `devforge-tdd-workflow` Skill：
-   - RED：编写失败测试（对应 tasks.md N.M）
+   - RED：编写失败测试
    - GREEN：写最小实现使测试通过
    - REFACTOR：在测试绿色下简化代码
 4. 运行测试确认绿色

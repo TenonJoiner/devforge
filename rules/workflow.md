@@ -1,15 +1,15 @@
-# 四层工作流规范
+# 三层工作流规范
 
 ## 概述
 
-本文档定义 teamskills 的四层工作流体系：产品级 → 特性级 → 代码级 → 测试验证级。
+本文档定义 DevForge 的三层工作流体系：产品级 → 特性级 → 代码级。
 
 **核心原则**：
 - 上层约束下层，下层变更反馈上层
 - 产品级灵活创作，特性级规范驱动
 - 长期迭代，螺旋式完善
 
-## 四层关系
+## 三层关系
 
 ```
 产品级（启发式 Skills + /df:* 命令）
@@ -22,19 +22,18 @@
    <subsystem>/
       │ 人工决策：从 proposal 清单选择当前要实现的特性
       │
-      └──▶ 特性级（OpenSpec + /opsx:* 命令）
-              proposal → specs → design → tasks
-              → /opsx:apply → /opsx:verify → /opsx:archive
+      └──▶ 特性级（规范驱动）
+              research → specs → design → review
                       │
                       │ 开发实现
                       ▼
-              代码级（teamskills 代码级 skills）
+              代码级（DevForge 代码级 skills）
                 worktree 隔离 → TDD 开发 → 代码评审
                         │
                         │ 单元测试通过
                         ▼
-              测试验证级（独立测试目录）
-                集成测试 → 系统测试 → 性能测试
+                测试验证级（独立测试目录）
+                  集成测试 → 系统测试 → 性能测试
                         │
                         │ 全量测试通过
                         ▼
@@ -48,9 +47,9 @@
 **目标**：架构设计、需求定义、迭代规划
 
 **核心原则**：
-- **与 OpenSpec 彻底脱离**，按思考模式辅助设计
+- 按思考模式辅助设计，无固定顺序
 - 重要的是**输出质量**而非**流程控制**
-- **可反复迭代**，无固定顺序，螺旋式完善
+- **可反复迭代**，螺旋式完善
 
 **交付物**：
 - `docs/architecture/` — 子系统架构
@@ -79,23 +78,21 @@
 **目标**：单个特性的规范驱动开发
 
 **核心原则**：
-- 基于 OpenSpec spec-driven-enhanced schema
 - 流程控制严格，按依赖图推进
 - 产出质量需符合产品级文档约束
+- 使用 Delta 格式管理需求变更
 
 **交付物**：
-- `openspec/changes/<proposal>/proposal.md`
-- `openspec/changes/<proposal>/specs/*.md`
-- `openspec/changes/<proposal>/design.md`
-- `openspec/changes/<proposal>/review.md`
-- `openspec/changes/<proposal>/tasks.md`
+- `docs/changes/<proposal>/proposal.md`
+- `docs/changes/<proposal>/specs/*.md`
+- `docs/changes/<proposal>/design.md`
+- `docs/changes/<proposal>/review.md`
 
 **触发命令**：
-- `/opsx:new` — 创建 proposal（从 iteration-plan.md 选择）
-- `/opsx:continue` — 继续下一阶段
-- `/opsx:apply` — 执行任务
-- `/opsx:verify` — 验证实现
-- `/opsx:archive` — 归档变更
+- `/df:research <proposal-name>` — 标杆研究
+- `/df:define` — 需求定义（Delta 格式）
+- `/df:design` — 架构设计（强制图示）
+- `/df:spec-review` — 文档评审
 
 ### 代码级
 
@@ -108,7 +105,7 @@
 
 **触发命令**：
 - `/df:tdd` — TDD 开发
-- `/df:review` — 代码评审
+- `/df:code-review` — 代码评审
 - `/df:simplify` — 代码简化重构（深度）
 - `/df:lint` — 编译检查
 - `/df:switch-worktree` — 切换 worktree
@@ -128,15 +125,15 @@
 ### 启动特性开发
 
 1. 从产品级 `docs/iteration-plan/milestone-plan.md` 的 Backlog 中选择 proposal
-2. 使用 `/opsx:new <proposal-name>` 启动特性级 workflow
-3. proposal.md 自动关联产品级需求文档（`docs/requirements/*.md`）
-4. design.md 自动关联产品级架构文档（`docs/architecture/design.md` 系统总纲，及 `docs/architecture/<subsystem>/design.md` 相关子系统）
+2. 使用 `/df:research <proposal-name>` 启动特性级研究
+3. 依次执行 `/df:define` → `/df:design` → `/df:spec-review`
+4. proposal.md 自动关联产品级需求文档（`docs/requirements/*.md`）
+5. design.md 自动关联产品级架构文档（`docs/architecture/design.md` 系统总纲，及 `docs/architecture/<subsystem>/design.md` 相关子系统）
 
 ### 变更反馈
 
 特性级开发中发现的产品级文档问题：
 - 在 spec/design 中使用 `[[发现]]` 标注
-- `/opsx:archive` 时汇总未处理发现
 - 累计超过 3 个时，提示执行 `/df:product-design` 或 `/df:product-define` 更新产品级文档
 
 ## 文档对齐
@@ -156,21 +153,6 @@
 3. **worktree 隔离**：每个并行开发使用独立 worktree
 4. **冲突检测**：特性级自动检测文件冲突
 
-## 与 OpenSpec 的分工
-
-| 能力 | OpenSpec 提供 | teamskills 自建 |
-|------|--------------|----------------|
-| Artifact 依赖图 | ✅ | — |
-| Delta 规范格式 | ✅ | — |
-| Schema 自定义 | ✅ | — |
-| 模板系统 | ✅ | — |
-| 命令系统 | ✅ | — |
-| 产品级 Skills | — | ✅ `/df:*` |
-| 代码级 Skills | — | ✅ `/df:*` |
-| Agents | — | ✅ |
-| Hooks | — | ✅ |
-| Rules | — | ✅ |
-
 ## 使用建议
 
 ### 产品级（数月周期）
@@ -187,13 +169,11 @@
 ### 特性级（数周周期）
 
 ```
-/opsx:new storage-write-buffer
-/opsx:continue → specs
-/opsx:continue → design
-/opsx:continue → tasks
-/opsx:apply → 代码实现
-/opsx:verify
-/opsx:archive
+/df:research storage-write-buffer
+/df:define → specs/*.md
+/df:design → design.md
+/df:spec-review → review.md
+# 代码实现（/df:tdd / /df:code-review / /df:simplify）
 ```
 
 ### 混合模式

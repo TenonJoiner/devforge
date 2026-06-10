@@ -17,7 +17,7 @@ RED → GREEN → REFACTOR。没有先失败的测试，决不写生产代码。
 
 ## 何时使用
 
-- 实现单个 OpenSpec task（尤其是 tasks.md 中的步骤 N.M）
+- 实现单个 task 的步骤
 - 为现有函数补充缺失单元测试
 - 重构思路上需要测试保驾护航的代码修改
 - **修复 Bug**：先写失败测试复现 bug，再修复，确保回归保护
@@ -219,6 +219,6 @@ NO PRODUCTION CODE WITHOUT A FAILING TEST FIRST
 
 ## Integration
 
-- **前置 Command**: `/opsx:apply`（提供当前 task 上下文）
+- **前置 Command**: 特性级设计完成后的代码实现阶段
 - **参考文档**: `testing-anti-patterns.md`（测试反模式）
 - **相关 Rules**: R3 `coding-style`, R4 `testing`

@@ -9,7 +9,7 @@
   "plugins": [
     {
       "name": "devforge",
-      "description": "三层工作流（产品级/特性级/代码级）+ OpenSpec 规范驱动 + 多 Agent 协作 + 自动化质量守护",
+      "description": "三层工作流（产品级/特性级/代码级）+ 多 Agent 协作 + 自动化质量守护",
       "author": {
         "name": "TenonJoiner"
       },

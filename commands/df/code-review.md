@@ -4,26 +4,20 @@
 
 ## 何时使用
 
-- **被 `/opsx:apply` 调用**（自动带 `autofix`）：
-  - 一个 task group 完成后（N.M.6 REVIEW，task group 级轻量评审）
-  - 全部实现 task 完成后、`/opsx:verify` 之前（Q.4 全量收尾评审）
 - **独立使用**：日常开发中任何需要外部视角检查代码质量的时刻
   - `/df:code-review` — 只评审不修复
   - `/df:code-review autofix` — 评审并自动修复
+- **批量变更后**：一批 task 完成后做全量收尾评审
 
 ## 执行流程
 
 1. 激活 `code-reviewer` Agent
 2. **范围确认**：
    - 日常轻量评审：获取当前工作区 `git diff HEAD` + `git diff --cached` 的变更
-   - task group 完成后：获取当前 task group 对应的 `git diff`（自上次 N.M.6 或分支起点以来的变更）
-   - Q.4 全量收尾：获取 `git diff $(git merge-base HEAD main)..HEAD` 的完整 proposal 变更
-3. **评审**：基于触发场景和变更规模选择评审深度
-   - **N.M.6 task group 完成后**：固定轻量评审
-   - **Q.4 全量收尾**：固定深度评审
-   - **日常独立使用**：按规模自动选择
-     - 轻量评审（< 300 行且模块 ≤ 2）：`code-reviewer` 单 agent，覆盖 D1 Correctness + D2 Readability，单轮
-     - 深度评审（≥ 300 行，或 3+ 模块）：5 个 subagent 并行（D1-D5 各一个），汇总去重
+   - 批量收尾：获取 `git diff $(git merge-base HEAD main)..HEAD` 的完整变更
+3. **评审**：基于变更规模选择评审深度
+   - **轻量评审（< 300 行且模块 ≤ 2）**：`code-reviewer` 单 agent，覆盖 D1 Correctness + D2 Readability，单轮
+   - **深度评审（≥ 300 行，或 3+ 模块）**：5 个 subagent 并行（D1-D5 各一个），汇总去重
 4. 输出结构化评审报告，按 CRITICAL → HIGH → MEDIUM 分级
 
 **`autofix` 未设置（默认）**：输出评审报告后结束，不执行修复。
@@ -41,11 +35,6 @@
 - 深度评审：新一轮评审无新增 CRITICAL/HIGH 时结束
 - MEDIUM 由 developer 判断是否修复，未修复的标注为"已接受风险"
 - LOW 发现不阻塞，记录后结束
-
-## 与 `/opsx:apply` 的衔接
-
-- **N.M.6 REVIEW**：一个 task group 完成后执行 `/df:code-review`
-- **Q.4 代码评审收尾**：所有实现 task 完成后，由 `code-reviewer` 执行全量 diff 评审
 
 ## 参数
 

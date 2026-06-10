@@ -12,9 +12,9 @@ allowed-tools: [Read, Bash, Grep, Glob, Agent]
 
 ## 何时使用
 
-- 特性级 `/opsx:apply` 的 QA.3 DEEP-REFACTOR 阶段（QA.2 FULL-REVIEW 完成后，对整个 feature 的完整 diff 执行）
+- 批量变更后的深度重构（QA.2 FULL-REVIEW 完成后，对整个 feature 的完整 diff 执行）
 - archive 前最终整理
-- OpenSpec 外的独立使用：一批变更累积较大（>200 行）且代码评审后仍有明显异味
+- 独立使用：一批变更累积较大（>200 行）且代码评审后仍有明显异味
 
 ## 何时不使用
 
