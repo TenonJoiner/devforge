@@ -167,7 +167,7 @@ git diff --name-only HEAD
 **配置文件策略**：
 - **存在项目配置**（如 `.clang-tidy`、`.golangci.yml`）→ 尊重并使用该配置
 - **不存在项目配置** → 使用工具默认规则继续执行，但输出中**强制标注降级状态**（作为输出总结的一部分，不可忽略）：
-  > ⚠ 项目未配置 `<config-file>`，L2 使用工具默认规则，部分检查项可能未覆盖。建议落地项目按 `rules/coding-style-<lang>.md` 创建对应配置文件。
+  > ⚠ 项目未配置 `<config-file>`，L2 使用工具默认规则，部分检查项可能未覆盖。建议落地项目创建对应配置文件（如 `.clang-tidy`、`.golangci.yml` 等）。
 
 **Type Check 执行示例**：
 
@@ -282,4 +282,3 @@ L2 静态分析
   - 自动：H1 pre-commit-lint 拦截存在严重问题的提交 — 自动带 `autofix`
   - 手动：`/df:lint`（只检测）或 `/df:lint autofix`（检测+修复）
 - **问题修复方**：developer（A2）自动修复并回归检查（仅 `autofix` 模式），最多 5 轮
-- **相关 Rules**: `rules/coding-style.md`（通用）、`rules/coding-style-<lang>.md`（语言特定）

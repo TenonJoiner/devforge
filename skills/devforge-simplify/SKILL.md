@@ -112,7 +112,6 @@ allowed-tools: [Read, Bash, Grep, Glob, Agent]
 |------|------|
 | `任务模式` | `simplify 三维度评审`（复用/质量/效率 之一） |
 | `主语言` | skill 从项目文件系统探测后注入（如 `C`/`Rust`/`Go`） |
-| `coding_style_path` | 对应语言规范文件（如 `rules/coding-style-c.md`） |
 | `评审维度` | 本 subagent 负责的单一维度（`code-reuse` / `code-quality` / `code-efficiency`） |
 | `diff_range` | skill 计算后注入的完整 diff 范围 |
 | `report_output_path` | 本 subagent 的报告路径（如 `/tmp/simplify-reuse-<ts>.md`） |

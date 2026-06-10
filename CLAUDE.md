@@ -25,7 +25,6 @@ DevForge 是一个 **Claude Code Plugin**，面向复杂基础软件（分布式
 | `agents/` | 10 个预定义专业化 agent（architect、product、developer、tester、code-reviewer 等） |
 | `skills/` | 14 个 DevForge skill（`devforge-*`） |
 | `commands/df/` | DevForge 用户命令（`/df:*`） |
-| `rules/` | 编码规范、Git 工作流、测试规范（R1-R4 分层规则） |
 | `templates/` | 文档模板（产品级需求 / 架构 / 迭代计划 / 评审报告 / domain-config 占位符等） |
 | `hooks/hooks.json` + `hooks/*.sh` | 自动化守护 hooks（PostEdit 格式化、PreCommit lint） |
 | `README.md` / `LICENSE` / `MARKETPLACE.md` / `CLAUDE.md` | 文档 |

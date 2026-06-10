@@ -201,7 +201,6 @@ Correctness 和 Security 维度中的部分检查项引用 `coding-style-<lang>.
 |------|------|------|
 | `任务模式` | 轻量评审（D1+D2）/ 深度评审（D1-D5）/ 单维度 subagent | `深度评审-D3-Architecture` |
 | `主语言` | skill 从项目文件系统探测后注入 | `C` / `Rust` / `Go` |
-| `coding_style_path` | 对应语言规范文件 | `rules/coding-style-c.md` |
 | `评审维度` | 本次评审覆盖的维度子集（D1-D5 子集） | `D1, D2` / `D3` 单维度 |
 | `diff_range` | skill 计算后注入的 git diff 命令或范围 | `git diff HEAD` / `git diff $(git merge-base HEAD main)..HEAD` |
 | `领域信号` | 从代码结构/架构文档识别的领域特征 | `存储/WAL` / `高性能服务` |
