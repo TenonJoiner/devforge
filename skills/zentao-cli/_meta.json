@@ -1,0 +1,13 @@
+{
+  "slug": "zentao-cli",
+  "displayName": "禅道 CLI 技能",
+  "summary": "通过 zentao 命令行工具查询和操作禅道（ZenTao）数据",
+  "version": "0.3.0",
+  "author": "Sun Hao <sunhao@chandao.com>",
+  "repository": "https://github.com/easysoft/zentao-cli.git",
+  "keywords": ["zentao", "禅道", "cli", "project-management"],
+  "license": "MIT",
+  "files": ["SKILL.md", "_meta.json", "skill-card.md"],
+  "createdAt": "2026-04-16T10:46:20.138Z",
+  "updatedAt": "2026-05-25T09:58:56.296Z"
+}
