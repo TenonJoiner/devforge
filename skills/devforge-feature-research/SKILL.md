@@ -67,7 +67,7 @@ skill 在**当前工作目录**查找输入文件、输出产出文件：
 准备以下输入（无需 Read 工具，只是明确路径）：
 1. **proposal.md**：本特性的动机、范围、Capabilities
 2. **产品级文档索引**：CLAUDE.md#产品级文档索引（已在上下文）
-3. **research.md template**：`templates/research.md`
+3. **输出格式**：见下方「Agent 派遣 Prompt 模板」中的输出结构定义
 
 ### [2] 标杆产品识别
 
@@ -358,7 +358,7 @@ rm -f research-review.md
 - proposal.md：当前工作目录
 - 标杆产品源码 / 论文 / 官方文档
 
-**输出结构**（与 research.md template §2 对齐）：
+**输出结构**（见下方结构定义）：
 
 1. **方案全景**（1-2 段）：一段话概括完整方案
 
@@ -441,7 +441,6 @@ rm -f research-review.md
 当前是特性级 research 阶段，评审 research.md。
 
 **被评审对象**：research.md（当前工作目录）
-**被评审 template_path**：`templates/research.md`
 **review_output_path**：`research-review.md`（当前工作目录，多轮追加同一文件）
 
 **评审维度**（视角清单）：

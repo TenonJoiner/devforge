@@ -52,7 +52,7 @@ skill 在**当前工作目录**查找输入文件、输出产出文件：
 2. **research.md**：约束清单 + 设计空间地图（作为 Requirement 边界依据）
 3. **产品级需求文档**（按需）：`docs/requirements/` 下相关 Feature 规格，获取 Actor 清单和验收标准
 4. **design.md**（如已存在）：了解实现方案，避免 spec 与 design 矛盾
-5. **spec.md template**：`templates/spec.md`
+5. **输出格式**：见下方「Agent 派遣 Prompt 模板」中的输出结构定义
 
 ### [2] Capability 拆解
 
@@ -121,7 +121,6 @@ skill 在**当前工作目录**查找输入文件、输出产出文件：
 - proposal.md：当前工作目录（读该 Capability 的描述）
 - research.md：当前工作目录（读约束清单，作为 Requirement 边界）
 - 产品级需求文档：docs/requirements/<相关 Feature>.md（获取 Actor 清单和验收标准）
-- spec.md template_path：`templates/spec.md`
 
 **output_path**：`specs/<capability>/spec-draft.md`（当前工作目录）
 
@@ -148,7 +147,6 @@ skill 在**当前工作目录**查找输入文件、输出产出文件：
 当前是特性级 specs 阶段，评审 specs/<capability>/spec-draft.md。
 
 **被评审对象**：<路径>
-**被评审 template_path**：`templates/spec.md`
 **review_output_path**：`specs/<capability>/spec-review.md`（多轮追加同一文件）
 **report_template_path**：`templates/review-report.md`（如存在）
 **复杂度档位**：中等（≥5 个质疑点，覆盖 7 项维度）
@@ -172,7 +170,6 @@ skill 在**当前工作目录**查找输入文件、输出产出文件：
 当前是特性级 specs 阶段，评审 specs/<capability>/spec-draft.md。
 
 **被评审对象**：<路径>
-**被评审 template_path**：`templates/spec.md`
 **review_output_path**：`specs/<capability>/spec-review.md`（多轮追加同一文件）
 **report_template_path**：`templates/review-report.md`（如存在）
 **复杂度档位**：中等（≥5 个质疑点）

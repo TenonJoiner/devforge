@@ -16,7 +16,7 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
 
 **核心原则**：
 1. **在既有架构内展开**：不新建子系统，不改变系统级架构决策
-2. **强制图示**：结构图 / 时序图 / 状态机图 / 数据流图，按触发条件强制出图。默认生成可编辑的 `.drawio` 文件，Mermaid 作为备选
+2. **强制图示**：结构图（ASCII Art）、时序图（Mermaid）、状态机图（Mermaid）、数据流图（ASCII Art 或 Mermaid），按触发条件强制出图
 3. **Decision 追溯标杆**：每个 Decision 的候选方案标注 research.md 中的标杆来源
 4. **skill 内化评审**：最多 3 轮 architect agent → architect-reviewer 循环
 
@@ -51,7 +51,7 @@ skill 在**当前工作目录**查找输入文件、输出产出文件：
 2. **research.md**：约束清单 + 标杆方案空间 + 设计空间地图
 3. **specs/*.md**（如已存在）：行为规范的详细定义
 4. **产品级架构文档**（按需）：`docs/architecture/` 下相关子系统设计、ADR
-5. **design.md template**：`templates/design.md`
+5. **输出格式**：见下方「Agent 派遣 Prompt 模板」中的输出结构定义
 
 ### [2] Decision 生成
 
@@ -65,16 +65,19 @@ skill 在**当前工作目录**查找输入文件、输出产出文件：
 ### [3] 强制图示检查
 
 主会话读 design-draft.md，检查是否满足强制出图条件：
-- 模块结构、组件关系（≥3 个组件）→ 结构图（`.drawio` 文件，路径 `design-structure.drawio`）
-- 跨进程/跨节点交互 → 时序图（`.drawio` 文件，路径 `design-sequence.drawio`）
-- 有生命周期的对象（租约、连接、会话）→ 状态机图（`.drawio` 文件，路径 `design-statemachine.drawio`）
-- 数据缓存、读写路径分离 → 数据流图（`.drawio` 文件，路径 `design-dataflow.drawio`）
+- 模块结构、组件关系（≥3 个组件）→ 结构图（Markdown ASCII Art）
+- 跨进程/跨节点交互 → 时序图（Mermaid `sequenceDiagram`）
+- 有生命周期的对象（租约、连接、会话）→ 状态机图（Mermaid `stateDiagram`）
+- 数据缓存、读写路径分离 → 数据流图（Markdown ASCII Art 或 Mermaid `flowchart`）
 
 **图示生成方式**：
-1. 派遣 architect agent 生成 drawio XML（参考 `templates/drawio-xml-guide.md`）
-2. 写入 `.drawio` 文件，与 `design.md` 同级目录
-3. 在 `design-draft.md` 中通过相对路径引用图示：`![描述](design-<type>.drawio)`
-4. drawio CLI 不可用时，回退到 Mermaid 内嵌代码块
+
+| 图示类型 | 格式 | 生成方式 |
+|---------|------|---------|
+| 结构图 | Markdown ASCII Art | 在 `design-draft.md` 中直接嵌入 ASCII 方框图 |
+| 时序图 | Mermaid | 在 `design-draft.md` 中嵌入 `sequenceDiagram` 代码块 |
+| 状态机图 | Mermaid | 在 `design-draft.md` 中嵌入 `stateDiagram` 代码块 |
+| 数据流图 | Markdown ASCII Art 或 Mermaid | 按表达清晰度选择 |
 
 未满足 → 派遣 architect agent 补充图示。
 
@@ -101,7 +104,6 @@ skill 在**当前工作目录**查找输入文件、输出产出文件：
 将 `design-draft.md` 重命名为 `design.md`。在终端汇报：
 - Decision 数
 - 图示数（结构图 / 时序图 / 状态机图 / 数据流图）
-- drawio 文件路径列表（如有）
 - 置信度（评审通过 / 带债通过）
 
 ---
@@ -110,14 +112,14 @@ skill 在**当前工作目录**查找输入文件、输出产出文件：
 
 反问主人「想修订哪一块」，提供选项：
 1. 修订 Decisions（重新比较候选方案）
-2. 修订图示（补充或调整 drawio 图，或切换为 Mermaid）
+2. 修订图示（补充或调整 ASCII Art 或 Mermaid 代码块）
 3. 修订其他章节（Context / Risks / Migration Plan 等）
 
 只跑对应范围的生成阶段，merge 结果回 design.md，不动其他章节。评审循环只检查变更范围。
 
 图示修订时：
-- 如需新增/修改 drawio 文件，派遣 architect agent 重新生成 XML
-- 如 drawio CLI 不可用且主人坚持导出，回退到 Mermaid 内嵌
+- 结构图/数据流图：在 design.md 中直接修改 ASCII Art
+- 时序图/状态机图：在 design.md 中直接修改 Mermaid 代码块
 
 ---
 
@@ -125,10 +127,10 @@ skill 在**当前工作目录**查找输入文件、输出产出文件：
 
 用结构性元素清单扫描 design.md，识别缺失项：
 - Decision 缺失候选方案或 trade-off 分析
-- 缺失强制图示（检查 `.drawio` 文件存在性，或 design.md 中 Mermaid 代码块）
+- 缺失强制图示（检查 design.md 中 ASCII Art 或 Mermaid 代码块）
 - 缺失 Architecture Traceability
 
-补全图示时，优先生成 `.drawio` 文件。直接在缺失位置生成补全内容，评审循环。
+补全图示时，直接在 design.md 缺失位置生成 ASCII Art 或 Mermaid 代码块，评审循环。
 
 ---
 
@@ -147,7 +149,6 @@ skill 在**当前工作目录**查找输入文件、输出产出文件：
 - research.md：当前工作目录（读设计空间地图，识别关键决策点）
 - specs/*.md：当前工作目录（如已存在）
 - 产品级架构文档：docs/architecture/<相关子系统>/design.md
-- design.md template_path：`templates/design.md`
 
 **output_path**：`design-draft.md`（当前工作目录）
 
@@ -174,7 +175,6 @@ skill 在**当前工作目录**查找输入文件、输出产出文件：
 当前是特性级 design 阶段，评审 design-draft.md。
 
 **被评审对象**：<路径>
-**被评审 template_path**：`templates/design.md`
 **review_output_path**：`design-review.md`（当前工作目录，多轮追加同一文件）
 **report_template_path**：`templates/review-report.md`（如存在）
 **复杂度档位**：复杂（≥7 个质疑点，覆盖 11 项维度）
@@ -218,47 +218,89 @@ skill 在**当前工作目录**查找输入文件、输出产出文件：
 
 ## 图示生成细则
 
-### drawio 优先策略
+### 结构图（Markdown ASCII Art）
 
-特性级 design 的强制图示默认产出 `.drawio` 文件，原因：
-- 可编辑：主人可在 draw.io Desktop 或浏览器中直接修改
-- 可导出：同一文件可反复导出为不同格式
-- 可复用：后续迭代无需重新生成
+用纯文本方框图表达组件分层和依赖关系：
 
-### Mermaid 回退条件
-
-以下情况使用 Mermaid 代码块替代 `.drawio` 文件：
-1. 主人明确指定使用 Mermaid
-2. drawio 生成失败（XML 格式错误、无法写入文件）
-3. 图示极简单（≤3 个组件，纯线性关系）
-
-### 文件引用规范
-
-`design.md` 中引用 drawio 文件：
 ```markdown
-## 组件结构
-
-![组件结构图](design-structure.drawio)
+        Client
+          │
+          ▼
+   ┌─────────────┐
+   │   Gateway   │
+   │  ┌───────┐  │
+   │  │Router │  │
+   │  └───┬───┘  │
+   └──────┼──────┘
+          │
+          ▼
+   ┌─────────────┐
+   │ Storage Node│
+   └─────────────┘
 ```
 
-`design.md` 中引用 Mermaid：
-```markdown
-## 组件结构
+**绘图约定**：
+- 上下分层：请求从上方进入，逐层下沉到存储/持久化层
+- 子系统用外框包裹，内部模块独立成框
+- 只出现"本特性涉及"或"需要说明边界"的模块，其他省略
+- 双向箭头表示推拉/回调；虚线表示配置、元数据或弱依赖
+- 在图旁用文字标注：哪些是新增/修改模块，哪些是只读依赖
 
+### 时序图（Mermaid）
+
+用 Mermaid `sequenceDiagram` 表达跨组件交互：
+
+```markdown
 ```mermaid
-graph TD
-  A[Client] --> B[API Gateway]
+sequenceDiagram
+    participant Client
+    participant A as Gateway
+    participant B as Storage
+
+    Client->>A: request
+    A->>B: forward
+    B-->>A: ack
+    A-->>Client: response
 ```
 ```
 
-### 图示文件名对照表
+**使用约束**：
+- 仅在跨进程/跨节点/跨组件交互时使用
+- 选择 1-3 个最关键的流程，避免过度工程
+- 10-20 行，聚焦核心交互路径
 
-| 图示类型 | drawio 文件名 | Mermaid 类型 |
-|---------|--------------|-------------|
-| 结构图 | `design-structure.drawio` | `graph TD` |
-| 时序图 | `design-sequence.drawio` | `sequenceDiagram` |
-| 状态机图 | `design-statemachine.drawio` | `stateDiagram` |
-| 数据流图 | `design-dataflow.drawio` | `flowchart` |
+### 状态机图（Mermaid）
+
+用 Mermaid `stateDiagram` 表达有生命周期对象的状态转换：
+
+```markdown
+```mermaid
+stateDiagram-v2
+    [*] --> Idle
+    Idle --> Active: connect
+    Active --> Idle: disconnect
+    Active --> Error: timeout
+    Error --> Idle: reset
+```
+```
+
+**使用约束**：
+- 仅在对象有明确生命周期（租约、连接、会话）时使用
+- 必须标注触发事件和转换条件
+
+### 数据流图（按需选择格式）
+
+简单数据流用 ASCII Art，复杂流向用 Mermaid `flowchart`：
+
+```markdown
+```mermaid
+flowchart TD
+    A[Write Request] --> B{Cache Hit?}
+    B -->|Yes| C[Update Cache]
+    B -->|No| D[Read from Storage]
+    D --> E[Populate Cache]
+```
+```
 
 ---
 

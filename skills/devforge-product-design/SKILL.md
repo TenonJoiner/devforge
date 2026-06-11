@@ -19,7 +19,7 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
 4. **方案 > 代码**：聚焦设计决策和 rationale，不讨论具体代码实现
 5. **产品级颗粒度**：只定义核心框架（子系统边界、接口契约、关键路径、不可逆决策），特性级实现细节不在本 skill 展开
 6. **长时间迭代**：架构文档需要 5-20 个阶段才能定稿，禁止一次对话定架构
-7. **架构图可编辑**：系统总纲和子系统设计必须生成 `.drawio` 架构图（参考 `templates/drawio-xml-guide.md`），确保主人可在 draw.io 中编辑调整
+7. **架构图内嵌文档**：系统总纲和子系统设计的结构图用 Markdown ASCII Art 内嵌；跨组件交互时序图用 Mermaid `sequenceDiagram`
 
 ---
 
@@ -294,13 +294,11 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
 
 ### 本 Skill 产出（仅限 `docs/architecture/`）
 
-- `docs/architecture/design.md` — 系统架构总纲
-- `docs/architecture/design-structure.drawio` — 系统架构图（drawio，由步骤 2 生成）
+- `docs/architecture/design.md` — 系统架构总纲（含内嵌 ASCII Art 结构图和 Mermaid 时序图）
 - `docs/architecture/adr.md` — ADR 索引
 - `docs/architecture/decisions/decision-overall.md` — 整体架构方案
 - `docs/architecture/decisions/decision-<维度>.md` — 各维度决策文档
-- `docs/architecture/<subsystem-en>/design.md` — 子系统架构（kebab-case 英文目录）
-- `docs/architecture/<subsystem-en>/design-structure.drawio` — 子系统架构图（drawio，由步骤 3 生成）
+- `docs/architecture/<subsystem-en>/design.md` — 子系统架构（kebab-case 英文目录，含内嵌 ASCII Art 结构图和 Mermaid 时序图）
 - `docs/architecture/reference/<product>.md` — 标杆架构分析
 
 ### 本 Skill 不产出
