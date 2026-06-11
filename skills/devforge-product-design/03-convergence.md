@@ -133,6 +133,7 @@
   - 数据流正常路径 + 错误传播路径完整定义
   - 与 `adr.md` 各 ADR 决策一致
   - 故障处理覆盖：故障模式、降级策略、恢复流程已定义
+  - **生成系统架构图**：从 draft 中提取子系统列表和交互关系，生成 `docs/architecture/design-structure.drawio`（参考 `templates/drawio-xml-guide.md`）
 - **输出**：用 Write 写入（覆盖）`docs/architecture/design.md`
 - **返回**：向主会话返回摘要（章节数、子系统数、与 ADR 对应关系数）
 
@@ -142,6 +143,7 @@
 - [ ] 与 `adr.md` 决策一致
 - [ ] 故障模式、降级策略、恢复流程已定义
 - [ ] 文档已写入 `docs/architecture/design.md` 并验证存在
+- [ ] **系统架构图已生成**：`docs/architecture/design-structure.drawio` 已写入并验证存在
 - [ ] **draft 已清理**：执行 `rm docs/architecture/design-draft-*.md`，并用 `ls` 确认无残留（按 SKILL.md「draft 清理约束」）
 
 ### 2.4 评审修正循环
@@ -226,6 +228,7 @@
   - 边界条件覆盖（输入边界、资源边界、并发边界）
   - 与系统总纲接口契约和 ADR 技术决策一致
   - 运维接口、监控点、日志规范已定义
+  - **生成子系统架构图**：从 draft 中提取组件列表和交互关系，生成 `docs/architecture/<subsystem-en>/design-structure.drawio`（参考 `templates/drawio-xml-guide.md`）
 - **输出**：用 Write 写入 `docs/architecture/<subsystem-en>/design.md`
 - **返回**：向主会话返回摘要（章节数、接口契约数、故障模式数）
 
@@ -236,6 +239,7 @@
 - [ ] 与系统总纲、ADR 一致
 - [ ] 运维接口、监控点、日志规范已定义
 - [ ] 文档已写入 `docs/architecture/<subsystem-en>/design.md` 并验证存在
+- [ ] **子系统架构图已生成**：`docs/architecture/<subsystem-en>/design-structure.drawio` 已写入并验证存在
 - [ ] **draft 已清理**：执行 `rm docs/architecture/<subsystem-en>/design-draft-*.md`，并用 `ls` 确认无残留（按 SKILL.md「draft 清理约束」）
 
 ### 3.4 评审修正循环

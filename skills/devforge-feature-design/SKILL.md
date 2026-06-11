@@ -16,7 +16,7 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
 
 **核心原则**：
 1. **在既有架构内展开**：不新建子系统，不改变系统级架构决策
-2. **强制图示**：结构图 / 时序图 / 状态机图 / 数据流图，按触发条件强制出图
+2. **强制图示**：结构图 / 时序图 / 状态机图 / 数据流图，按触发条件强制出图。默认生成可编辑的 `.drawio` 文件，Mermaid 作为备选
 3. **Decision 追溯标杆**：每个 Decision 的候选方案标注 research.md 中的标杆来源
 4. **skill 内化评审**：最多 3 轮 architect agent → architect-reviewer 循环
 
@@ -65,10 +65,16 @@ skill 在**当前工作目录**查找输入文件、输出产出文件：
 ### [3] 强制图示检查
 
 主会话读 design-draft.md，检查是否满足强制出图条件：
-- 模块结构、组件关系（≥3 个组件）→ 结构图（Mermaid graph 或 ASCII）
-- 跨进程/跨节点交互 → 时序图（Mermaid sequenceDiagram）
-- 有生命周期的对象（租约、连接、会话）→ 状态机图（Mermaid stateDiagram）
-- 数据缓存、读写路径分离 → 数据流图（Mermaid flowchart）
+- 模块结构、组件关系（≥3 个组件）→ 结构图（`.drawio` 文件，路径 `design-structure.drawio`）
+- 跨进程/跨节点交互 → 时序图（`.drawio` 文件，路径 `design-sequence.drawio`）
+- 有生命周期的对象（租约、连接、会话）→ 状态机图（`.drawio` 文件，路径 `design-statemachine.drawio`）
+- 数据缓存、读写路径分离 → 数据流图（`.drawio` 文件，路径 `design-dataflow.drawio`）
+
+**图示生成方式**：
+1. 派遣 architect agent 生成 drawio XML（参考 `templates/drawio-xml-guide.md`）
+2. 写入 `.drawio` 文件，与 `design.md` 同级目录
+3. 在 `design-draft.md` 中通过相对路径引用图示：`![描述](design-<type>.drawio)`
+4. drawio CLI 不可用时，回退到 Mermaid 内嵌代码块
 
 未满足 → 派遣 architect agent 补充图示。
 
@@ -95,6 +101,7 @@ skill 在**当前工作目录**查找输入文件、输出产出文件：
 将 `design-draft.md` 重命名为 `design.md`。在终端汇报：
 - Decision 数
 - 图示数（结构图 / 时序图 / 状态机图 / 数据流图）
+- drawio 文件路径列表（如有）
 - 置信度（评审通过 / 带债通过）
 
 ---
@@ -103,10 +110,14 @@ skill 在**当前工作目录**查找输入文件、输出产出文件：
 
 反问主人「想修订哪一块」，提供选项：
 1. 修订 Decisions（重新比较候选方案）
-2. 修订图示（补充或调整图）
+2. 修订图示（补充或调整 drawio 图，或切换为 Mermaid）
 3. 修订其他章节（Context / Risks / Migration Plan 等）
 
 只跑对应范围的生成阶段，merge 结果回 design.md，不动其他章节。评审循环只检查变更范围。
+
+图示修订时：
+- 如需新增/修改 drawio 文件，派遣 architect agent 重新生成 XML
+- 如 drawio CLI 不可用且主人坚持导出，回退到 Mermaid 内嵌
 
 ---
 
@@ -114,10 +125,10 @@ skill 在**当前工作目录**查找输入文件、输出产出文件：
 
 用结构性元素清单扫描 design.md，识别缺失项：
 - Decision 缺失候选方案或 trade-off 分析
-- 缺失强制图示
+- 缺失强制图示（检查 `.drawio` 文件存在性，或 design.md 中 Mermaid 代码块）
 - 缺失 Architecture Traceability
 
-直接在缺失位置生成补全内容，评审循环。
+补全图示时，优先生成 `.drawio` 文件。直接在缺失位置生成补全内容，评审循环。
 
 ---
 
@@ -202,6 +213,52 @@ skill 在**当前工作目录**查找输入文件、输出产出文件：
 - 禁止跳过强制图示检查
 - 禁止 Decision 只列一个方案没有备选（已被架构约束的除外）
 - 禁止跳过评审循环直接输出
+
+---
+
+## 图示生成细则
+
+### drawio 优先策略
+
+特性级 design 的强制图示默认产出 `.drawio` 文件，原因：
+- 可编辑：主人可在 draw.io Desktop 或浏览器中直接修改
+- 可导出：同一文件可反复导出为不同格式
+- 可复用：后续迭代无需重新生成
+
+### Mermaid 回退条件
+
+以下情况使用 Mermaid 代码块替代 `.drawio` 文件：
+1. 主人明确指定使用 Mermaid
+2. drawio 生成失败（XML 格式错误、无法写入文件）
+3. 图示极简单（≤3 个组件，纯线性关系）
+
+### 文件引用规范
+
+`design.md` 中引用 drawio 文件：
+```markdown
+## 组件结构
+
+![组件结构图](design-structure.drawio)
+```
+
+`design.md` 中引用 Mermaid：
+```markdown
+## 组件结构
+
+```mermaid
+graph TD
+  A[Client] --> B[API Gateway]
+```
+```
+
+### 图示文件名对照表
+
+| 图示类型 | drawio 文件名 | Mermaid 类型 |
+|---------|--------------|-------------|
+| 结构图 | `design-structure.drawio` | `graph TD` |
+| 时序图 | `design-sequence.drawio` | `sequenceDiagram` |
+| 状态机图 | `design-statemachine.drawio` | `stateDiagram` |
+| 数据流图 | `design-dataflow.drawio` | `flowchart` |
 
 ---
 
