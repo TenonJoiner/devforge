@@ -1,3 +1,8 @@
+---
+name: spec-review
+description: 文档评审——单轮全维度扫描 + 人工决策门禁。评审 proposal/specs/design，输出问题清单 + AI 建议。不做修复。
+---
+
 # /df:spec-review
 
 文档评审——单轮全维度扫描 + 人工决策门禁。评审 proposal/specs/design，输出问题清单 + AI 建议。不做修复。

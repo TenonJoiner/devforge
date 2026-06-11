@@ -1,3 +1,8 @@
+---
+name: simplify
+description: 基于 git diff 对批量变更进行三维度（复用/质量/效率）并行评审，由 developer 汇总修复。
+---
+
 # /df:simplify
 
 基于 git diff 对批量变更进行三维度（复用/质量/效率）并行评审，由 developer 汇总修复。

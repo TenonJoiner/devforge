@@ -1,3 +1,8 @@
+---
+name: product-design
+description: 探索产品级架构方案、竞品分析、子系统分解。多 Agent 深度思考，标杆研究先行。
+---
+
 # /df:product-design
 
 探索产品级架构方案、竞品分析、子系统分解。多 Agent 深度思考，标杆研究先行。

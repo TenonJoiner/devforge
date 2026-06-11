@@ -1,3 +1,8 @@
+---
+name: plan
+description: 制定迭代计划与 Backlog 清单。多 Agent 深度思考，按阶段逐步展开，迭代式完善。
+---
+
 # /df:plan
 
 制定迭代计划与 Backlog 清单。多 Agent 深度思考，按阶段逐步展开，迭代式完善。

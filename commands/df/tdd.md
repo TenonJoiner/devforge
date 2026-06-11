@@ -1,3 +1,8 @@
+---
+name: tdd
+description: 执行 TDD 开发循环（RED-GREEN-REFACTOR）。
+---
+
 # /df:tdd
 
 执行 TDD 开发循环（RED-GREEN-REFACTOR）。

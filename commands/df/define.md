@@ -1,3 +1,8 @@
+---
+name: define
+description: 特性级需求定义——Requirement + Scenario（Delta 格式）。
+---
+
 # /df:define
 
 特性级需求定义——Requirement + Scenario（Delta 格式）。

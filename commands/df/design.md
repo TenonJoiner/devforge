@@ -1,3 +1,8 @@
+---
+name: design
+description: 特性级架构设计——HOW 实现 specs（强制图示）。
+---
+
 # /df:design
 
 特性级架构设计——HOW 实现 specs（强制图示）。

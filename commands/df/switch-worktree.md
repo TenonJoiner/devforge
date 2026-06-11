@@ -1,3 +1,8 @@
+---
+name: switch-worktree
+description: 切换或创建 Git worktree，实现隔离并行开发。
+---
+
 # /df:switch-worktree
 
 切换或创建 Git worktree，实现隔离并行开发。

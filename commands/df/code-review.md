@@ -1,3 +1,8 @@
+---
+name: code-review
+description: 执行五维度代码评审——Correctness / Readability / Architecture / Security / Performance。
+---
+
 # /df:code-review
 
 执行五维度代码评审——Correctness / Readability / Architecture / Security / Performance。
