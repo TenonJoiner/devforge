@@ -1,8 +1,3 @@
----
-name: diagram
-description: 从架构文档自动生成可编辑的 drawio 架构图。
----
-
 # /df:diagram
 
 从架构文档自动生成可编辑的 drawio 架构图。

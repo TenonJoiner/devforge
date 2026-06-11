@@ -1,8 +1,3 @@
----
-name: product-define
-description: 定义产品级需求、制定验收标准。多 agent 深度思考，标杆研究先行，Feature-Scenario 分层展开，螺旋式迭代完善。
----
-
 # /df:product-define
 
 定义产品级需求、制定验收标准。多 agent 深度思考，标杆研究先行，Feature-Scenario 分层展开，螺旋式迭代完善。

@@ -1,8 +1,3 @@
----
-name: finish-worktree
-description: 完成当前 worktree 的开发工作：验证测试 → 呈现合并选项 → 执行选择 → 清理。
----
-
 # /df:finish-worktree
 
 完成当前 worktree 的开发工作：验证测试 → 呈现合并选项 → 执行选择 → 清理。

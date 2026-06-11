@@ -1,8 +1,3 @@
----
-name: test-design
-description: 制定测试策略和各级测试方案。
----
-
 # /df:test-design
 
 制定测试策略和各级测试方案。
