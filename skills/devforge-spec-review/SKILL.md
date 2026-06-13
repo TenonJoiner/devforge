@@ -14,11 +14,11 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
 
 **与 skill 内化评审的关系**：
 - feature-research / feature-define / feature-design 三个 skill 内部已经做过深度评审循环（最多 3 轮自修），保证基础质量
-- 本 skill 是「质量体检 + 人工门槛」：单轮扫描 21 项维度，发现问题不修复，输出清单交人决策
+- 本 skill 是「质量体检 + 人工门槛」：单轮扫描 23 项维度，发现问题不修复，输出清单交人决策
 
 **核心原则**：
 1. **单轮扫描**：不做修复循环，只输出问题清单
-2. **21 项维度**：跨文档一致性（3 项）+ Proposal 质量（3 项）+ Specs 质量（7 项）+ Design 质量（11 项）
+2. **23 项维度**：跨文档一致性（3 项）+ Proposal 质量（3 项）+ Specs 质量（8 项）+ Design 质量（12 项）
 3. **人工门禁**：AI 建议仅供参考，最终决策权在 Tech Leader
 4. **双模式触发**：workflow 自动触发 + 手动临时体检
 
@@ -39,7 +39,7 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
 读取以下输入：
 1. **proposal.md**：本特性的动机、范围、Capabilities
 2. **specs/*.md**：Requirement + Scenario（Delta 格式）
-3. **design.md**：Context + Decisions + Interface Changes + Risks
+3. **design.md**：Context + Decisions + Interface Changes + Risks + Upgrade Compatibility Statement
 4. **产品级文档**（按需）：`docs/requirements/` 和 `docs/architecture/` 下相关文档
 5. **review.md template**：`templates/review.md`
 
@@ -99,7 +99,7 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
 
 ---
 
-## 评审标准（21 项）
+## 评审标准（23 项）
 
 以下为评审的单一权威标准。
 
@@ -113,7 +113,7 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
 - **方案合理性**：提出的 Capabilities 是否是解决该问题的合理方案，有无更优替代方案未考虑
 - **范围完整性**：Capabilities 是否完整覆盖变更范围，粒度是否合理
 
-**Specs 质量（7 项）**：
+**Specs 质量（8 项）**：
 - **需求合理性**：每条 Requirement 本身是否合理——不过度（镀金）、不遗漏（关键场景缺失）、不矛盾（需求间冲突）
 - **需求必要性**：每条 Requirement 是否必要——能否追溯到 proposal 的 Capability 或产品级需求，无凭空增加的需求
 - **需求完整性**：Requirement 集合是否完整覆盖问题域——不只是"支撑 proposal"，而是从领域视角审视是否有遗漏
@@ -121,8 +121,9 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
 - **需求可验收性**：每条 Requirement 是否可独立验收——不依赖其他 Requirement 的上下文就能理解和测试
 - **异常路径质量**：每条 Requirement 的异常路径 Scenario 是否从业务语义出发（如权限、配额、冲突等）
 - **安全覆盖**：安全相关的行为是否有对应 Requirement 覆盖
+- **非功能需求覆盖**：`## Non-Functional Requirements` 是否强制覆盖 Performance / Reliability / Compatibility / Observability / Upgrade Compatibility——不涉及项是否已显式标注原因，量化指标是否可验证
 
-**Design 质量（11 项）**：
+**Design 质量（12 项）**：
 - **方案可行性**：技术方案是否可行——能否满足 specs 的每条 Requirement，有无技术风险未评估
 - **方案竞争力**：方案是否具备竞争力——对比业界标准或已知方案，在性能、可扩展性、成本等关键维度是否有说服力
 - **方案合理性**：技术决策是否合理——trade-off 权衡是否得当（不只是列出备选，而是选择合理）
@@ -134,6 +135,7 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
 - **并发模型**：涉及并发交互的决策是否声明了并发模型（锁类型、粒度、获取顺序）
 - **状态机表达**：涉及多状态组件是否有状态转换表
 - **性能评估**：性能影响评估是否充分——关键路径延迟和吞吐量是否有量化分析
+- **升级兼容性评估**：`Upgrade Compatibility Statement` 是否充分识别了对系统升级流程的风险，以及升级模块需要做什么工作
 
 ---
 
@@ -153,12 +155,12 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
 
 **review_output_path**：`review.md`（当前工作目录，多视角合并到同一文件）
 **report_template_path**：`templates/review-report.md`（如存在）
-**复杂度档位**：复杂（≥7 个质疑点，覆盖以下视角清单的 10 项维度）
+**复杂度档位**：复杂（≥7 个质疑点，覆盖以下视角清单的 11 项维度）
 
 **评审维度**（视角清单）：
-- 跨文档一致性（产品视角）：Capability → Requirement 是否对齐、与 docs/requirements/ 的一致性、产品���追���链
+- 跨文档一致性（产品视角）：Capability → Requirement 是否对齐、与 docs/requirements/ 的一致性、产品级追溯链
 - Proposal 质量（3 项）：动机合理性、方案合理性、范围完整性
-- Specs 质量（7 项）：需求合理性、需求必要性、需求完整性、需求清晰性、需求可验收性、异常路径质量、安全覆盖
+- Specs 质量（8 项）：需求合理性、需求必要性、需求完整性、需求清晰性、需求可验收性、异常路径质量、安全覆盖、非功能需求覆盖
 
 **输出**：
 问题清单（CRITICAL / HIGH / MEDIUM / LOW），每个问题标注 Location（文件:章节）。
@@ -178,11 +180,11 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
 
 **review_output_path**：`review.md`（当前工作目录，多视角合并到同一文件）
 **report_template_path**：`templates/review-report.md`（如存在）
-**复杂度档位**：复杂（≥7 个质疑点，覆盖以下视角清单的 12 项维度）
+**复杂度档位**：复杂（≥7 个质疑点，覆盖以下视角清单的 13 项维度）
 
 **评审维度**（视角清单）：
 - 跨文档一致性（架构视角）：Requirement → Decision 是否对齐、与 docs/architecture/ 的一致性、架构追溯链
-- Design 质量（11 项）：方案可行性、方案竞争力、方案合理性、架构一致性、设计内部一致性、可维护性、故障处理、决策备选方案、并发模型、状态机表达、性能评估
+- Design 质量（12 项）：方案可行性、方案竞争力、方案合理性、架构一致性、设计内部一致性、可维护性、故障处理、决策备选方案、并发模型、状态机表达、性能评估、升级兼容性评估
 
 **输出**：
 问题清单（CRITICAL / HIGH / MEDIUM / LOW），每个问题标注 Location（文件:章节）。

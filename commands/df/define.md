@@ -10,7 +10,7 @@
 
 ## 输出物
 
-- `docs/changes/<change-name>/specs/*.md` — Delta 格式 Requirement + Scenario
+- `docs/changes/<change-name>/specs/*.md` — Delta 格式 Requirement + Scenario + Non-Functional Requirements
 
 ## 调用方式
 

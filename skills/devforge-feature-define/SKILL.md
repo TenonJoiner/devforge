@@ -1,6 +1,6 @@
 ---
 name: devforge-feature-define
-description: 特性级需求定义 skill，产出 specs/*.md（Delta 格式 Requirement + Scenario）。派遣 product agent 生成、product-reviewer + architect-reviewer 双视角评审（最多 3 轮）。
+description: 特性级需求定义 skill，产出 specs/*.md（Delta 格式 Requirement + Scenario + Non-Functional Requirements）。派遣 product agent 生成、product-reviewer + architect-reviewer 双视角评审（最多 3 轮）。
 allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
 ---
 
@@ -126,6 +126,14 @@ skill 在**当前工作目录**查找输入文件、输出产出文件：
 
 **输出**：
 使用 Delta 格式（## ADDED Requirements / ## MODIFIED Requirements / ## REMOVED Requirements / ## RENAMED Requirements）。
+
+在 Requirements 之前，必须包含独立的 `## Non-Functional Requirements` 章节，强制覆盖以下五类；如某一类确实不涉及，必须显式写明「本期不涉及：[具体原因]」：
+- **Performance**：延迟、吞吐量、资源占用、伸缩性等量化指标
+- **Reliability**：容错、故障恢复、持久化保证、可用性目标
+- **Compatibility**：与现有版本、协议、API、数据格式、客户端的兼容性要求
+- **Observability**：监控指标、日志、追踪、告警等可观测信号
+- **Upgrade Compatibility**：版本升级、回滚、数据/配置迁移的要求
+
 每条 Requirement：
 - 使用 SHALL/MUST 表达规范性要求
 - 至少一个正常路径 + 一个异常路径 Scenario
@@ -149,16 +157,17 @@ skill 在**当前工作目录**查找输入文件、输出产出文件：
 **被评审对象**：<路径>
 **review_output_path**：`specs/<capability>/spec-review.md`（多轮追加同一文件）
 **report_template_path**：`templates/review-report.md`（如存在）
-**复杂度档位**：中等（≥5 个质疑点，覆盖 7 项维度）
+**复杂度档位**：中等（≥5 个质疑点，覆盖 8 项维度）
 
-**评审维度**（视角清单，7 项）：
+**评审维度**（视角清单，8 项）：
 - 需求合理性：每条 Requirement 本身是否合理（不过度、不遗漏、不矛盾）
-- 需求必要性：每条 Requirement 是否必要（能否追溯到 proposal Capability 或产品级���求）
+- 需求必要性：每条 Requirement 是否必要（能否追溯到 proposal Capability 或产品级需求）
 - 需求完整性：Requirement 集合是否完整覆盖问题域
 - 需求清晰性：每条 Requirement 是否清晰无歧义
 - 需求可验收性：每条 Requirement 是否可独立验收
 - 异常路径质量：每条 Requirement 的异常路径 Scenario 是否从业务语义出发
 - 安全覆盖：安全相关的行为是否有对应 Requirement 覆盖
+- 非功能需求覆盖：`## Non-Functional Requirements` 是否强制覆盖 Performance / Reliability / Compatibility / Observability / Upgrade Compatibility（不涉及项是否已显式标注原因）
 
 **输出**：
 问题清单（CRITICAL / HIGH / MEDIUM / LOW），计算缺陷密度。
@@ -174,10 +183,11 @@ skill 在**当前工作目录**查找输入文件、输出产出文件：
 **report_template_path**：`templates/review-report.md`（如存在）
 **复杂度档位**：中等（≥5 个质疑点）
 
-**评审维度**（3 项）：
+**评审维度**（4 项）：
 - 与 research.md 约束的一致性：Requirement 是否违反约束清单中的约束
 - 与产品级需求的追溯链：每条 Requirement 的追溯字段是否正确填写
 - Delta 格式正确性：ADDED / MODIFIED / REMOVED / RENAMED 章节是否符合 Delta 语义
+- 非功能需求与约束的一致性：`## Non-Functional Requirements` 中的量化指标、兼容性、可靠性、可观测性、升级兼容性要求是否与 research.md 约束及产品级非功能目标一致
 
 **输出**：
 问题清单（CRITICAL / HIGH / MEDIUM / LOW），计算缺陷密度。

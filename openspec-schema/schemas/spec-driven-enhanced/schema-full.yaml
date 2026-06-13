@@ -242,7 +242,7 @@ artifacts:
       - **Decisions**：关键技术选择及理由（为什么选 X 而非 Y？），每个决策列出备选方案
       - **Interface Changes**：涉及跨子系统接口时列出变更定义及影响，紧随 Decisions 说明方案的对外接口
       - **Risks / Trade-offs**：已知风险和权衡。格式：[风险] → [缓解措施]
-      - **Migration Plan**：部署步骤、回滚策略（如适用）
+      - **Upgrade Compatibility Statement**：升级兼容性声明，评估本特性对系统升级流程的影响及升级模块需做的工作（如适用）
       - **Open Questions**：待解决的决策或未知项，放在末尾作为待决事项汇总
 
       聚焦架构和方案，而非逐行实现。
@@ -297,7 +297,7 @@ artifacts:
 
       feature-research / feature-define / feature-design 三个 skill 内部已经做过深度
       评审循环（最多 3 轮自修），保证基础质量。本 review artifact 是「质量体检 + 人工
-      门槛」：单轮扫描 21 项维度，发现问题不修复，输出清单交人决策。
+      门槛」：单轮扫描 23 项维度，发现问题不修复，输出清单交人决策。
 
       若发现 CRITICAL 问题，AI 建议给 REJECT，由主人决定是直接对话改 artifact、
       重跑对应 skill 修订模式、或在人工决策时说明问题不成立。
@@ -315,7 +315,7 @@ artifacts:
       - 仅有 MEDIUM/LOW 累积超标，无 CRITICAL/HIGH → 建议 PASS WITH CONDITIONS
       - 任一文档有 CRITICAL，或多文档总分严重超标 → 建议 REJECT
 
-      ## 评审标准（21 项）
+      ## 评审标准（23 项）
 
       以下为评审的单一权威标准。skill 内化评审与本 artifact 评审都以此为准。
 

@@ -21,8 +21,10 @@ artifacts:
 
       各章节：
       - **Why**：1-2 句话说明问题或机会。解决什么问题？为什么是现在？
-      - **What Changes**：变更清单，具体说明新增、修改或移除的能力。破坏性变更标记 **BREAKING**。
-      - **Capabilities**：识别将要创建或修改的 spec。
+      - **What Changes**：面向读者的变更摘要清单。具体说明新增、修改或移除的能力/变更点，破坏性变更标记 **BREAKING**。不展开细节——详细的能力契约由 Capabilities 承担。
+      - **Capabilities**：OpenSpec 流程的规范入口，识别将要创建或修改的 spec。
+
+        **核心原则**：每个 Capability 都是**对外部调用方/用户可见的行为能力**，不是内部实现动作（如新增内部 API、修改某文件、换数据结构）。即使以子系统仓库为单位执行 OpenSpec，Capability 也应该是该子系统对外暴露的能力。
 
         **命名规范**：
         - 从**功能特性维度**命名，不从模块或组件维度命名。
@@ -43,6 +45,8 @@ artifacts:
         - **New Capabilities**：新增能力列表。每个 capability 生成 `specs/<capability-name>/spec.md`。
         - **Modified Capabilities**：已有能力的需求变更（非纯实现优化）。仅在 spec 级别行为变更时列出（不仅是实现细节）。每个需要一份 delta spec。使用 `openspec/specs/` 中的已有名称。无需求变更则留空。
 
+      - **Acceptance Criteria**：从外部视角定义本次变更做成什么样算成功。只写**feature 级别**的整体验收标准（如端到端场景、性能基线、兼容性承诺、覆盖率门槛），不重复 Capabilities 中的单个能力描述。单个 capability 的详细验收在对应 spec.md 的 Scenario 中细化。
+
       - **Impact**：受影响的代码、API、依赖和系统。
 
       重要：Capabilities 部分是 proposal 与 specs 之间的契约。填写前先研究已有 specs，避免重复或遗漏。每个 capability 都需要一份对应的 spec 文件。
@@ -54,6 +58,7 @@ artifacts:
       ## 反模式检查
       - 🚩 Why 只说"需要这个功能"而没有解释为什么需要
       - 🚩 Capability 描述的是实现方案（如"使用 B+ 树索引"）而非行为（如"支持范围查询"）
+      - 🚩 Capability 描述的是内部实现动作（如"新增 `xx_internal_api()`""修改 `foo.c`"）而非外部可见行为
     requires: []
 
   - id: specs
@@ -111,7 +116,7 @@ artifacts:
       - **Goals / Non-Goals**：本设计达成什么、明确排除什么
       - **Decisions**：关键技术选择及理由（为什么选 X 而非 Y？），每个决策列出备选方案
       - **Risks / Trade-offs**：已知风险和权衡。格式：[风险] → [缓解措施]
-      - **Migration Plan**：部署步骤、回滚策略（如适用）
+      - **Upgrade Compatibility Statement**：升级兼容性声明，评估本特性对系统升级流程的影响及升级模块需做的工作（如适用）
       - **Open Questions**：待解决的决策或未知项
 
       聚焦架构和方案，而非逐行实现。

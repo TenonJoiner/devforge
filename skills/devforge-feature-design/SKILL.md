@@ -84,14 +84,14 @@ skill 在**当前工作目录**查找输入文件、输出产出文件：
 ### [4] 其他章节生成
 
 派遣 1 个 architect agent，任务：
-- 补全 Context / Architecture Traceability / Goals / Non-Goals / Interface Changes / Risks / Migration Plan / Open Questions
+- 补全 Context / Architecture Traceability / Goals / Non-Goals / Interface Changes / Risks / Upgrade Compatibility Statement / Open Questions
 - 产出：完整 design.md（写入 `design-draft.md`）
 
 ### [5] 评审循环（最多 3 轮）
 
 派遣 1 个 architect-reviewer agent，任务：
 - 读 design-draft.md 全文
-- 检查：方案可行性、方案竞争力、方案合理性、架构一致性、设计内部一致性、可维护性、故障处理、决策备选方案、并发模型、状态机表达、性能评估
+- 检查：方案可行性、方案竞争力、方案合理性、架构一致性、设计内部一致性、可维护性、故障处理、决策备选方案、并发模型、状态机表达、性能评估、**升级兼容性影响评估（Upgrade Compatibility Statement 是否充分识别对系统升级流程的风险和要求）**
 - 产出：问题清单（CRITICAL / HIGH / MEDIUM / LOW）
 
 计算缺陷密度（问题分数之和 / Decision 数）：
@@ -113,7 +113,7 @@ skill 在**当前工作目录**查找输入文件、输出产出文件：
 反问主人「想修订哪一块」，提供选项：
 1. 修订 Decisions（重新比较候选方案）
 2. 修订图示（补充或调整 ASCII Art 或 Mermaid 代码块）
-3. 修订其他章节（Context / Risks / Migration Plan 等）
+3. 修订其他章节（Context / Risks / Upgrade Compatibility Statement 等）
 
 只跑对应范围的生成阶段，merge 结果回 design.md，不动其他章节。评审循环只检查变更范围。
 

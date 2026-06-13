@@ -12,7 +12,7 @@
 
 ## 输出物
 
-- `docs/changes/<change-name>/design.md` — Context + Decisions + Interface Changes + Risks + Migration Plan
+- `docs/changes/<change-name>/design.md` — Context + Decisions + Interface Changes + Risks + Upgrade Compatibility Statement
 
 ## 调用方式
 
