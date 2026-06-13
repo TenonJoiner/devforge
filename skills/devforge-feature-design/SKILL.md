@@ -10,9 +10,11 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
 
 特性级架构设计是 specs + research 之后的实现方案阶段。本 skill 产出 design.md，说明如何（HOW）实现 specs 中定义的需求。
 
+> **内容规范强牵引**：design 交付件的所有内容结构、章节要求、自检清单**以 `templates/design.md` 为唯一准绳**。本 skill 只负责定义**努力程度、写作风格、质量门槛和流程控制**，不再重复模板中已有的内容要求。
+
 **与产品级 design 的区别**：
 - 产品级（`/df:product-design`）：子系统分解 + ADR + 系统架构总纲，产出 `docs/architecture/*.md`
-- 特性级（本 skill）：在既有架构内展开，不新建子系统，产出当前工作目录的 `design.md`
+- 特性级（本 skill）：在既有架构内展开，不新建子系统，产出 change-dir 的 `design.md`
 
 **核心原则**：
 1. **在既有架构内展开**：不新建子系统，不改变系统级架构决策
@@ -24,21 +26,26 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
 
 ## 工作目录约定
 
-skill 在**当前工作目录**查找输入文件、输出产出文件：
+skill 在 **change-dir**（默认当前工作目录）查找输入文件、输出产出文件：
+- **change-dir**：由 `--change-dir <path>` 参数指定，无参数时默认当前工作目录
 - **输入**：`proposal.md`（必需）、`research.md`（必需）、`specs/*.md`（如已存在）
 - **输出**：`design.md`
+- **内容模板**：`templates/design.md`（plugin 内置模板，章节结构与内容要求的唯一准绳）
 - **产品级文档**：通过项目根目录的 CLAUDE.md#产品级文档索引定位
 
 **调用方式**：
-- **手动调用**：用户先 `cd` 到包含 `proposal.md` 的目录，然后调用 `/df:design`
+- **手动调用**：用户先 `cd` 到包含 `proposal.md` 的目录，然后调用 `/df:design`；或显式传入 `--change-dir <path>`
+- **workflow 调用**：由主会话传入 `--change-dir <path>`，以指定目录为工作上下文
 
 ## 启动检测
 
-检查当前工作目录的 `design.md`：
+**change-dir**：由 `--change-dir <path>` 参数指定，无参数时默认当前工作目录。
+
+检查 change-dir 的 `design.md`：
 - **不存在** → 进入「初次生成」模式
 - **已存在** → 反问主人「修订 / 补全」，按指定模式运行
 
-如果当前工作目录无 `proposal.md` 或 `research.md`，立即报错并提示主人 `cd` 到正确目录或先完成前置 artifact。
+如果 change-dir 无 `proposal.md` 或 `research.md`，立即报错并提示主人检查 `--change-dir` 参数、`cd` 到正确目录或先完成前置 artifact。
 
 ---
 
@@ -46,7 +53,7 @@ skill 在**当前工作目录**查找输入文件、输出产出文件：
 
 ### [1] 上下文准备
 
-读取以下输入：
+读取以下输入（路径均相对于 change-dir）：
 1. **proposal.md**：本特性的动机和范围
 2. **research.md**：约束清单 + 标杆方案空间 + 设计空间地图
 3. **specs/*.md**（如已存在）：行为规范的详细定义
@@ -84,14 +91,15 @@ skill 在**当前工作目录**查找输入文件、输出产出文件：
 ### [4] 其他章节生成
 
 派遣 1 个 architect agent，任务：
-- 补全 Context / Architecture Traceability / Goals / Non-Goals / Interface Changes / Risks / Upgrade Compatibility Statement / Open Questions
+- 读取 `templates/design.md`，按模板章节顺序补全 design.md 剩余章节
 - 产出：完整 design.md（写入 `design-draft.md`）
+- 注意：模板中已定义各章节的内容要求、自检清单和强制图示触发条件，无需在 prompt 中重复
 
 ### [5] 评审循环（最多 3 轮）
 
 派遣 1 个 architect-reviewer agent，任务：
 - 读 design-draft.md 全文
-- 检查：方案可行性、方案竞争力、方案合理性、架构一致性、设计内部一致性、可维护性、故障处理、决策备选方案、并发模型、状态机表达、性能评估、**升级兼容性影响评估（Upgrade Compatibility Statement 是否充分识别对系统升级流程的风险和要求）**
+- 检查：方案可行性、方案竞争力、方案合理性、架构一致性、设计内部一致性、可维护性、故障处理、决策备选方案、并发模型、状态机表达、性能评估、**升级影响评估（按 `templates/design.md` 的 `## Upgrade Impact` 章节检查）**
 - 产出：问题清单（CRITICAL / HIGH / MEDIUM / LOW）
 
 计算缺陷密度（问题分数之和 / Decision 数）：
@@ -113,7 +121,7 @@ skill 在**当前工作目录**查找输入文件、输出产出文件：
 反问主人「想修订哪一块」，提供选项：
 1. 修订 Decisions（重新比较候选方案）
 2. 修订图示（补充或调整 ASCII Art 或 Mermaid 代码块）
-3. 修订其他章节（Context / Risks / Upgrade Compatibility Statement 等）
+3. 修订其他章节（按 `templates/design.md` 的章节清单选择）
 
 只跑对应范围的生成阶段，merge 结果回 design.md，不动其他章节。评审循环只检查变更范围。
 
@@ -126,9 +134,9 @@ skill 在**当前工作目录**查找输入文件、输出产出文件：
 ## 补全模式
 
 用结构性元素清单扫描 design.md，识别缺失项：
+- 与 `templates/design.md` 章节结构对比，标记缺失章节
 - Decision 缺失候选方案或 trade-off 分析
 - 缺失强制图示（检查 design.md 中 ASCII Art 或 Mermaid 代码块）
-- 缺失 Architecture Traceability
 
 补全图示时，直接在 design.md 缺失位置生成 ASCII Art 或 Mermaid 代码块，评审循环。
 
@@ -142,15 +150,17 @@ skill 在**当前工作目录**查找输入文件、输出产出文件：
 当前是特性级 design 阶段，生成 design.md。
 
 **任务模式**：特性级架构决策主角（既有架构内展开 Decisions）
-**任务**：生成 Decisions 章节。
+**任务**：生成 Decisions 章节；其他章节按 `templates/design.md` 补全。
 
 **输入**：
-- proposal.md：当前工作目录
-- research.md：当前工作目录（读设计空间地图，识别关键决策点）
-- specs/*.md：当前工作目录（如已存在）
+- proposal.md：change-dir
+- research.md：change-dir（读设计空间地图，识别关键决策点）
+- specs/*.md：change-dir（如已存在）
 - 产品级架构文档：docs/architecture/<相关子系统>/design.md
+- 内容模板：templates/design.md（必须严格遵循其章节结构与内容要求）
 
-**output_path**：`design-draft.md`（当前工作目录）
+**template_path**：`templates/design.md`（写作前 MUST 先读取）
+**output_path**：`design-draft.md`（change-dir）
 
 **输出**：
 每个 Decision：
@@ -159,6 +169,8 @@ skill 在**当前工作目录**查找输入文件、输出产出文件：
 - 结论（选择 X 因为 Y，不选 A 因为 ...，不选 B 因为 ...）
 - 取舍代价 + 缓解措施
 - 演进性（或"本决策无演进性需求"）
+
+按 `templates/design.md` 的章节顺序补全其余章节（Context、Goals/Non-Goals、Solution Overview、Architecture、Key Flows、Interface Changes、Risks/Trade-offs、Upgrade Impact、Open Questions 等）。
 
 写入 `design-draft.md`。
 
@@ -175,22 +187,14 @@ skill 在**当前工作目录**查找输入文件、输出产出文件：
 当前是特性级 design 阶段，评审 design-draft.md。
 
 **被评审对象**：<路径>
-**review_output_path**：`design-review.md`（当前工作目录，多轮追加同一文件）
+**被评审 template 路径**：`templates/design.md`（评审锚点来源 1：章节结构、必填项、自检清单）
+**review_output_path**：`design-review.md`（change-dir，多轮追加同一文件）
 **report_template_path**：`templates/review-report.md`（如存在）
-**复杂度档位**：复杂（≥7 个质疑点，覆盖 11 项维度）
+**复杂度档位**：复杂（≥7 个质疑点）
 
-**评审维度**（11 项）：
-- 方案可行性：技术方案是否可行（能否满足 specs 的每条 Requirement）
-- 方案竞争力：方案是否具备竞争力（对比业界标准或已知方案）
-- 方案合理性：技术决策是否合理（trade-off 权衡是否得当）
-- 架构一致性：是否违反架构设计原则（对照 docs/architecture/ 检查）
-- 设计内部一致性：设计内部是否一致（Decision 之间无矛盾）
-- 可维护性：设计复杂度是否合理，是否过度工程化
-- 故障处理：故障场景是否充分考虑（关键路径的失败模式、降级策略、恢复机制）
-- 决策备选方案：有选择空间的决策是否有备选方案和 trade-off 分析
-- 并发模型：涉及并发交互的决策是否声明了并发模型
-- 状态机表达：涉及多状态组件是否有状态转换表
-- 性能评估：性能影响评估是否充分（关键路径延迟和吞吐量是否有量化分析）
+**评审维度**：
+1. 模板符合性：是否严格遵循 `templates/design.md` 的章节结构、内容要求和强制图示触发条件
+2. 通用质量：方案可行性、方案竞争力、方案合理性、架构一致性、设计内部一致性、可维护性、故障处理、决策备选方案、并发模型、状态机表达、性能评估、升级影响评估
 
 **输出**：
 问题清单（CRITICAL / HIGH / MEDIUM / LOW），计算缺陷密度。

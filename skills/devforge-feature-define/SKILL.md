@@ -10,9 +10,11 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
 
 特性级需求定义是 proposal + research 之后的规范化阶段。本 skill 产出 specs/*.md，使用 Delta 格式（ADDED / MODIFIED / REMOVED / RENAMED Requirements）。
 
+> **内容规范强牵引**：spec 交付件的所有内容结构、章节要求、自检清单**以 `templates/spec.md` 为唯一准绳**。本 skill 只负责定义**努力程度、写作风格、质量门槛和流程控制**，不再重复模板中已有的内容要求。
+
 **与产品级 define 的区别**：
 - 产品级（`/df:product-define`）：Actor 识别 + Feature-Scenario 分层展开，产出 `docs/requirements/*.md`
-- 特性级（本 skill）：承接已识别 Actor，在既有 Feature 框架内定义 Requirement + Scenario，产出当前工作目录的 `specs/*.md`
+- 特性级（本 skill）：承接已识别 Actor，在既有 Feature 框架内定义 Requirement + Scenario，产出 change-dir 的 `specs/*.md`
 
 **核心原则**：
 1. **承接 Actor**：不重新识别 Actor，从产品级需求文档中获取已识别的 Actor 清单
@@ -25,21 +27,26 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
 
 ## 工作目录约定
 
-skill 在**当前工作目录**查找输入文件、输出产出文件：
+skill 在 **change-dir**（默认当前工作目录）查找输入文件、输出产出文件：
+- **change-dir**：由 `--change-dir <path>` 参数指定，无参数时默认当前工作目录
 - **输入**：`proposal.md`（必需）、`research.md`（如已存在）、`design.md`（如已存在）
 - **输出**：`specs/` 目录及其下的 spec 文件
+- **内容模板**：`templates/spec.md`（plugin 内置模板，章节结构与内容要求的唯一准绳）
 - **产品级文档**：通过项目根目录的 CLAUDE.md#产品级文档索引定位
 
 **调用方式**：
-- **手动调用**：用户先 `cd` 到包含 `proposal.md` 的目录，然后调用 `/df:define`
+- **手动调用**：用户先 `cd` 到包含 `proposal.md` 的目录，然后调用 `/df:define`；或显式传入 `--change-dir <path>`
+- **workflow 调用**：由主会话传入 `--change-dir <path>`，以指定目录为工作上下文
 
 ## 启动检测
 
-检查当前工作目录的 `specs/` 目录：
+**change-dir**：由 `--change-dir <path>` 参数指定，无参数时默认当前工作目录。
+
+检查 change-dir 的 `specs/` 目录：
 - **不存在或为空** → 进入「初次生成」模式
 - **已存在 spec 文件** → 反问主人「修订 / 补全」，按指定模式运行
 
-如果当前工作目录无 `proposal.md`，立即报错并提示主人 `cd` 到正确目录。
+如果 change-dir 无 `proposal.md`，立即报错并提示主人检查 `--change-dir` 参数或 `cd` 到正确目录。
 
 ---
 
@@ -47,7 +54,7 @@ skill 在**当前工作目录**查找输入文件、输出产出文件：
 
 ### [1] 上下文准备
 
-读取以下输入：
+读取以下输入（路径均相对于 change-dir）：
 1. **proposal.md**：本特性的 Capabilities 清单（每个 Capability 对应一个 spec 文件）
 2. **research.md**：约束清单 + 设计空间地图（作为 Requirement 边界依据）
 3. **产品级需求文档**（按需）：`docs/requirements/` 下相关 Feature 规格，获取 Actor 清单和验收标准
@@ -115,38 +122,31 @@ skill 在**当前工作目录**查找输入文件、输出产出文件：
 当前是特性级 specs 阶段，为 Capability「<capability>」生成 spec.md。
 
 **任务模式**：特性需求定义主角（不重新识别 Actor，复用产品级 Actor 清单）
-**任务**：为 Capability「<capability>」定义 Requirement + Scenario。
+**任务**：为 Capability「<capability>」定义 Requirement + Scenario，输出 specs/<capability>/spec-draft.md。
 
 **输入**：
-- proposal.md：当前工作目录（读该 Capability 的描述）
-- research.md：当前工作目录（读约束清单，作为 Requirement 边界）
+- proposal.md：change-dir（读该 Capability 的描述）
+- research.md：change-dir（读约束清单，作为 Requirement 边界）
 - 产品级需求文档：docs/requirements/<相关 Feature>.md（获取 Actor 清单和验收标准）
+- 内容模板：templates/spec.md（plugin 内置模板，必须严格遵循其章节结构与内容要求）
 
-**output_path**：`specs/<capability>/spec-draft.md`（当前工作目录）
+**template_path**：`templates/spec.md`（写作前 MUST 先读取，按模板章节顺序和占位符要求生成）
+**output_path**：`specs/<capability>/spec-draft.md`（change-dir）
 
-**输出**：
-使用 Delta 格式（## ADDED Requirements / ## MODIFIED Requirements / ## REMOVED Requirements / ## RENAMED Requirements）。
-
-在 Requirements 之前，必须包含独立的 `## Non-Functional Requirements` 章节，强制覆盖以下五类；如某一类确实不涉及，必须显式写明「本期不涉及：[具体原因]」：
-- **Performance**：延迟、吞吐量、资源占用、伸缩性等量化指标
-- **Reliability**：容错、故障恢复、持久化保证、可用性目标
-- **Compatibility**：与现有版本、协议、API、数据格式、客户端的兼容性要求
-- **Observability**：监控指标、日志、追踪、告警等可观测信号
-- **Upgrade Compatibility**：版本升级、回滚、数据/配置迁移的要求
-
-每条 Requirement：
-- 使用 SHALL/MUST 表达规范性要求
-- 至少一个正常路径 + 一个异常路径 Scenario
-- 填写追溯字段（关联 docs/requirements/ 或"不适用：<原因>"）
-- Scenario 必须 4 个 hashtag（####）
-
-写入 `specs/<capability>/spec-draft.md`。
+**输出要求**：
+- 严格遵循 `templates/spec.md` 的章节结构、占位符说明和自检清单
+- 模板已定义 Delta 格式、Requirements Overview、Non-Functional Requirements 五类等要求，无需在本 prompt 中重复
+- 每条 Requirement 至少包含一个正常路径 Scenario 和一个异常路径 Scenario
+- Scenario 必须使用 4 个 hashtag（`####`）
 
 **质量约束**：
 - Requirement 可测试（读完能明确判断"通过"还是"不通过"）
 - Scenario WHEN 描述具体的前置状态和触发动作
 - Scenario THEN 描述可验证的预期结果
 - 异常路径聚焦业务语义（权限、配额、冲突等），不罗列系统级异常
+- 禁止在 spec.md 中写实现细节（如具体代码、API 签名、数据结构）
+
+写入 `specs/<capability>/spec-draft.md`。
 ```
 
 ### product-reviewer agent
@@ -154,20 +154,17 @@ skill 在**当前工作目录**查找输入文件、输出产出文件：
 ```
 当前是特性级 specs 阶段，评审 specs/<capability>/spec-draft.md。
 
-**被评审对象**：<路径>
-**review_output_path**：`specs/<capability>/spec-review.md`（多轮追加同一文件）
-**report_template_path**：`templates/review-report.md`（如存在）
-**复杂度档位**：中等（≥5 个质疑点，覆盖 8 项维度）
+**任务**：从产品视角评审 spec 质量。
 
-**评审维度**（视角清单，8 项）：
-- 需求合理性：每条 Requirement 本身是否合理（不过度、不遗漏、不矛盾）
-- 需求必要性：每条 Requirement 是否必要（能否追溯到 proposal Capability 或产品级需求）
-- 需求完整性：Requirement 集合是否完整覆盖问题域
-- 需求清晰性：每条 Requirement 是否清晰无歧义
-- 需求可验收性：每条 Requirement 是否可独立验收
-- 异常路径质量：每条 Requirement 的异常路径 Scenario 是否从业务语义出发
-- 安全覆盖：安全相关的行为是否有对应 Requirement 覆盖
-- 非功能需求覆盖：`## Non-Functional Requirements` 是否强制覆盖 Performance / Reliability / Compatibility / Observability / Upgrade Compatibility（不涉及项是否已显式标注原因）
+**被评审对象**：<路径>
+**被评审 template 路径**：`templates/spec.md`（评审锚点来源 1：章节结构、必填项、自检清单）
+**review_output_path**：`specs/<capability>/spec-review.md`（change-dir，多轮追加同一文件）
+**report_template_path**：`templates/review-report.md`（如存在）
+**复杂度档位**：中等（≥5 个质疑点）
+
+**评审维度**：
+1. 模板符合性：是否严格遵循 `templates/spec.md` 的章节结构、Delta 格式、Scenario 层级、NFR 五类覆盖要求
+2. 通用质量（8 项）：需求合理性、必要性、完整性、清晰性、可验收性、异常路径质量、安全覆盖、非功能需求覆盖
 
 **输出**：
 问题清单（CRITICAL / HIGH / MEDIUM / LOW），计算缺陷密度。
@@ -178,16 +175,20 @@ skill 在**当前工作目录**查找输入文件、输出产出文件：
 ```
 当前是特性级 specs 阶段，评审 specs/<capability>/spec-draft.md。
 
+**任务**：从架构视角评审 spec 与约束/追溯的一致性。
+
 **被评审对象**：<路径>
-**review_output_path**：`specs/<capability>/spec-review.md`（多轮追加同一文件）
+**被评审 template 路径**：`templates/spec.md`（评审锚点来源 1：章节结构、必填项、自检清单）
+**review_output_path**：`specs/<capability>/spec-review.md`（change-dir，多轮追加同一文件）
 **report_template_path**：`templates/review-report.md`（如存在）
 **复杂度档位**：中等（≥5 个质疑点）
 
-**评审维度**（4 项）：
-- 与 research.md 约束的一致性：Requirement 是否违反约束清单中的约束
-- 与产品级需求的追溯链：每条 Requirement 的追溯字段是否正确填写
-- Delta 格式正确性：ADDED / MODIFIED / REMOVED / RENAMED 章节是否符合 Delta 语义
-- 非功能需求与约束的一致性：`## Non-Functional Requirements` 中的量化指标、兼容性、可靠性、可观测性、升级兼容性要求是否与 research.md 约束及产品级非功能目标一致
+**评审维度**：
+1. 模板符合性：是否严格遵循 `templates/spec.md` 的章节结构、Delta 格式、NFR 五类覆盖要求
+2. 与 research.md 约束的一致性：Requirement 是否违反约束清单中的约束
+3. 与产品级需求的追溯链：每条 Requirement 的追溯字段是否正确填写
+4. Delta 格式正确性：ADDED / MODIFIED / REMOVED / RENAMED 章节是否符合 Delta 语义
+5. 非功能需求与约束的一致性：NFR 中的量化指标是否与 research.md 约束及产品级非功能目标一致
 
 **输出**：
 问题清单（CRITICAL / HIGH / MEDIUM / LOW），计算缺陷密度。

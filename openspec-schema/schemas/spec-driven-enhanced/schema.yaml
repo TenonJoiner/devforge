@@ -19,10 +19,19 @@ artifacts:
       思考方向：变更目的是否清晰？影响范围是否明确？是否有未说明的约束或依赖？
       如果用户的需求描述已足够清晰完整，跳过提问直接编写。
 
-      各章节：
-      - **Why**：1-2 句话说明问题或机会。解决什么问题？为什么是现在？
-      - **What Changes**：面向读者的变更摘要清单。具体说明新增、修改或移除的能力/变更点，破坏性变更标记 **BREAKING**。不展开细节——详细的能力契约由 Capabilities 承担。
-      - **Capabilities**：OpenSpec 流程的规范入口，识别将要创建或修改的 spec。
+      按模板章节顺序填写：
+
+      **Why**：
+      - 1-2 段叙事，说明问题或机会，建立共情
+      - bugfix / 性能优化 / 技术债务清理时：分析根因，量化影响（如性能下降百分比、故障频率）
+      - 新特性 / 能力扩展时：说明业务价值、用户场景、不做的后果
+
+      **What Changes**：
+      - 变更清单，具体说明新增、修改或移除的能力
+      - 破坏性变更标记 **BREAKING**
+
+      **Capabilities**：
+      - OpenSpec 流程的规范入口，识别将要创建或修改的 spec
 
         **核心原则**：每个 Capability 都是**对外部调用方/用户可见的行为能力**，不是内部实现动作（如新增内部 API、修改某文件、换数据结构）。即使以子系统仓库为单位执行 OpenSpec，Capability 也应该是该子系统对外暴露的能力。
 
@@ -53,6 +62,8 @@ artifacts:
 
       保持简洁（1-2 页）。聚焦"为什么"而非"怎么做"——实现细节属于 design.md。
 
+      **篇幅控制**：Capabilities 中禁止展开实现方案、文件路径、API 签名、内部数据结构等技术细节；Impact 只列出受影响的高层范围，不做展开。避免在 Why / What Changes / Capabilities / Impact 之间重复描述同一变更。
+
       proposal 是整个流程的基石，specs、design、tasks 都建立在此基础上。
 
       ## 反模式检查
@@ -72,11 +83,26 @@ artifacts:
       - New capabilities：使用 proposal 中的 kebab-case 名称（`specs/<capability>/spec.md`）。
       - Modified capabilities：使用 `openspec/specs/<capability>/` 中的已有名称创建 delta spec（`specs/<capability>/spec.md`）。
 
-      Delta 操作（使用 ## 标题）：
+      文档结构（按模板章节顺序）：
+
+      **Requirements Overview**：
+      - 1-2 段，说明本 spec 基于 proposal 中哪个 capability 展开
+      - 分解为哪些需求方向及理由，让读者快速理解"这份 spec 管什么"
+
+      **Delta 操作（使用 ## 标题）**：
       - **ADDED Requirements**：新增能力
       - **MODIFIED Requirements**：行为变更——必须包含完整更新内容
       - **REMOVED Requirements**：废弃功能——必须包含 **Reason** 和 **Migration**
       - **RENAMED Requirements**：仅改名——使用 FROM:/TO: 格式
+
+      **Non-Functional Requirements**：
+      - 位于 Delta 操作之后，强制覆盖以下五类；不涉及的必须写明「本期不涉及：[具体原因]」
+      - **Performance**：延迟、吞吐量、资源占用、伸缩性等量化指标
+      - **Reliability**：容错、故障恢复、持久化保证、可用性目标
+      - **Compatibility**：与现有版本、协议、API、数据格式、客户端的兼容性要求
+      - **Observability**：监控指标、日志、追踪、告警等可观测信号
+      - **Upgrade Compatibility**：版本升级、回滚、数据/配置迁移的要求
+      - 所有指标必须可验证、可度量，并引用其在 ADDED/MODIFIED Requirements 中的落地位置
 
       格式要求：
       - 每条 Requirement：`### Requirement: <name>` + 描述
@@ -93,6 +119,8 @@ artifacts:
 
       常见陷阱：MODIFIED 只写部分内容会导致 archive 时丢失细节。
       如果是新增关注点而非改变已有行为，用 ADDED 而非 MODIFIED。
+
+      **细节边界**：Scenario 应包含足够可测试的外部行为细节（输入、输出、状态变化、异常），但禁止描述内部实现方式、数据结构、调用链路或具体函数名。spec 只写 WHAT，不写 HOW。
 
       Spec 应该可测试——每条 Scenario 都是潜在的测试用例。
     requires:
@@ -111,15 +139,22 @@ artifacts:
       - 安全、性能或迁移复杂度
       - 技术决策有助于消除歧义时
 
-      各章节：
+      各章节（按模板章节顺序）：
       - **Context**：背景、现状、约束、利益相关方
       - **Goals / Non-Goals**：本设计达成什么、明确排除什么
+      - **Solution Overview**：3-5 段整体方案概括、核心思路、关键组件、最终交付的系统行为变化
+      - **Architecture**：只画与本特性相关的子系统/模块
+        - **Component Architecture**：ASCII Art 或 Mermaid 图，新增/修改模块明确标注
+        - **Component Description**：2-3 段叙述各组件职责、边界、数据流向
+      - **Key Flows**：1-3 个最关键流程，用时序图展示触发条件、关键决策点、异常分支、性能考量
       - **Decisions**：关键技术选择及理由（为什么选 X 而非 Y？），每个决策列出备选方案
+      - **Interface Changes**：涉及跨子系统接口时列出变更类型、函数签名/数据结构/协议格式
       - **Risks / Trade-offs**：已知风险和权衡。格式：[风险] → [缓解措施]
-      - **Upgrade Compatibility Statement**：升级兼容性声明，评估本特性对系统升级流程的影响及升级模块需做的工作（如适用）
+      - **Upgrade Impact**：升级影响声明，评估本特性对系统升级流程的影响及升级模块需做的工作
       - **Open Questions**：待解决的决策或未知项
 
       聚焦架构和方案，而非逐行实现。
+      禁止大段复制粘贴 spec 内容；需要引用 spec 时以"参见 specs/<capability>/spec.md Requirement X"形式简要关联，将篇幅留给方案本身。
       参考 proposal 了解动机，参考 specs 了解需求。
 
       好的设计文档解释技术决策背后的"为什么"。

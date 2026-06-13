@@ -28,21 +28,25 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
 
 ## 工作目录约定
 
-skill 在**当前工作目录**查找输入文件、输出产出文件：
+skill 在 **change-dir**（默认当前工作目录）查找输入文件、输出产出文件：
+- **change-dir**：由 `--change-dir <path>` 参数指定，无参数时默认当前工作目录
 - **输入**：`proposal.md`（必需）
 - **输出**：`research.md`
 - **产品级文档**：通过项目根目录的 CLAUDE.md#产品级文档索引定位
 
 **调用方式**：
-- **手动调用**：用户先 `cd` 到包含 `proposal.md` 的目录，然后调用 `/df:research`
+- **手动调用**：用户先 `cd` 到包含 `proposal.md` 的目录，然后调用 `/df:research`；或显式传入 `--change-dir <path>`
+- **workflow 调用**：由主会话传入 `--change-dir <path>`，以指定目录为工作上下文
 
 ## 启动检测
 
-检查当前工作目录的 `research.md`：
+**change-dir**：由 `--change-dir <path>` 参数指定，无参数时默认当前工作目录。
+
+检查 change-dir 的 `research.md`：
 - **不存在** → 进入「初次生成」模式
 - **已存在** → 反问主人「修订 / 补全」，按指定模式运行
 
-如果当前工作目录无 `proposal.md`，立即报错并提示主人 `cd` 到正确目录。
+如果 change-dir 无 `proposal.md`，立即报错并提示主人检查 `--change-dir` 参数或 `cd` 到正确目录。
 
 ---
 
@@ -213,7 +217,7 @@ skill 在**当前工作目录**查找输入文件、输出产出文件：
 - ❌ 推荐方案（不写"建议选 X"，让 design 决策）
 - ❌ 写实现细节（并发/内存/错误处理留给 design）
 
-**写入**：当前工作目录 `research.md` 的 §1 §2 §3 §引用 章节。
+**写入**：change-dir `research.md` 的 §1 §2 §3 §引用 章节。
 
 ### [5] 评审循环（最多 3 轮）
 
@@ -324,10 +328,10 @@ rm -f research-review.md
 **任务**：识别 2-3 个相关标杆产品，强调互补性而非穷举。
 
 **输入**：
-- proposal.md：当前工作目录
+- proposal.md：change-dir
 - 产品级文档索引：CLAUDE.md#产品级文档索引
 
-**output_path**：`research-benchmarks-draft.md`（当前工作目录）
+**output_path**：`research-benchmarks-draft.md`（change-dir）
 
 **输出要求**：
 标杆产品清单（2-3 个），每个标杆包含：
@@ -355,7 +359,7 @@ rm -f research-review.md
 **任务**：产出该标杆在本特性领域的完整方案分析报告，**保持方案整体性**。
 
 **输入**：
-- proposal.md：当前工作目录
+- proposal.md：change-dir
 - 标杆产品源码 / 论文 / 官方文档
 
 **输出结构**（见下方结构定义）：
@@ -406,7 +410,7 @@ rm -f research-review.md
 
 **输入**：
 - 所有标杆的 draft：`research-benchmark-<product>-draft.md`
-- proposal.md：当前工作目录
+- proposal.md：change-dir
 - 已确认的约束清单（主会话提供）
 
 **子任务 1：撰写 §1 背景与目标**（30-50 行）：
@@ -432,7 +436,7 @@ rm -f research-review.md
 - 不推荐方案（不越界 design 职责）
 - 不写实现细节（并发/内存/错误处理留给 design）
 
-**输出**：写入当前工作目录 `research.md`。
+**输出**：写入 change-dir `research.md`。
 ```
 
 ### architect-reviewer agent
@@ -440,8 +444,8 @@ rm -f research-review.md
 ```
 当前是特性级 research 阶段，评审 research.md。
 
-**被评审对象**：research.md（当前工作目录）
-**review_output_path**：`research-review.md`（当前工作目录，多轮追加同一文件）
+**被评审对象**：research.md（change-dir）
+**review_output_path**：`research-review.md`（change-dir，多轮追加同一文件）
 
 **评审维度**（视角清单）：
 

@@ -35,14 +35,9 @@ artifacts:
       ## 各部分要求（按模板章节顺序）
 
       **Why**：
-      - 1-2 句话说明问题或机会。分析根因，而非描述表面现象
-      - 量化影响：用数据说明严重程度（如性能下降百分比、故障频率）
-      - 如果无法量化，说明定性影响和不解决的后果
-
-      **Product Traceability**（记录上述查找结果）：
-      - 列出步骤 1-2 中实际找到的文档及其与本次变更的关联
-      - 有对应文档时：`docs/iteration-plan/<文件>#<条目>` + 需求或架构文档引用
-      - 无对应文档时：填写"不适用"并说明原因
+      - 1-2 段叙事，说明问题或机会，建立共情
+      - bugfix / 性能优化 / 技术债务清理时：分析根因，量化影响（如性能下降百分比、故障频率）
+      - 新特性 / 能力扩展时：说明业务价值、用户场景、不做的后果
 
       **What Changes**：
       - 变更清单，具体说明新增、修改或移除的能力
@@ -72,7 +67,14 @@ artifacts:
       - 填写前先研究已有 specs，避免重复或遗漏
       - 每个 Capability 必须描述可验证的行为变化，而非实现细节
 
-      **Impact**：列出受影响的代码、API、依赖和系统。
+      **Acceptance Criteria**：
+      - 从外部视角定义本次变更做成什么样算成功
+      - 只写 feature 级别的整体验收标准（端到端场景、性能基线、兼容性承诺、覆盖率门槛）
+      - 不重复 Capabilities 中的单个能力描述；单个 capability 的详细验收在对应 spec.md 的 Scenario 中细化
+
+      **Impact**：
+      - 受影响的代码路径、API/协议/数据格式、依赖、部署/配置/监控、兼容性/升级路径
+      - 只列出受影响的高层范围，不做展开；详细的兼容性、可靠性、可观测性要求在对应 spec.md NFR 章节中细化
 
       保持简洁（1-2 页）。聚焦"为什么"而非"怎么做"——实现细节属于 design.md。
       proposal 是整个流程的基石，specs、design、tasks 都建立在此基础上。
@@ -80,7 +82,6 @@ artifacts:
       ## 反模式检查
       - 🚩 Why 只说"需要这个功能"而没有解释为什么需要
       - 🚩 Capability 描述的是实现方案（如"使用 B+ 树索引"）而非行为（如"支持范围查询"）
-      - 🚩 Product Traceability 留空（应填写关联文档或"不适用 + 原因"）
     requires: []
 
   - id: research
@@ -88,11 +89,14 @@ artifacts:
     description: 特性级研究文档——约束清单、标杆方案空间、设计空间地图
     template: research.md
     instruction: |
-      生成 research.md：用 Skill 工具调用 `devforge-feature-research` skill 完成。
+      生成 research.md：用 Skill 工具调用 `devforge-feature-research --change-dir <change-dir>` skill 完成。
+
+      `<change-dir>` 为当前 change 的工作目录（如 `openspec/changes/<change-name>/`），skill
+      在此目录下读取 `proposal.md`，输出 `research.md`。
 
       **调用方式**：
-      - 默认模式：`devforge-feature-research`（2 个必须确认点：标杆产品 + 带债推进决策）
-      - 全确认模式：`devforge-feature-research --confirm-topics --confirm-constraints`（4 个确认点）
+      - 默认模式：`devforge-feature-research --change-dir <change-dir>`（2 个必须确认点：标杆产品 + 带债推进决策）
+      - 全确认模式：`devforge-feature-research --change-dir <change-dir> --confirm-topics --confirm-constraints`（4 个确认点）
 
       **确认环节**：
       - **必须确认**（默认启用）：
@@ -118,7 +122,10 @@ artifacts:
     description: 规范文件，定义系统行为的 Delta 变更
     template: spec.md
     instruction: |
-      生成 specs/*.md：用 Skill 工具调用 `devforge-feature-define` skill 完成。
+      生成 specs/*.md：用 Skill 工具调用 `devforge-feature-define --change-dir <change-dir>` skill 完成。
+
+      `<change-dir>` 为当前 change 的工作目录（如 `openspec/changes/<change-name>/`），skill
+      在此目录下读取 `proposal.md`、`research.md`，输出 `specs/*.md`。
 
       spec 描述系统应该做什么（WHAT），不涉及如何实现（HOW）。
       按 proposal 的 Capabilities 拆解，每个 Capability 一个 spec 文件。
@@ -129,6 +136,27 @@ artifacts:
       双视角评审。spec.md 已存在时，skill 反问「修订 / 补全」。
 
       详细流程见 `.claude/skills/devforge-feature-define/SKILL.md`。
+
+      ## 文档结构（按模板章节顺序）
+
+      **Requirements Overview**：
+      - 1-2 段，说明本 spec 基于 proposal 中哪个 capability 展开
+      - 分解为哪些需求方向及理由，让读者快速理解"这份 spec 管什么"
+
+      **Delta 规范格式（使用 ## headers）**：
+      - **ADDED Requirements**：新增能力
+      - **MODIFIED Requirements**：行为变更——MUST 包含完整更新内容
+      - **REMOVED Requirements**：废弃功能——MUST 包含 **Reason** 和 **Migration**
+      - **RENAMED Requirements**：仅改名——使用 FROM:/TO: 格式
+
+      **Non-Functional Requirements**：
+      - 位于 Delta 操作之后，强制覆盖以下五类；不涉及的必须写明「本期不涉及：[具体原因]」
+      - **Performance**：延迟、吞吐量、资源占用、伸缩性等量化指标
+      - **Reliability**：容错、故障恢复、持久化保证、可用性目标
+      - **Compatibility**：与现有版本、协议、API、数据格式、客户端的兼容性要求
+      - **Observability**：监控指标、日志、追踪、告警等可观测信号
+      - **Upgrade Compatibility**：版本升级、回滚、数据/配置迁移的要求
+      - 所有指标必须可验证、可度量，并引用其在 ADDED/MODIFIED Requirements 中的落地位置
 
       ## OpenSpec 模板硬约束（不可破坏）
 
@@ -152,12 +180,6 @@ artifacts:
       4. 查找不到对应产品级需求文档时，在 Requirement 的追溯字段中填写"不适用"并说明
          原因，不阻塞流程
 
-      ## 文件组织
-
-      按 proposal 的 Capabilities 部分，每个 Capability 一个 spec 文件：
-      - New capabilities：使用 proposal 中的 kebab-case 名称（specs/<capability>/spec.md）
-      - Modified capabilities：使用 openspec/specs/<capability>/ 中的已有名称
-
       ## Delta 规范格式（使用 ## headers）
 
       - **ADDED Requirements**：新增能力
@@ -172,6 +194,12 @@ artifacts:
       4. 确保 header 文本精确匹配（不区分空白）
       常见陷阱：MODIFIED 只写部分内容会导致 archive 时丢失细节。
       如果是新增关注点而非改变已有行为，用 ADDED 而非 MODIFIED。
+
+      ## 文件组织
+
+      按 proposal 的 Capabilities 部分，每个 Capability 一个 spec 文件：
+      - New capabilities：使用 proposal 中的 kebab-case 名称（specs/<capability>/spec.md）
+      - Modified capabilities：使用 openspec/specs/<capability>/ 中的已有名称
 
       ## Requirement 格式
 
@@ -208,7 +236,10 @@ artifacts:
     description: 技术设计文档，说明如何实现
     template: design.md
     instruction: |
-      生成 design.md：用 Skill 工具调用 `devforge-feature-design` skill 完成。
+      生成 design.md：用 Skill 工具调用 `devforge-feature-design --change-dir <change-dir>` skill 完成。
+
+      `<change-dir>` 为当前 change 的工作目录（如 `openspec/changes/<change-name>/`），skill
+      在此目录下读取 `proposal.md`、`research.md`、`specs/*.md`，输出 `design.md`。
 
       design 描述如何（HOW）实现 specs 中定义的需求。
       skill 注入「特性级在既有架构内展开，不新建子系统」语境，派遣 architect agent 生成、
@@ -231,18 +262,21 @@ artifacts:
          模块边界，确保本设计方案与产品级架构一致
       5. **docs/requirements/**：查找相关 Feature 的产品级需求，了解更广泛的业务上下文
          和非功能性约束（性能指标、可用性要求等）
-      6. 查找不到对应文档时，在 Architecture Traceability 中填写"不适用"并说明原因，
-         不阻塞流程
+      6. 查找不到对应文档时，在 Context 中说明"不适用"并解释原因，不阻塞流程。
 
       ## 各部分要求（按模板章节顺序）
 
-      - **Context**：背景、现状、约束、利益相关方
-      - **Architecture Traceability**：关联 docs/architecture/ 下的具体文档，紧随 Context 说明架构约束
+      - **Context**：背景、现状、约束、利益相关方；如引用了产品级架构文档，在此简要说明关联关系
       - **Goals / Non-Goals**：本设计要达成什么、明确排除什么
+      - **Solution Overview**：3-5 段整体方案概括、核心思路、关键组件、最终交付的系统行为变化
+      - **Architecture**：只画与本特性相关的子系统/模块
+        - **Component Architecture**：ASCII Art 或 Mermaid 图，新增/修改模块明确标注
+        - **Component Description**：2-3 段叙述各组件职责、边界、数据流向
+      - **Key Flows**：1-3 个最关键流程，用时序图展示触发条件、关键决策点、异常分支、性能考量
       - **Decisions**：关键技术选择及理由（为什么选 X 而非 Y？），每个决策列出备选方案
-      - **Interface Changes**：涉及跨子系统接口时列出变更定义及影响，紧随 Decisions 说明方案的对外接口
+      - **Interface Changes**：涉及跨子系统接口时列出变更定义及影响
       - **Risks / Trade-offs**：已知风险和权衡。格式：[风险] → [缓解措施]
-      - **Upgrade Compatibility Statement**：升级兼容性声明，评估本特性对系统升级流程的影响及升级模块需做的工作（如适用）
+      - **Upgrade Impact**：升级影响声明，评估本特性对系统升级流程的影响及升级模块需做的工作
       - **Open Questions**：待解决的决策或未知项，放在末尾作为待决事项汇总
 
       聚焦架构和方案，而非逐行实现。
@@ -269,15 +303,10 @@ artifacts:
       **Risks / Trade-offs**：
       - 每个 Risk 必须有对应的 Mitigation，不能只列风险不给方案
 
-      **Architecture Traceability**：
-      - 有对应架构文档时关联 docs/architecture/ 下的具体文件，无对应文档时（如新领域、局部优化等）填写"不适用"并说明原因
-      - 设计方案不得与产品级架构决策矛盾，如有偏差须显式标注并说明原因
-
       ## 反模式检查
       - 🚩 有选择空间的决策只列了一个方案没有备选（已被架构约束的除外）
       - 🚩 Decisions 没有 trade-off 分析，只说"使用 X"
       - 🚩 Risk 没有 Mitigation
-      - 🚩 Architecture Traceability 为空（应填写关联文档或"不适用 + 原因"）
     requires: [proposal, research]
 
   - id: review
@@ -285,7 +314,10 @@ artifacts:
     description: 设计评审报告——单轮全维度扫描 + 人工决策门禁
     template: review.md
     instruction: |
-      生成 review.md：用 Skill 工具调用 `devforge-spec-review` skill 完成。
+      生成 review.md：用 Skill 工具调用 `devforge-spec-review --change-dir <change-dir>` skill 完成。
+
+      `<change-dir>` 为当前 change 的工作目录（如 `openspec/changes/<change-name>/`），skill
+      在此目录下读取 `proposal.md`、`specs/*.md`、`design.md`，输出 `review.md`。
 
       review.md 包含两部分：
       1. **AI 评审报告**：单轮扫描，输出问题清单（按 CRITICAL/HIGH/MEDIUM/LOW 分级）+ AI 建议决策。**不做修复**
@@ -329,7 +361,7 @@ artifacts:
       - **方案合理性**：提出的 Capabilities 是否是解决该问题的合理方案，有无更优替代方案未考虑
       - **范围完整性**：Capabilities 是否完整覆盖变更范围，粒度是否合理
 
-      **Specs 质量（7 项）**：
+      **Specs 质量（8 项）**：
       - **需求合理性**：每条 Requirement 本身是否合理——不过度（镀金）、不遗漏（关键场景缺失）、不矛盾（需求间冲突）
       - **需求必要性**：每条 Requirement 是否必要——能否追溯到 proposal 的 Capability 或产品级需求，无凭空增加的需求
       - **需求完整性**：Requirement 集合是否完整覆盖问题域——不只是"支撑 proposal"，而是从领域视角审视是否有遗漏
@@ -337,8 +369,9 @@ artifacts:
       - **需求可验收性**：每条 Requirement 是否可独立验收——不依赖其他 Requirement 的上下文就能理解和测试
       - **异常路径质量**：每条 Requirement 的异常路径 Scenario 是否从业务语义出发（如权限、配额、冲突等）
       - **安全覆盖**：安全相关的行为是否有对应 Requirement 覆盖
+      - **非功能需求覆盖**：`## Non-Functional Requirements` 是否强制覆盖 Performance / Reliability / Compatibility / Observability / Upgrade Compatibility——不涉及项是否已显式标注原因，量化指标是否可验证
 
-      **Design 质量（11 项）**：
+      **Design 质量（12 项）**：
       - **方案可行性**：技术方案是否可行——能否满足 specs 的每条 Requirement，有无技术风险未评估
       - **方案竞争力**：方案是否具备竞争力——对比业界标准或已知方案，在性能、可扩展性、成本等关键维度是否有说服力
       - **方案合理性**：技术决策是否合理——trade-off 权衡是否得当（不只是列出备选，而是选择合理）
@@ -350,12 +383,13 @@ artifacts:
       - **并发模型**：涉及并发交互的决策是否声明了并发模型（锁类型、粒度、获取顺序）
       - **状态机表达**：涉及多状态组件是否有状态转换表
       - **性能评估**：性能影响评估是否充分——关键路径延迟和吞吐量是否有量化分析
+      - **升级影响评估**：`## Upgrade Impact` 是否充分识别了对系统升级流程的风险，以及升级模块需要做什么工作
 
       ## 单轮扫描流程
 
       1. **并行评审**：启动两个独立 agent 并行评审，各自按评审标准中对应维度检查：
-         - **product-reviewer agent**：跨文档一致性（产品视角）+ Proposal 质量（3 项）+ Specs 质量（7 项）
-         - **architect-reviewer agent**：跨文档一致性（架构视角）+ Design 质量（11 项）
+         - **product-reviewer agent**：跨文档一致性（产品视角）+ Proposal 质量（3 项）+ Specs 质量（8 项）
+         - **architect-reviewer agent**：跨文档一致性（架构视角）+ Design 质量（12 项）
          两个 agent 独立工作，互不可见对方的评审结果
       2. **汇总计分**：主会话收集两个 agent 的评审结果，合并问题清单，去重后分别计算
          proposal.md、specs/ 中每个 spec 文件、design.md 的缺陷总分

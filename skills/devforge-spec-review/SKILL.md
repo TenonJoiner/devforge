@@ -24,9 +24,23 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
 
 ---
 
+## 工作目录约定
+
+skill 在 **change-dir**（默认当前工作目录）查找输入文件、输出产出文件：
+- **change-dir**：由 `--change-dir <path>` 参数指定，无参数时默认当前工作目录
+- **输入**：`proposal.md`、`specs/*.md`、`design.md`
+- **输出**：`review.md`
+- **报告模板**：`templates/review.md`（review.md 格式模板）
+
+**调用方式**：
+- **手动调用**：用户先 `cd` 到包含 `proposal.md` 的目录，然后调用 `/df:spec-review`；或显式传入 `--change-dir <path>`
+- **workflow 调用**：由主会话传入 `--change-dir <path>`，以指定目录为工作上下文
+
 ## 启动检测
 
-读取当前工作目录的 `review.md`：
+**change-dir**：由 `--change-dir <path>` 参数指定，无参数时默认当前工作目录。
+
+读取 change-dir 的 `review.md`：
 - **不存在** → 进入「初次评审」模式
 - **已存在** → 反问主人「重新评审 / 查看现有评审」
 
@@ -36,18 +50,18 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
 
 ### [1] 上下文准备
 
-读取以下输入：
+读取以下输入（路径均相对于 change-dir）：
 1. **proposal.md**：本特性的动机、范围、Capabilities
 2. **specs/*.md**：Requirement + Scenario（Delta 格式）
-3. **design.md**：Context + Decisions + Interface Changes + Risks + Upgrade Compatibility Statement
+3. **design.md**：Context + Goals/Non-Goals + Solution Overview + Architecture + Key Flows + Decisions + Interface Changes + Risks + Upgrade Impact + Open Questions
 4. **产品级文档**（按需）：`docs/requirements/` 和 `docs/architecture/` 下相关文档
 5. **review.md template**：`templates/review.md`
 
 ### [2] 并行评审
 
 并行派遣 2 个 reviewer agent：
-- **product-reviewer**：跨文档一致性（产品视角）+ Proposal 质量（3 项）+ Specs 质量（7 项）
-- **architect-reviewer**：跨文档一致性（架构视角）+ Design 质量（11 项）
+- **product-reviewer**：跨文档一致性（产品视角）+ Proposal 质量（3 项）+ Specs 质量（8 项）
+- **architect-reviewer**：跨文档一致性（架构视角）+ Design 质量（12 项）
 
 每个 reviewer 产出问题清单（CRITICAL / HIGH / MEDIUM / LOW）。
 
@@ -135,7 +149,7 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
 - **并发模型**：涉及并发交互的决策是否声明了并发模型（锁类型、粒度、获取顺序）
 - **状态机表达**：涉及多状态组件是否有状态转换表
 - **性能评估**：性能影响评估是否充分——关键路径延迟和吞吐量是否有量化分析
-- **升级兼容性评估**：`Upgrade Compatibility Statement` 是否充分识别了对系统升级流程的风险，以及升级模块需要做什么工作
+- **升级影响评估**：`## Upgrade Impact` 是否充分识别了对系统升级流程的风险，以及升级模块需要做什么工作
 
 ---
 
@@ -153,14 +167,20 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
 - specs/*.md：<路径列表>
 - design.md：<路径>
 
-**review_output_path**：`review.md`（当前工作目录，多视角合并到同一文件）
-**report_template_path**：`templates/review-report.md`（如存在）
-**复杂度档位**：复杂（≥7 个质疑点，覆盖以下视角清单的 11 项维度）
+**被评审 template 路径**（评审锚点来源 1：章节结构、必填项、自检清单）：
+- proposal.md 模板：`templates/proposal.md`
+- spec 模板：`templates/spec.md`
+- design.md 模板：`templates/design.md`
 
-**评审维度**（视角清单）：
-- 跨文档一致性（产品视角）：Capability → Requirement 是否对齐、与 docs/requirements/ 的一致性、产品级追溯链
-- Proposal 质量（3 项）：动机合理性、方案合理性、范围完整性
-- Specs 质量（8 项）：需求合理性、需求必要性、需求完整性、需求清晰性、需求可验收性、异常路径质量、安全覆盖、非功能需求覆盖
+**review_output_path**：`review.md`（change-dir，多视角合并到同一文件）
+**report_template_path**：`templates/review-report.md`（如存在）
+**复杂度档位**：复杂（≥7 个质疑点）
+
+**评审维度**：
+1. 模板符合性：proposal/specs/design 是否分别遵循对应模板的章节结构、必填项和自检清单
+2. 跨文档一致性（产品视角）：Capability → Requirement 是否对齐、与 docs/requirements/ 的一致性、产品级追溯链
+3. Proposal 质量（3 项）：动机合理性、方案合理性、范围完整性
+4. Specs 质量（8 项）：需求合理性、必要性、完整性、清晰性、可验收性、异常路径质量、安全覆盖、非功能需求覆盖
 
 **输出**：
 问题清单（CRITICAL / HIGH / MEDIUM / LOW），每个问题标注 Location（文件:章节）。
@@ -178,13 +198,19 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
 - specs/*.md：<路径列表>
 - design.md：<路径>
 
-**review_output_path**：`review.md`（当前工作目录，多视角合并到同一文件）
-**report_template_path**：`templates/review-report.md`（如存在）
-**复杂度档位**：复杂（≥7 个质疑点，覆盖以下视角清单的 13 项维度）
+**被评审 template 路径**（评审锚点来源 1：章节结构、必填项、自检清单）：
+- proposal.md 模板：`templates/proposal.md`
+- spec 模板：`templates/spec.md`
+- design.md 模板：`templates/design.md`
 
-**评审维度**（视角清单）：
-- 跨文档一致性（架构视角）：Requirement → Decision 是否对齐、与 docs/architecture/ 的一致性、架构追溯链
-- Design 质量（12 项）：方案可行性、方案竞争力、方案合理性、架构一致性、设计内部一致性、可维护性、故障处理、决策备选方案、并发模型、状态机表达、性能评估、升级兼容性评估
+**review_output_path**：`review.md`（change-dir，多视角合并到同一文件）
+**report_template_path**：`templates/review-report.md`（如存在）
+**复杂度档位**：复杂（≥7 个质疑点）
+
+**评审维度**：
+1. 模板符合性：proposal/specs/design 是否分别遵循对应模板的章节结构、必填项和自检清单
+2. 跨文档一致性（架构视角）：Requirement → Decision 是否对齐、与 docs/architecture/ 的一致性、架构追溯链
+3. Design 质量（12 项）：方案可行性、方案竞争力、方案合理性、架构一致性、设计内部一致性、可维护性、故障处理、决策备选方案、并发模型、状态机表达、性能评估、升级影响评估
 
 **输出**：
 问题清单（CRITICAL / HIGH / MEDIUM / LOW），每个问题标注 Location（文件:章节）。

@@ -8,12 +8,13 @@
 
 ## 使用场景
 
-- **手动触发**：任意时刻直接 `/df:design` 做临时设计或修订
+- **手动触发**：`/df:design` 或 `/df:design --change-dir <path>` 做临时设计或修订
 
 ## 输出物
 
-- `docs/changes/<change-name>/design.md` — Context + Decisions + Interface Changes + Risks + Upgrade Compatibility Statement
+- `<change-dir>/design.md` — 特性级架构设计文档（HOW）
+  - 默认 `<change-dir>` 为当前工作目录
 
 ## 调用方式
 
-调用 Skill 工具加载 `devforge-feature-design`
+调用 Skill 工具加载 `devforge-feature-design`，可选参数 `--change-dir <path>`。
