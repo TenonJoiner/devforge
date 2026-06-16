@@ -118,10 +118,10 @@ claude plugin install devforge
 
 ### 编码规范分层
 
-- **R1** - 通用原则（跨语言）
-- **R2** - Git 工作流（Conventional Commits + worktree 规范）
-- **R3** - 语言特定（C/C++/Rust/Go/Python/Java）
-- **R4** - 测试分层（单元/集成/性能 + TDD 铁律）
+- **通用编码规范** — 跨语言通用原则：见 `rules/coding-style.md`
+- **Git 工作流** — Conventional Commits + worktree 规范：见 `rules/git-workflow.md`
+- **语言特定规范** — C / Go / Python / Java 等：见 `rules/coding-style-*.md`
+- **测试分层** — 单元 / 集成 / 性能 + TDD 铁律（待补充）
 
 ## Plugin 结构
 
@@ -144,11 +144,11 @@ devforge/
 │   ├── devforge-code-review/
 │   └── ...
 ├── rules/                       # 编码规范与工作流规则
-│   ├── coding-style.md          # R3 通用规范
-│   ├── coding-style-c.md        # R3 C 语言规范
-│   ├── coding-style-rust.md     # R3 Rust 规范
-│   ├── git-workflow.md          # R2 Git 规范
-│   ├── testing.md               # R4 测试规范
+│   ├── coding-style.md          # 通用编码规范
+│   ├── coding-style-c.md        # C 语言规范
+│   ├── coding-style-rust.md     # Rust 规范
+│   ├── git-workflow.md          # Git 规范
+│   ├── testing.md               # 测试规范
 │   └── workflow.md              # 工作流定义
 ├── hooks/                       # 自动化 Hooks
 │   ├── hooks.json               # Hook 配置

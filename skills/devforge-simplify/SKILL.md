@@ -267,6 +267,6 @@ allowed-tools: [Read, Bash, Grep, Glob, Agent]
 
 ## Integration
 
-- **相关 Rules**: R3 `coding-style`、R4 `testing`
+- **相关 Rules**: `rules/coding-style.md`、`rules/testing.md`
 - **Agent**: `developer` 调度，`code-reviewer` 作为 subagent
 - **排除标记**: `simplify-ignore-start` / `simplify-ignore-end`、`// perf-critical`、`// intentional`

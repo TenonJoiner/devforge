@@ -366,6 +366,6 @@ Developer 按报告逐项修复后输出：
 
 ## Integration
 
-- **相关 Rules**: R3 `coding-style`, R4 `testing`
+- **相关 Rules**: `rules/coding-style.md`, `rules/testing.md`
 - **相关 Hooks**: `post-edit-format`（风格问题在编辑时自动处理，不进入评审管线）
 - **相关 Agent**: `code-reviewer`(A3) 执行评审，`developer`(A2) 负责修复

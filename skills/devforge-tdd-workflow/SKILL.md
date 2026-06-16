@@ -221,4 +221,4 @@ NO PRODUCTION CODE WITHOUT A FAILING TEST FIRST
 
 - **前置 Command**: 特性级设计完成后的代码实现阶段
 - **参考文档**: `testing-anti-patterns.md`（测试反模式）
-- **相关 Rules**: R3 `coding-style`, R4 `testing`
+- **相关 Rules**: `rules/coding-style.md`, `rules/testing.md`
