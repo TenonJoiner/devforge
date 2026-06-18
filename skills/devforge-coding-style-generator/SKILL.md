@@ -1,10 +1,10 @@
 ---
-name: coding-style-generator
+name: devforge-coding-style-generator
 description: 为任意代码仓库生成贴合实际代码风格的 coding-style-LANG.md 规范文件，例如 coding-style-c.md、coding-style-cpp.md、coding-style-go.md。当用户提到“生成编码规范”“制定代码风格规则”“创建 coding-style rule”“分析仓库风格”“统一代码风格”“写 coding-style 文档”或“给 coding agent 生成规则”时使用本 skill。即使只说了“整理一下这个仓库的编码习惯”或“给这个 repo 写个风格指南”，也应触发。
 allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent, AskUserQuestion]
 ---
 
-# coding-style-generator — 仓库编码规范生成器
+# devforge-coding-style-generator — 仓库编码规范生成器
 
 ## 概述
 
@@ -240,50 +240,38 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent, AskUserQuestion]
 - 外部规范参考（可选）：<external-specs> 中用户提供的文件/目录（若为空则跳过）
 - 仓库风格事实：.claude/rules/code-style-facts-<lang>.md
 - 差距分析与决策：.claude/rules/gap-analysis-<lang>.md
+- **规则条目模板：本 skill 目录下 `templates/coding-style-rule.md`（生成前 MUST 先读取，按模板格式输出）**
 
 要求：
 1. 篇幅简洁完整，通常 200–500 行，宁短勿滥。每个规则必须基于输入文件中的事实或决策，禁止编造；规范正文不写来源引用，通过真实代码示例和验证阶段保证可追溯性
 2. 完整自洽的编码规范（非差异增量），agent 只读一份即可编码。若提供了外部规范，最终规范必须同时包含：外部规范中适用/遵循的条款（按本仓库实际调整后写入）、与外部规范冲突且已按本仓库决策调整后的条款、仓库自身特有的规则；不能只写差异，也不能完全忽略外部规范
-3. 结构如下：
-   - 适用范围（1 段）
-   - 必须遵守的规则
-   - 推荐风格
-   - 禁止反模式
-   - 历史例外说明
-4. 每条规则统一格式：
-   - 规则陈述（使用“必须”/“推荐”/“禁止”措辞）
-   - 适用场景
-   - 原因（错因/收益）
-   - 正确示例（文件路径 + 短片段）
-   - 错误示例（如为禁止规则，文件路径 + 错因）
-5. 内容焦点：只收录工具无法自动修复的隐式约定
+3. **生成规则前必须先读取本 skill 目录下 `templates/coding-style-rule.md`，并严格遵循该模板定义的结构与格式**。规范文件的章节顺序、规则条目字段、历史例外说明格式、禁止出现的内容等全部以模板为准，禁止自由发挥为段落、表格或其他结构。
+4. 内容焦点：只收录工具无法自动修复的隐式约定
    - 关注编码范式与工程领域：错误处理、并发、日志、资源管理、领域框架 API、目录↔前缀↔职责映射、并发编程模型、公共接口设计、性能敏感约定
    - 不收录可由 formatter/linter 自动修复的风格（缩进 / 花括号 / import 顺序 / 命名大小写等）
    - 不含构建 / 测试执行命令、覆盖率标准、lint 配置
-6. 质量要求：规则必须可执行
+5. 质量要求：规则必须可执行
    - 判据而非枚举：每个选项 / 级别 / API 须给出“什么场景选哪个”的判据
    - 领域 API 要有深度：列出该仓库的核心 API / 惯用法，给正确用法 + 选用判据
    - 反模式必须给出推荐替代写法，不能只列错误
-7. 历史例外说明必须包含：
-   - 例外场景
-   - 存在原因
-   - 是否允许新代码继续使用
-   - 建议迁移方式
-8. 真实性约束
+6. 真实性约束
    - 忠于输入：技术名词、错误码、框架 API 必须与输入文件一致
    - 禁止编造输入未支持的量化标准（覆盖率 / 阈值 / 行数等）
    - 版权与许可证须核实仓库实际主体与年份
    - 代码示例须来自该仓库真实代码，标注文件路径；反模式须标注“错误写法”并说明错因
    - 安全红线不可削弱
-9. 规则溯源：生成时确保每条规则都能对应到 gap-analysis-<lang>.md 或 code-style-facts-<lang>.md 中的事实/决策；规范正文不出现“来源：...”这类引用
+7. 规则溯源：生成时确保每条规则都能对应到 gap-analysis-<lang>.md 或 code-style-facts-<lang>.md 中的事实/决策；规范正文不出现“来源：...”这类引用
 
 输出要求：
 - 将完整规范写入 .claude/rules/coding-style-<lang>.md
 - 在文件末尾附加“检查摘要”小节，仅包含客观计数，格式如下：
   - 缺失章节数量：N（应为 0，即包含全部 5 个章节）
+  - 规则编号重复/缺失/格式不一致数量：N（应为 0）
+  - 未使用规则条目模板的规则数量：N（应为 0）
   - “必须”规则缺失真实代码示例数量：N（应为 0）
   - 禁止规则缺失错误示例或推荐替代写法的数量：N（应为 0）
   - 未经验证量化标准数量：N（应为 0）
+  - 出现外部规范引用或过程性描述的数量：N（应为 0）
   - 安全红线被削弱数量：N（应为 0）
 ```
 
@@ -291,9 +279,12 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent, AskUserQuestion]
 
 检查摘要中的客观计数满足：
 - 缺失章节数量 = 0
+- 规则编号重复/缺失/格式不一致数量 = 0
+- 未使用规则条目模板的规则数量 = 0
 - “必须”规则缺失真实代码示例数量 = 0
 - 禁止规则缺失错误示例/替代写法数量 = 0
 - 未经验证量化标准数量 = 0
+- 出现外部规范引用或过程性描述的数量 = 0
 - 安全红线被削弱数量 = 0
 
 ## 第 5 阶段：自动验证与修复
@@ -313,6 +304,7 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent, AskUserQuestion]
 - .claude/rules/code-style-facts-<lang>.md
 - .claude/rules/gap-analysis-<lang>.md
 - 外部规范参考（可选）：<external-specs> 中用户提供的文件/目录（若为空则跳过）
+- **本 skill 目录下 `templates/coding-style-rule.md`（验证格式唯一准绳）**
 
 按以下清单验证，发现问题时直接修复并覆写 .claude/rules/coding-style-<lang>.md：
 
@@ -320,12 +312,12 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent, AskUserQuestion]
    - 技术名词、错误码、框架 API 是否与输入一致
    - 是否存在输入文件中未提及的量化标准、阈值、行数限制
 2. 结构合规性
-   - 是否包含：适用范围、必须遵守的规则、推荐风格、禁止反模式、历史例外说明
+   - 章节结构与顺序是否严格遵循本 skill 目录下 `templates/coding-style-rule.md` 的“章节级规则清单”
    - 若提供了外部规范，最终规范是否完整（而非差异增量），是否同时覆盖了外部规范适用条款、调整后的冲突条款、仓库特有规则
    - 是否出现未被确认的语言规范
 3. 规则格式一致性
-   - 每条规则是否包含：规则陈述、适用场景、原因、正确示例
-   - 禁止规则是否额外包含错误示例 + 推荐替代写法
+   - 每条规则是否严格遵循本 skill 目录下 `templates/coding-style-rule.md` 的条目模板
+   - 规则编号是否无重复、无缺失、格式一致（纯数字连续或分类编码全局唯一）
    - 每条规则是否能在 gap-analysis-<lang>.md 或 code-style-facts-<lang>.md 中找到对应的事实/决策依据（不要求规范正文标注来源）
 4. 可执行性
    - 每条“必须”规则是否配有来自本仓库的真实代码示例
@@ -338,8 +330,10 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent, AskUserQuestion]
    - 同一语言规范内部是否存在矛盾条款
    - 若提供了外部规范，是否只输出差异增量或完全忽略外部规范
    - 如引用了外部规范，相关内容是否与外部规范一致（本文件为替换用途，冲突时不需声明“以本文件为准”，但不应自相矛盾）
-7. 历史例外完整性
-   - 每个例外是否包含：场景、原因、是否允许新代码使用、迁移方式
+7. 外部引用清理
+   - 是否出现本 skill 目录下 `templates/coding-style-rule.md` 中“禁止出现的内容”所列的任何项
+8. 历史例外完整性
+   - 每个例外是否严格遵循本 skill 目录下 `templates/coding-style-rule.md` 中“历史例外说明”的格式要求
 
 修复规则：
 - 发现不真实、不可执行、超范围、自相矛盾的条款时，直接删除或改写
@@ -347,10 +341,11 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent, AskUserQuestion]
 - 缺失推荐替代写法时，从 gap-analysis-<lang>.md 中补充
 - 不得引入输入文件未支持的新规则
 - 不得削弱安全红线
+- 定稿前删除 coding-style-<lang>.md 末尾的“检查摘要”章节，最终规范只保留正式内容
 
 输出要求：
-- 更新后的 .claude/rules/coding-style-<lang>.md
-- 验证报告 .claude/rules/coding-style-validation-<lang>.md，列出：检查项、结果、修复动作、残留问题汇总（CRITICAL / HIGH / MEDIUM / LOW 各几条）
+- 更新后的 .claude/rules/coding-style-<lang>.md（已删除检查摘要）
+- 验证报告 .claude/rules/coding-style-validation-<lang>.md，列出：检查项、结果、修复动作、残留问题汇总（CRITICAL / HIGH / MEDIUM / LOW 各几条）、规范规则统计（必须 / 推荐 / 禁止 / 历史例外 各几条；结构不一致规则数量；外部引用残留数量）
 ```
 
 ### 通过标准
@@ -365,7 +360,7 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent, AskUserQuestion]
 所有阶段结束后，向用户汇报：
 - 为哪些语言生成了规范
 - 输出文件清单（`.claude/rules/coding-style-<lang>.md`）
-- 每个规范的规则条数（必须 / 推荐 / 禁止 / 历史例外）——取自最终检查摘要
+- 每个规范的规则条数（必须 / 推荐 / 禁止 / 历史例外）——取自最终验证报告中的“规范规则统计”
 - 残留问题（如有）——取自最终验证报告
 
 ## 问题分级
