@@ -33,14 +33,14 @@ artifacts:
       **Capabilities**：
       - OpenSpec 流程的规范入口，识别将要创建或修改的 spec
 
-        **核心原则**：每个 Capability 都是**对外部调用方/用户可见的行为能力**，不是内部实现动作（如新增内部 API、修改某文件、换数据结构）。即使以子系统仓库为单位执行 OpenSpec，Capability 也应该是该子系统对外暴露的能力。
+        **核心原则**：每个 Capability 都是**对外部调用方/用户可见的行为能力或质量属性承诺**，不是内部实现动作（如新增内部 API、修改某文件、换数据结构、升级依赖版本）。即使以子系统仓库为单位执行 OpenSpec，Capability 也应该是该子系统对外暴露的能力或质量属性。
 
         **命名规范**：
         - 从**功能特性维度**命名，不从模块或组件维度命名。
         - 使用**共享前缀**让相关能力在 `specs/` 中字典序聚集（如 `replication-*`、`storage-*`）。
         - 两段或三段，按需选择：
           - 两段：`{feature}-{capability}` — 如 `replication-log-shipping`、`storage-compaction`
-          - 三段：`{feature}-{area}-{capability}` — 如 `replication-consensus-leader-election`
+          - 三段：`{feature}-{area}-{capability}` — 如 `replication-consensus-leader-election`、`storage-io-latency`
         - 技术名不推荐（保证命名稳定性），但不禁止。
         - 禁止斜杠、`and`、`or` 连接多个概念。
         - 禁止组件类名作为 capability 名。
@@ -52,7 +52,8 @@ artifacts:
         - 演进稳定性：总是一起变 → 合并；独立演进 → 拆分。
 
         - **New Capabilities**：新增能力列表。每个 capability 生成 `specs/<capability-name>/spec.md`。
-        - **Modified Capabilities**：已有能力的需求变更（非纯实现优化）。仅在 spec 级别行为变更时列出（不仅是实现细节）。每个需要一份 delta spec。使用 `openspec/specs/` 中的已有名称。无需求变更则留空。
+        - **Modified Capabilities**：已有能力的行为变更或质量属性提升。仅当存在外部可见变化时列出，不只因内部实现调整而列出。每个需要一份 delta spec。使用 `openspec/specs/` 中的已有名称。无需求变更则留空。
+        - 实现动作（如升级依赖、重构模块、替换数据结构）不作为 New/Modified Capability；由实现动作带来的外部可见行为或质量属性变化可以且应该列为 capability。
 
       - **Acceptance Criteria**：从外部视角定义本次变更做成什么样算成功。只写**feature 级别**的整体验收标准（如端到端场景、性能基线、兼容性承诺、覆盖率门槛），不重复 Capabilities 中的单个能力描述。单个 capability 的详细验收在对应 spec.md 的 Scenario 中细化。
 
@@ -120,7 +121,7 @@ artifacts:
       常见陷阱：MODIFIED 只写部分内容会导致 archive 时丢失细节。
       如果是新增关注点而非改变已有行为，用 ADDED 而非 MODIFIED。
 
-      **细节边界**：Scenario 应包含足够可测试的外部行为细节（输入、输出、状态变化、异常），但禁止描述内部实现方式、数据结构、调用链路或具体函数名。spec 只写 WHAT，不写 HOW。
+      **细节边界**：Scenario 应包含足够可测试的外部行为细节（输入、输出、状态变化、异常），但禁止描述内部实现方式、数据结构、调用链路或具体函数名。spec 只写 WHAT，不写 HOW。内部重构应表述为"在保持外部行为 X 不变的前提下，指标 Y 达到 Z"，而非实现步骤。
 
       Spec 应该可测试——每条 Scenario 都是潜在的测试用例。
     requires:

@@ -45,12 +45,14 @@ artifacts:
 
       **Capabilities**（关键：这是 proposal 与 specs 之间的契约）：
 
+      **核心原则**：每个 Capability 都是对外部调用方/用户可见的**行为能力或质量属性承诺**（如性能、可靠性、兼容性），不是内部实现动作（如升级依赖、重构模块、替换数据结构）。
+
       **命名规范**：
       - 从**功能特性维度**命名，不从模块或组件维度命名
       - 使用**共享前缀**让相关能力在 `specs/` 中聚集（如 `replication-*`、`storage-*`）
       - 两段或三段，按需选择：
         - 两段：`{feature}-{capability}` — 如 `replication-log-shipping`、`storage-compaction`
-        - 三段：`{feature}-{area}-{capability}` — 如 `replication-consensus-leader-election`
+        - 三段：`{feature}-{area}-{capability}` — 如 `replication-consensus-leader-election`、`storage-io-latency`
       - 技术名不推荐（保证命名稳定性），但不禁止
       - 禁止斜杠、`and`、`or` 连接多个概念
       - 禁止组件类名作为 capability 名
@@ -62,8 +64,9 @@ artifacts:
       - 演进稳定性：总是一起变 → 合并；独立演进 → 拆分
 
       - **New Capabilities**：新增能力列表。每个 Capability 生成 `specs/<capability-name>/spec.md`
-      - **Modified Capabilities**：已有能力的行为变更（非纯实现优化）。
+      - **Modified Capabilities**：已有能力的行为变更或质量属性提升。仅当存在外部可见变化时列出，不只因内部实现调整而列出。
         使用 `openspec/specs/` 中的已有 spec 名称。无需求变更则留空
+      - 实现动作（如升级依赖、重构模块、替换数据结构）不作为 New/Modified Capability；由实现动作带来的外部可见行为或质量属性变化可以且应该列为 capability
       - 填写前先研究已有 specs，避免重复或遗漏
       - 每个 Capability 必须描述可验证的行为变化，而非实现细节
 
@@ -216,6 +219,7 @@ artifacts:
       - 必须可测试：读完能明确判断"通过"还是"不通过"
       - 一条 Requirement 只描述一个行为。用"和"连接了两个行为则拆成两条
       - 描述可观测的外部行为，不涉及内部实现
+      - 内部重构表述为"外部行为不变 + 质量指标提升"，不写实现步骤
 
       **Scenario 编写**：
       - 每条 Requirement 至少一个正常路径 + 一个异常路径 Scenario
