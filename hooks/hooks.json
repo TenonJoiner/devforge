@@ -1,6 +1,17 @@
 {
-  "description": "DevForge automation hooks for security guard, dangerous command blocking, and post-edit formatting",
+  "description": "DevForge automation hooks for security guard, dangerous command blocking, post-edit formatting, and openspec schema sync",
   "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/sync-openspec-schemas.sh\"",
+            "timeout": 30
+          }
+        ]
+      }
+    ],
     "PreToolUse": [
       {
         "matcher": "Bash",
