@@ -16,15 +16,15 @@ OpenSpec 变更文档基线化归档——将已通过 Tech Leader 评审的 cha
 调用 Skill 工具加载 `devforge-baseline`：
 
 ```
-/df:baseline --change-dir <path> --version <version> --repo-url <url>
+/df:baseline --change <name> --version <version> --repo-url <url>
 ```
 
-- `--change-dir <path>`：change 目录，默认当前工作目录
-- `--version <version>`：基线版本号（必填）
+- `--change <name>`：change 名称，例如 `add-storage-wal`。默认从当前 `openspec/changes/<name>/` 目录自动识别
+- `--version <version>`：产品版本号（必填）
 - `--repo-url <url>`：基线化文档仓库的 git URL（必填）
 
 ## 示例
 
 ```
-/df:baseline --change-dir openspec/changes/add-storage-wal --version v2.3 --repo-url git@github.com:org/specs-baseline.git
+/df:baseline --change add-storage-wal --version V2R1C01 --repo-url git@github.com:org/specs-baseline.git
 ```
