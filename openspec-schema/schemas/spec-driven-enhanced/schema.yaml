@@ -67,10 +67,13 @@ artifacts:
 
       proposal 是整个流程的基石，specs、design、tasks 都建立在此基础上。
 
+      **篇幅引导**：proposal.md 建议 50~100 行；复杂变更可适当扩展，但应控制在 1-2 页内，聚焦 WHY 与 WHAT，不写实现细节。
+
       ## 反模式检查
       - 🚩 Why 只说"需要这个功能"而没有解释为什么需要
       - 🚩 Capability 描述的是实现方案（如"使用 B+ 树索引"）而非行为（如"支持范围查询"）
       - 🚩 Capability 描述的是内部实现动作（如"新增 `xx_internal_api()`""修改 `foo.c`"）而非外部可见行为
+      - 🚩 bugfix / 重构类变更被命名为 `fix-*` / `refactor-*`，或 spec 只能写出实现步骤而写不出 WHEN/THEN
     requires: []
 
   - id: specs
@@ -96,13 +99,16 @@ artifacts:
       - **REMOVED Requirements**：废弃功能——必须包含 **Reason** 和 **Migration**
       - **RENAMED Requirements**：仅改名——使用 FROM:/TO: 格式
 
+      **篇幅引导**：单份 spec.md 建议 100~200 行；复杂 capability 可适当扩展。若篇幅明显超出，应优先检查是否混入了多个独立能力或不必要的实现细节，而不是直接按行数拆分 capability。
+
       **Non-Functional Requirements**：
-      - 位于 Delta 操作之后，强制覆盖以下五类；不涉及的必须写明「本期不涉及：[具体原因]」
+      - 位于 Delta 操作之后，强制覆盖以下七类；不涉及的必须写明「本期不涉及：[具体原因]」
       - **Performance**：延迟、吞吐量、资源占用、伸缩性等量化指标
       - **Reliability**：容错、故障恢复、持久化保证、可用性目标
-      - **Compatibility**：与现有版本、协议、API、数据格式、客户端的兼容性要求
+      - **Compatibility**：与现有版本、协议、API、数据格式、客户端的兼容性要求，以及版本升级、回滚、数据/配置迁移的要求
       - **Observability**：监控指标、日志、追踪、告警等可观测信号
-      - **Upgrade Compatibility**：版本升级、回滚、数据/配置迁移的要求
+      - **Security**：鉴权、加密、审计、数据隔离等安全要求
+      - **Testability**：为验证本 capability 需新增的可测试能力与低概率场景覆盖
       - 所有指标必须可验证、可度量，并引用其在 ADDED/MODIFIED Requirements 中的落地位置
 
       格式要求：
@@ -146,7 +152,7 @@ artifacts:
       - **Design**：聚焦方案设计：能描述清楚特性设计方案即可，不要过于细节，不要具体到代码实现层面（不写源码/函数签名/代码样例）；先写 1-2 段总体性方案概要，再用文字从整体到局部逐层阐述本特性的设计方案和思路，按需覆盖：需求实现方式、关键组件协作、数据/控制流、关键决策点/边界处理、外部接口边界等；在需要直观展示处可插入图（架构图/数据流图/状态机图/时序图等）辅助理解，文字本身应完整表达设计，不依赖图也能读懂；简单设计可只用文字，不陷入实现细节
       - **Decisions**：记录本特性设计中的关键决策，每个决策列出 2-3 个候选方案，每个方案用 2-3 句话言简意赅地概括核心优缺点，不做大段展开；结论说明最终选择及相应取舍代价；已被架构约束确定的直接引用；design 章节已有的内容避免冗余阐述，直接引用
       - **Interface Changes**：如涉及跨子系统接口：先在此用 1 段说明整体影响范围，再逐条接口列变更类型、定义；系统级兼容性问题在 ## Upgrade Impact 中统一说明
-      - **Upgrade Impact**：说明本设计对系统升级的具体影响，对应 spec.md 中 Upgrade Compatibility NFR 的量化目标；无影响时可写「不涉及」
+      - **Upgrade Impact**：说明本设计对系统升级的具体影响，对应 spec.md 中 Compatibility NFR 的升级兼容性量化目标；无影响时可写「不涉及」
       - **Risks / Trade-offs**：每个风险必须有缓解措施；格式：[风险] → [缓解措施]
       - **Open Questions**：待解决的决策或未知项
 
@@ -155,8 +161,33 @@ artifacts:
       参考 proposal 了解动机，参考 specs 了解需求。
 
       好的设计文档解释技术决策背后的"为什么"。
+
+      **篇幅引导**：design.md 建议 200~500 行；复杂设计（涉及多模块协作、重大数据模型变更、升级迁移等）可适当扩展。避免大段复制 spec 内容，将篇幅留给方案与决策本身。
     requires:
       - proposal
+
+  - id: review
+    generates: review.md
+    description: 设计评审报告——AI 单轮扫描，产出供 Tech Leader 人工决策门禁使用的 review.md
+    template: review.md
+    instruction: |
+      调用 `devforge-spec-review --change-dir <change-dir>` skill 生成 review.md。
+      skill 读取 proposal.md、specs/*.md、design.md。
+
+      review.md 结构：
+      1. AI 评审报告：按 CRITICAL/HIGH/MEDIUM/LOW 分级的问题清单 + AI 建议决策
+      2. Tech Leader 最终决策区：留空，由 Tech Leader 人工填写
+
+      **skill 职责边界**：devforge-spec-review 只负责生成评审报告，不执行人工决策门禁。门禁由 OpenSpec 流程控制（见下游 tasks 节点的前置检查）。
+
+      生成 review.md 后 STOP，提示检查 AI 建议决策：
+      - 如 AI 建议为 **REJECT**，由人修复对应 artifact（proposal.md / specs/*.md / design.md）后重新执行 review 步骤
+      - 如 AI 建议为 **PASS** 或 **PASS WITH CONDITIONS**，将交付件及 review.md 提交 Tech Leader 评审
+
+      Tech Leader 在「Tech Leader 最终决策区」填写 PASS / PASS WITH CONDITIONS / REJECT 后，才允许进入 tasks 阶段。
+    requires:
+      - specs
+      - design
 
   - id: tasks
     generates: tasks.md
@@ -164,6 +195,12 @@ artifacts:
     template: tasks.md
     instruction: |
       将 specs 和 design 分解为可执行的任务清单。
+
+      ## 前置检查（MUST）
+
+      创建 tasks 前 MUST 读取 review.md，检查「Tech Leader 最终决策」区域：
+      - 决策为 PASS 或 PASS WITH CONDITIONS → 允许继续创建 tasks
+      - 决策为 REJECT 或决策区域为空/未填写 → **禁止创建 tasks**，提示：「review.md 中 Tech Leader 最终决策未填写或为 REJECT，请先完成交叉评审并由 Tech Leader 确认后再继续」
 
       ## 任务推导
 
@@ -263,14 +300,13 @@ artifacts:
       - 🚩 specs 中的某个 Requirement/Scenario 在 tasks 中没有对应任务
       - 🚩 按 TDD 类型做分组而非按 Requirement 分组
     requires:
-      - specs
-      - design
+      - review
 
 apply:
   requires: [tasks]
   tracks: tasks.md
   instruction: |
-    读取前序 artifact（proposal.md、specs/*.md、design.md）了解需求和设计方案。
+    读取前序 artifact（proposal.md、specs/*.md、design.md）了解需求和设计方案；读取 review.md 检查 Tech Leader 最终决策是否允许进入实现阶段。
 
     ## 调度模型
 

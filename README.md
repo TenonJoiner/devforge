@@ -53,6 +53,9 @@ claude plugin install devforge
 
 # 文档评审
 /df:spec-review
+
+# 基线化归档（评审通过后归档到基线仓库）
+/df:baseline --change-dir <path> --version <version> --repo-url <url>
 ```
 
 ### 代码级工作流

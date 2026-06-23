@@ -1,3 +1,5 @@
+<!-- proposal.md 篇幅引导：50~100 行；复杂变更可适当扩展，聚焦 WHY 与 WHAT，不写实现细节。 -->
+
 ## Why
 
 <!-- 1-2 段叙事：让读者快速理解"为什么要做这件事"，建立共情 -->
@@ -46,6 +48,12 @@
   - 禁止斜杠、and、or 连接多个概念；禁止组件类名作为 capability 名
   - 粒度判断：功能完整性、开发独立性、依赖耦合、演进稳定性
   每个 capability 生成 specs/<capability-name>/spec.md
+
+  bugfix / 内部优化类 capability 禁止以动作命名（如 `fix-*`、`refactor-*`、`upgrade-*`），
+  应转换为修复后对外承诺的行为或质量属性：
+  - 错误：`fix-compactor-memory-leak` → 正确：`storage-compaction-memory-bounded`
+  - 错误：`refactor-leader-election` → 正确：`replication-consensus-failover-latency`
+  若重构仅为消除 bug 根因而无法独立验收，应与 bugfix 合并为同一个质量属性 capability。
 -->
 - `<capability-name>`: <brief description>
 
