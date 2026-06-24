@@ -1,0 +1,26 @@
+# repo-map.yaml 样例
+#
+# 位置：change 所属仓库根目录下的 .claude/repo-map.yaml
+# 作用：定义多仓模式下仓库名称到仓库目录及组件的映射
+#
+# 格式说明：
+# - 顶层 key 为 repo-name，与 tasks.md 中 [repo: <repo-name>] 标注一致
+# - path 为相对于本文件所在目录的相对路径，指向该仓库根目录
+# - components 列出该仓库包含的组件，用于与 tasks.md 中的 Component 字段对应
+
+storage:
+  path: ./storage
+  components:
+    - storage-engine
+    - storage-io
+
+meta:
+  path: ./meta
+  components:
+    - metadata
+
+api:
+  path: ./api
+  components:
+    - api-server
+    - api-client

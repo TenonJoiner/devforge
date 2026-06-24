@@ -150,6 +150,8 @@ artifacts:
       - **Context**：背景、现状、约束
       - **Goals / Non-Goals**：本设计达成什么、明确排除什么
       - **Design**：聚焦方案设计：能描述清楚特性设计方案即可，不要过于细节，不要具体到代码实现层面（不写源码/函数签名/代码样例）；先写 1-2 段总体性方案概要，再用文字从整体到局部逐层阐述本特性的设计方案和思路，按需覆盖：需求实现方式、关键组件协作、数据/控制流、关键决策点/边界处理、外部接口边界等；在需要直观展示处可插入图（架构图/数据流图/状态机图/时序图等）辅助理解，文字本身应完整表达设计，不依赖图也能读懂；简单设计可只用文字，不陷入实现细节
+
+        **多仓场景**：若本次变更涉及多个并列仓库，按**子系统**分二级章节（如 `### 子系统: replication`），在每个子系统章节内说明：该子系统涉及哪些仓库、各仓库在本特性中的职责、跨仓库接口/数据流边界。子系统不等于仓库；一个子系统可跨多个仓库，一个仓库也可包含多个子系统。
       - **Decisions**：记录本特性设计中的关键决策，每个决策列出 2-3 个候选方案，每个方案用 2-3 句话言简意赅地概括核心优缺点，不做大段展开；结论说明最终选择及相应取舍代价；已被架构约束确定的直接引用；design 章节已有的内容避免冗余阐述，直接引用
       - **Interface Changes**：如涉及跨子系统接口：先在此用 1 段说明整体影响范围，再逐条接口列变更类型、定义；系统级兼容性问题在 ## Upgrade Impact 中统一说明
       - **Upgrade Impact**：说明本设计对系统升级的具体影响，对应 spec.md 中 Compatibility NFR 的升级兼容性量化目标；无影响时可写「不涉及」
@@ -234,6 +236,7 @@ artifacts:
 
       - 按 Requirement 分组（每个 ## 组对应一条 Requirement）
       - 同一 Requirement 横跨多个模块时，按模块拆分子组（如 ## 1a. Requirement X - storage 侧）
+      - **多仓场景**：任务组标题下可标注 `**Component**: <组件名>`；若同一任务组内的任务需要落在不同仓库，再按仓库拆分子组（如 `### 1a. storage 侧` / `### 1b. meta 侧`），每个任务描述末尾标注 `[repo: <repo-name>]`。
       - 禁止按 TDD 步骤类型做分组（如「## RED 阶段」）
 
       ### 任务组末尾固定任务（强制）
@@ -253,6 +256,13 @@ artifacts:
       - [ ] QA.3 DEEP-REFACTOR: 调用 /df:simplify 深度简化重构
       - [ ] QA.4 UNIT-COVERAGE: 重新执行单元测试，验收覆盖率达标
       - [ ] QA.5 INTEGRATION-TEST: 开发 feature 级别集成测试用例，运行并验证通过
+      ```
+
+      **多仓场景追加**（仅当检测到 `repo-map.yaml` 时生成）：
+
+      ```
+      - [ ] QA.6 CROSS-REPO-INTEGRATION: 触发跨仓库集成测试或最小端到端验证，确保各仓库变更协同工作
+      - [ ] QA.7 CROSS-REPO-COMMIT-ORDER: 确认各仓库 commit 顺序与接口契约匹配，避免部分提交导致中间状态不可用
       ```
 
       QA 任务组与所有 Requirement 任务组都是 depends-on 关系（最后执行）。
@@ -308,12 +318,28 @@ apply:
   instruction: |
     读取前序 artifact（proposal.md、specs/*.md、design.md）了解需求和设计方案；读取 review.md 检查 Tech Leader 最终决策是否允许进入实现阶段。
 
+    ## 多仓检测（仅影响有 repo-map.yaml 的项目）
+
+    1. 在 change 所属仓库根目录的 `.claude/repo-map.yaml` 中读取多仓映射。
+    2. 若存在：解析为 `repo-name → relative-path` 映射；进入多仓模式。
+    3. 若未找到：进入单仓模式，所有任务在当前 change-dir 执行，行为与当前完全一致。
+
+    **单仓兼容性保证**：没有 repo-map.yaml 时，以下所有多仓逻辑均不触发。
+
     ## 调度模型
 
     - 任务组（`## N.` 组）粒度调度：independent 任务组可并行，depends-on 按依赖顺序串行
     - 任务组内任务（`- [ ]`）严格串行执行
     - QA 任务组（`## QA.`）depends-on 所有 Requirement 任务组，最后执行
     - 完成每个任务后立即标记 checkbox
+
+    ## 多仓模式下的任务路由
+
+    - 对每个任务，从描述中提取 `[repo: <repo-name>]` 标注。
+    - 若任务无 repo 标注：默认在当前 change-dir 执行（与单仓一致）。
+    - 若任务有 repo 标注：在执行前通过 Bash 切换到 `repo-map.yaml` 中该 repo 对应的目录；skill 调用结束后切回 change-dir 标记 checkbox。
+    - 任务类型为 `CHORE` 且涉及 product 仓库本身文档/配置时，可不标 repo，直接在 change-dir 执行。
+    - QA 任务中的 `CROSS-REPO-*` 类型：由主会话按跨仓集成测试的入口位置决定执行目录（通常回到 product 仓库或指定集成测试仓库）。
 
     ## 任务类型 → 执行者映射
 
