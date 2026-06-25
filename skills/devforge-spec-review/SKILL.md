@@ -33,6 +33,14 @@ parameters:
 
 ---
 
+## 模板路径解析
+
+本 skill 引用的 `openspec-schema/...` 路径均相对于 DevForge plugin 安装目录。plugin 安装目录 = 文档顶部「Base directory for this skill」指示目录的上两级。
+
+读取模板时请拼接为绝对路径：`<skill_base_dir>/../../openspec-schema/schemas/spec-driven-enhanced/templates/<name>.md`。
+
+---
+
 ## 工作目录约定
 
 skill 在 **change-dir** 查找输入文件、输出产出文件：
@@ -44,7 +52,7 @@ skill 在 **change-dir** 查找输入文件、输出产出文件：
   4. 以上都失败 → 报错并提示用户
 - **输入**：`proposal.md`、`specs/**/*.md`、`design.md`
 - **输出**：`review.md`（写入 change-dir）
-- **报告模板**：`openspec-schema/schemas/spec-driven-enhanced/templates/review.md`（review.md 格式模板）
+- **报告模板**：`../../openspec-schema/schemas/spec-driven-enhanced/templates/review.md`（review.md 格式模板）
 
 **调用方式**：
 - **手动调用**：用户先 `cd` 到 change 目录，然后调用 `/df:spec-review`；或显式传入 `--change-dir <path>`
@@ -93,7 +101,7 @@ skill 在 **change-dir** 查找输入文件、输出产出文件：
 1. **验证输入存在性**：确认 change-dir 下存在 `proposal.md`、`specs/**/*.md`、`design.md` 中的至少一个；一个都不存在则立即报错并停止。存在多个时，由 agent 按需评审实际存在的文件。
 2. **发现产品级架构文档**：用 `Glob` 列出项目根目录 `docs/architecture/` 下可能与本次变更相关的文件路径，供 architect-reviewer 读取。
 3. **统计 spec 文件数**：用于后续缺陷密度计算的文档总数。
-4. **读取 review.md template**：`openspec-schema/schemas/spec-driven-enhanced/templates/review.md`，作为组装最终 review.md 的格式依据。
+4. **读取 review.md template**：`../../openspec-schema/schemas/spec-driven-enhanced/templates/review.md`，作为组装最终 review.md 的格式依据。
 
 主会话**不读取** proposal.md / specs/**/*.md / design.md / 产品级架构文档的内容；由各 agent 在 prompt 中按需读取。
 
@@ -140,7 +148,7 @@ skill 在 **change-dir** 查找输入文件、输出产出文件：
 
 ### [5] 写入 review.md
 
-主会话按 `openspec-schema/schemas/spec-driven-enhanced/templates/review.md` 的章节结构，将合并后的问题清单、缺陷密度、AI 建议决策组装写入 `review.md`。
+主会话按 `../../openspec-schema/schemas/spec-driven-enhanced/templates/review.md` 的章节结构，将合并后的问题清单、缺陷密度、AI 建议决策组装写入 `review.md`。
 
 - 不带 `autofix`：按模板写入单轮报告，「AI Review Rounds」下记录为 **Round 1**
 - 带 `autofix`（首轮）：同样写入 **Round 1**；后续循环中在此基础上追加 Round
@@ -261,8 +269,8 @@ skill 在 **change-dir** 查找输入文件、输出产出文件：
 - specs/**/*.md：<路径列表>
 
 **被评审 template 路径**（评审锚点来源 1：章节结构、必填项、自检清单；请读取对应 template 并逐项核对具体格式要求）：
-- proposal.md 模板：`openspec-schema/schemas/spec-driven-enhanced/templates/proposal.md`
-- spec 模板：`openspec-schema/schemas/spec-driven-enhanced/templates/spec.md`
+- proposal.md 模板：`../../openspec-schema/schemas/spec-driven-enhanced/templates/proposal.md`
+- spec 模板：`../../openspec-schema/schemas/spec-driven-enhanced/templates/spec.md`
 
 **review_output_path**：`review.md`（change-dir，多视角合并到同一文件）
 
@@ -298,7 +306,7 @@ skill 在 **change-dir** 查找输入文件、输出产出文件：
 - 产品级架构文档：`docs/architecture/<相关子系统>/design.md` 及 ADR（检查 design 是否违反架构原则）
 
 **被评审 template 路径**（评审锚点来源 1：章节结构、必填项、自检清单；请读取对应 template 并逐项核对具体格式要求）：
-- design.md 模板：`openspec-schema/schemas/spec-driven-enhanced/templates/design.md`
+- design.md 模板：`../../openspec-schema/schemas/spec-driven-enhanced/templates/design.md`
 
 **review_output_path**：`review.md`（change-dir，多视角合并到同一文件）
 
@@ -330,9 +338,9 @@ skill 在 **change-dir** 查找输入文件、输出产出文件：
 - design.md：<路径>
 
 **被评审 template 路径**（评审锚点来源 1：章节结构、必填项、自检清单；请读取对应 template 并逐项核对具体格式要求）：
-- proposal.md 模板：`openspec-schema/schemas/spec-driven-enhanced/templates/proposal.md`
-- spec 模板：`openspec-schema/schemas/spec-driven-enhanced/templates/spec.md`
-- design.md 模板：`openspec-schema/schemas/spec-driven-enhanced/templates/design.md`
+- proposal.md 模板：`../../openspec-schema/schemas/spec-driven-enhanced/templates/proposal.md`
+- spec 模板：`../../openspec-schema/schemas/spec-driven-enhanced/templates/spec.md`
+- design.md 模板：`../../openspec-schema/schemas/spec-driven-enhanced/templates/design.md`
 
 **review_output_path**：`review.md`（change-dir，多视角合并到同一文件）
 
@@ -366,8 +374,8 @@ skill 在 **change-dir** 查找输入文件、输出产出文件：
 
 **参考输入**：
 - review.md：<路径>（读取其中 Location 落在上述文件的问题，按优先级 CRITICAL → HIGH → MEDIUM → LOW 依次修复）
-- proposal.md 模板：`openspec-schema/schemas/spec-driven-enhanced/templates/proposal.md`
-- spec 模板：`openspec-schema/schemas/spec-driven-enhanced/templates/spec.md`
+- proposal.md 模板：`../../openspec-schema/schemas/spec-driven-enhanced/templates/proposal.md`
+- spec 模板：`../../openspec-schema/schemas/spec-driven-enhanced/templates/spec.md`
 
 **修复规则**：
 1. 只修改 Location 落在 proposal.md 或 specs/**/*.md 的问题
@@ -397,7 +405,7 @@ skill 在 **change-dir** 查找输入文件、输出产出文件：
 - 上游文档（按需读取，确保修复后仍然覆盖 specs 的 Requirement）：
   - proposal.md：<路径>
   - specs/**/*.md：<路径列表>
-- design.md 模板：`openspec-schema/schemas/spec-driven-enhanced/templates/design.md`
+- design.md 模板：`../../openspec-schema/schemas/spec-driven-enhanced/templates/design.md`
 
 **修复规则**：
 1. 只修改 Location 落在 design.md 的问题
