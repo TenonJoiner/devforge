@@ -35,21 +35,44 @@ parameters:
 
 ## 工作目录约定
 
-skill 在 **change-dir**（默认当前工作目录）查找输入文件、输出产出文件：
-- **change-dir**：由 `--change-dir <path>` 参数指定，无参数时默认当前工作目录
+skill 在 **change-dir** 查找输入文件、输出产出文件：
+- **change-dir**：最终要评审的 change 目录，目录下包含 `proposal.md`、`specs/**/*.md`、`design.md`
+- **change-dir 解析顺序**：
+  1. 用户显式传入 `--change-dir <path>` → 直接使用
+  2. 当前工作目录本身已是 change 目录（直接包含 `proposal.md` / `specs/` / `design.md` 中的至少一个） → 直接使用当前目录
+  3. 从当前工作目录向上递归查找 `openspec/changes/` → 在该目录下自动选择合适 change
+  4. 以上都失败 → 报错并提示用户
 - **输入**：`proposal.md`、`specs/**/*.md`、`design.md`
-- **输出**：`review.md`
+- **输出**：`review.md`（写入 change-dir）
 - **报告模板**：`openspec-schema/schemas/spec-driven-enhanced/templates/review.md`（review.md 格式模板）
 
 **调用方式**：
-- **手动调用**：用户先 `cd` 到包含 `proposal.md` 的目录，然后调用 `/df:spec-review`；或显式传入 `--change-dir <path>`
+- **手动调用**：用户先 `cd` 到 change 目录，然后调用 `/df:spec-review`；或显式传入 `--change-dir <path>`
 - **workflow 调用**：由主会话传入 `--change-dir <path>`，以指定目录为工作上下文
 
 ## 启动检测
 
-**change-dir**：由 `--change-dir <path>` 参数指定，无参数时默认当前工作目录。
+### 步骤 1：解析 change-dir
 
-**autofix 模式**：由 `autofix` 参数开启。
+按以下顺序确定 change-dir：
+
+1. **显式参数**：由 `--change-dir <path>` 参数指定，直接使用
+2. **当前目录即 change 目录**：当前工作目录下已存在 `proposal.md`、`specs/**/*.md`、`design.md` 中的至少一个，直接使用当前目录
+3. **自动发现 openspec/changes**：
+   - 从当前工作目录向上递归查找 `openspec/changes/` 目录
+   - 找到后，列出其下所有子目录，过滤出包含 `proposal.md`、`specs/**/*.md`、`design.md` 中至少一个的候选 change 目录
+   - **只有一个候选** → 自动作为 change-dir
+   - **多个候选** → 主会话根据上下文推断最合适的 change：
+     - 优先选择当前 git 分支名匹配的 change 目录
+     - 其次选择最近有文件修改的 change 目录
+     - 无法推断时，列出候选目录向用户确认
+   - **没有候选** → 报错：未找到可用 change 目录
+
+### 步骤 2：检测 autofix 模式
+
+由 `autofix` 参数开启。
+
+### 步骤 3：读取现有 review.md
 
 读取 change-dir 的 `review.md`：
 - **不存在** →
