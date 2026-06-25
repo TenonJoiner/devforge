@@ -138,6 +138,25 @@ rebase 交互式编辑规则：
 - agent 不检查目标分支是否受平台保护；推送被平台拦截时通知用户处理
 - 合并后，对应本地分支和 worktree 应当清理；持续维护型分支可在用户确认后保留
 
+### MR/PR 创建流程
+
+创建 MR/PR 前，必须完成以下步骤：
+
+1. 确认目标分支：默认目标分支为 `main`；从 `release/<version>` 切出的分支，目标分支为对应 `release/<version>`
+2. 获取目标分支最新变更：
+   ```bash
+   git fetch origin
+   git rebase origin/<target-branch>
+   ```
+3. 本地解决 rebase 冲突（如有），确保冲突解决后代码可编译且相关测试通过
+4. 将当前分支推送到远程：
+   ```bash
+   git push origin <current-branch>
+   ```
+5. 创建 MR/PR，目标分支为 `<target-branch>`
+
+禁止在 rebase 未完成、冲突未本地解决的情况下直接推送并创建 MR/PR。
+
 ### Merge 方式
 
 - 默认使用普通 merge（non-squash），保持 atomic commit 历史
