@@ -181,12 +181,12 @@ skill 在 **change-dir** 查找输入文件、输出产出文件：
 - **PASS** 或 **PASS WITH CONDITIONS** → 跳出循环，提示用户 autofix 完成；PASS WITH CONDITIONS 时 Tech Leader 需在最终决策中明确附加条件及闭环时限，附加条件可与 tasks 并行推进，但须在归档前完成
 - **REJECT** → 继续本轮修复（说明存在 CRITICAL，或单文档缺陷密度 > 6.0）
 
-#### 步骤 2：并行派遣修复 agent
+#### 步骤 2：串行派遣修复 agent
 
-根据实际存在的文件，并行派遣修复 agent。每个 agent 负责读取本轮 `review.md` 中的问题清单、定位自己负责的文件、执行修复并写回原文件。
+为避免同一轮内多个修复 agent 并行修改不同文件导致不一致，本轮修复按固定顺序**串行**执行：
 
-- **`product`（修复 proposal + specs）**：当 `proposal.md` 或 `specs/**/*.md` 存在时派遣；负责修复 location 落在这些文件上的问题
-- **`architect`（修复 design）**：当 `design.md` 存在时派遣；负责修复 location 落在 `design.md` 上的问题
+1. 先派遣 **`product`（修复 proposal + specs）**：当 `proposal.md` 或 `specs/**/*.md` 存在时派遣；负责修复 location 落在这些文件上的问题，写回后输出本轮修改摘要。
+2. 再派遣 **`architect`（修复 design）**：当 `design.md` 存在时派遣；负责修复 location 落在 `design.md` 上的问题。`architect` 执行前必须读取 `product` 本轮的修改摘要，并据此同步调整 design 中对应的 Requirement / Capability / 范围 / 术语表述。
 
 **问题归属规则**：
 - location 中文件路径属于 `proposal.md` 或 `specs/**/*.md` 的问题 → 由 `product` 修复
@@ -197,6 +197,10 @@ skill 在 **change-dir** 查找输入文件、输出产出文件：
 - **按优先级修复**：本轮评审中的 CRITICAL → HIGH → MEDIUM → LOW 问题
 - **信息不足时保留**：因信息不足无法修复的问题，转入「遗留问题 / 附加条件」，供 Tech Leader 决策时参考
 
+**同轮次一致性上下文**：
+- `architect` 修复 design 前，主会话必须将**本轮 `product` 已输出的修改摘要**作为 prompt 上下文传入。
+- 若 `product` 不存在（即本轮只改 design），则无同轮次摘要。
+
 #### 步骤 3：agent 修复并写回
 
 修复 agent 按以下要求执行：
@@ -206,6 +210,16 @@ skill 在 **change-dir** 查找输入文件、输出产出文件：
 4. 使用 `Edit` 工具直接修改原文件，禁止重写无关章节
 5. 若某个问题因信息不足无法修复，在修改摘要中说明并标记为残留风险
 6. 输出修改摘要：修改了哪些文件、修复了哪些问题（含原问题分级）、残留风险
+
+`architect` 额外要求：修复 design 前读取 `product` 本轮修改摘要；若 `product` 的修改改变了 Requirement / Capability / Scenario 的语义，必须同步检查 design.md 中对应表述并一并调整。
+
+#### 步骤 3.5：跨文档一致性同步检查
+
+`architect` 修复 design 写回后，派遣 `product-reviewer（cross-doc）` 做一轮轻量同步检查：
+
+- **只关注本轮修改涉及的内容**：重点检查 `product` 修改 proposal/specs 与 `architect` 修改 design 之间是否出现语义偏差、术语不一致或范围冲突。
+- **即时修正**：若同步检查发现问题，直接派遣对应修复 agent 修正，**不增加 autofix 轮次计数**。修正顺序仍遵循 product → architect，确保同轮次一致性闭环。
+- **输出**：同步检查摘要（新增不一致 + 已修正项），合并到本轮修复摘要中。
 
 #### 步骤 4：重新评审并追加 Round
 
@@ -513,7 +527,7 @@ skill 在 **change-dir** 查找输入文件、输出产出文件：
 
 **输出**：
 1. 直接修改原文件（proposal.md / specs/**/*.md）
-2. 修改摘要：修复了哪些问题（含原分级）、修改了哪些文件、未修复的问题及原因、残留风险
+2. 修改摘要：修复了哪些问题（含原分级）、修改了哪些文件、未修复的问题及原因、残留风险。摘要须清晰说明哪些 Requirement / Capability / Scenario 的语义发生了变化，供后续 `architect` agent 同步 design 时参考。
 ```
 
 ### architect agent（autofix 修复 design）
@@ -528,6 +542,7 @@ skill 在 **change-dir** 查找输入文件、输出产出文件：
 
 **参考输入**：
 - review.md：<路径>（读取其中 Location 落在 design.md 的问题）
+- 同轮次 `product` 修改摘要：<product 本轮修改摘要>（修复前读取，评估 proposal/specs 的语义变化是否要求 design 同步调整）
 - 上游文档（按需读取，确保修复后仍然覆盖 specs 的 Requirement）：
   - proposal.md：<路径>
   - specs/**/*.md：<路径列表>
@@ -535,8 +550,9 @@ skill 在 **change-dir** 查找输入文件、输出产出文件：
 
 **修复范围**：
 1. **按优先级修复**：本轮 review.md 中 Location 落在 design.md 的问题，按 CRITICAL → HIGH → MEDIUM → LOW 顺序处理
-2. **LOW 问题**：格式、拼写、minor 文案等 LOW 问题可视修复成本跳过
-3. **信息不足时保留**：因信息不足无法修复的问题，在修改摘要中列出并说明原因
+2. **同步上游变化**：读取 `product` 本轮修改摘要后，若 Requirement / Capability / Scenario 语义发生变化，必须同步调整 design.md 中的对应 Decision / 接口 / 范围 / 术语表述
+3. **LOW 问题**：格式、拼写、minor 文案等 LOW 问题可视修复成本跳过
+4. **信息不足时保留**：因信息不足无法修复的问题，在修改摘要中列出并说明原因
 
 **修复规则**：
 1. 只修改 Location 落在 design.md 的问题
@@ -547,7 +563,7 @@ skill 在 **change-dir** 查找输入文件、输出产出文件：
 
 **输出**：
 1. 直接修改原文件（design.md）
-2. 修改摘要：修复了哪些问题（含原分级）、修改了哪些文件、未修复的问题及原因、残留风险
+2. 修改摘要：修复了哪些问题（含原分级）、修改了哪些文件、未修复的问题及原因、残留风险。摘要须清晰说明是否因同步 `product` 修改而调整了 design 中的对应表述。
 ```
 
 ---
