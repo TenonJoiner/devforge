@@ -40,7 +40,7 @@ skill 在 **change-dir** 查找输入文件、输出产出文件：
 - **change-dir 解析顺序**：
   1. 用户显式传入 `--change-dir <path>` → 直接使用
   2. 当前工作目录本身已是 change 目录（直接包含 `proposal.md` / `specs/` / `design.md` 中的至少一个） → 直接使用当前目录
-  3. 从当前工作目录向上递归查找 `openspec/changes/` → 在该目录下自动选择合适 change
+  3. 在当前工作目录下查找 `openspec/changes/` → 在该目录下自动选择合适 change
   4. 以上都失败 → 报错并提示用户
 - **输入**：`proposal.md`、`specs/**/*.md`、`design.md`
 - **输出**：`review.md`（写入 change-dir）
@@ -59,7 +59,7 @@ skill 在 **change-dir** 查找输入文件、输出产出文件：
 1. **显式参数**：由 `--change-dir <path>` 参数指定，直接使用
 2. **当前目录即 change 目录**：当前工作目录下已存在 `proposal.md`、`specs/**/*.md`、`design.md` 中的至少一个，直接使用当前目录
 3. **自动发现 openspec/changes**：
-   - 从当前工作目录向上递归查找 `openspec/changes/` 目录
+   - 在当前工作目录下查找 `openspec/changes/` 目录
    - 找到后，列出其下所有子目录，过滤出包含 `proposal.md`、`specs/**/*.md`、`design.md` 中至少一个的候选 change 目录
    - **只有一个候选** → 自动作为 change-dir
    - **多个候选** → 主会话根据上下文推断最合适的 change：
