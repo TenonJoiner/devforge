@@ -146,16 +146,20 @@ rebase 交互式编辑规则：
 2. 获取目标分支最新变更：
    ```bash
    git fetch origin
-   git rebase origin/<target-branch>
    ```
-3. 本地解决 rebase 冲突（如有），确保冲突解决后代码可编译且相关测试通过
-4. 将当前分支推送到远程：
+3. 将目标分支合并到当前分支：
+   ```bash
+   git merge origin/<target-branch>
+   ```
+   若提示已是最新，则跳过后续冲突解决，直接推送。
+4. 本地解决冲突（如有），确保冲突解决后代码可编译且相关测试通过
+5. 将当前分支推送到远程：
    ```bash
    git push origin <current-branch>
    ```
-5. 创建 MR/PR，目标分支为 `<target-branch>`
+6. 创建 MR/PR，目标分支为 `<target-branch>`
 
-禁止在 rebase 未完成、冲突未本地解决的情况下直接推送并创建 MR/PR。
+禁止在同步未完成、冲突未本地解决的情况下直接推送并创建 MR/PR。
 
 ### Merge 方式
 
@@ -203,7 +207,7 @@ rebase 交互式编辑规则：
 - 临时快照是否已整理为 atomic commit？
 - worktree 目录是否符合项目约定？
 - worktree 内是否未直接修改基线分支？
-- 是否已根据当前分支基线执行过 rebase？
+- 当前分支是否已包含目标分支最新提交？
 
 ## 人机交互边界
 
