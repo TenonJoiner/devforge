@@ -1,10 +1,10 @@
 ---
 name: devforge-spec-review
-description: 文档评审 skill，单轮全维度扫描，输出 review.md 报告。评审 proposal/specs/design 三类文档，输出问题清单（CRITICAL/HIGH/MEDIUM/LOW）+ AI 建议决策。默认不做修复、不执行门径；带 autofix 时进入自动修复循环。用于特性级 workflow 的 review artifact 生成或手动临时体检。
+description: 文档评审 skill，按各维度的通过标准逐项判定，输出 review.md 报告。评审 proposal/specs/design 三类文档，输出未达标问题清单（CRITICAL/HIGH/MEDIUM/LOW）+ AI 建议决策。默认只评审不修复；带 autofix 时按优先级自动修复所有级别问题并以全新上下文重新评审，最多 3 轮。用于特性级 workflow 的 review artifact 生成或临时评审。
 allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
 parameters:
   - name: autofix
-    description: 评审后自动修复文档问题（默认只评审不修复）
+    description: 评审后按优先级自动修复所有级别问题（CRITICAL/HIGH/MEDIUM/LOW），默认只评审不修复
     required: false
     default: false
 ---
@@ -14,22 +14,21 @@ parameters:
 ## 概述
 
 文档评审是 design 完成后、实现前的质量体检。本 skill 产出 review.md，包含两部分：
-1. **AI 评审报告**：单轮扫描，输出问题清单（按 CRITICAL/HIGH/MEDIUM/LOW 分级）+ AI 建议决策
+1. **AI 评审报告**：按各项维度的「通过标准」逐项判定，输出未达标问题清单（按 CRITICAL / HIGH / MEDIUM / LOW 分级）+ AI 建议决策
 2. **Tech Leader 最终决策区**：留空，由 Tech Leader 在 OpenSpec 流程中人工填写
 
 **两种运行模式**：
-- **默认模式**：单轮扫描，输出问题清单，**不做修复**。用于生成 review artifact 或临时体检
-- **`autofix` 模式**：评审后若未达 PASS，自动派遣修复 agent 修改问题，重新评审，最多循环 3 轮。循环结束后仍未 PASS 的，输出最终 review.md 供人工决策
+- **默认模式**：单轮评审判定，输出问题清单，**不做修复**。用于生成 review artifact 或临时评审
+- **`autofix` 模式**：评审后若未达 PASS，自动派遣修复 agent 按优先级修复各级问题（CRITICAL → HIGH → MEDIUM → LOW），然后以全新上下文重新评审，最多循环 3 轮。循环结束后仍未 PASS 的，输出最终 review.md 供人工决策
 
 **与 skill 内化评审的关系**：
 - feature-research / feature-define / feature-design 三个 skill 内部已经做过深度评审循环（最多 3 轮自修），保证基础质量
-- 本 skill 是「质量体检 + 报告产出」：默认单轮扫描 19 项核心维度；`autofix` 模式下额外提供独立的外部修复循环
+- 本 skill 是「质量判定 + 报告产出」：默认单轮按各项核心维度的通过标准判定；`autofix` 模式下按优先级自动修复各级问题
 
 **核心原则**：
-1. **默认单轮扫描**：不带 `autofix` 时不做修复循环，只输出问题清单
+1. **判定达标而非穷举问题**：每个维度有明确「通过标准」，满足即不提出问题，只在未满足时记录问题
 2. **19 项核心维度**：跨文档一致性（6 项）+ Proposal 质量（2 项）+ Specs 质量（4 项）+ Design 质量（7 项）
 3. **只做报告，不执行门径**：AI 建议决策写入报告，最终人工决策由 OpenSpec 流程控制
-4. **双模式触发**：workflow 自动触发 + 手动临时体检
 
 ---
 
@@ -100,8 +99,7 @@ skill 在 **change-dir** 查找输入文件、输出产出文件：
 
 1. **验证输入存在性**：确认 change-dir 下存在 `proposal.md`、`specs/**/*.md`、`design.md` 中的至少一个；一个都不存在则立即报错并停止。存在多个时，由 agent 按需评审实际存在的文件。
 2. **发现产品级架构文档**：用 `Glob` 列出项目根目录 `docs/architecture/` 下可能与本次变更相关的文件路径，供 architect-reviewer 读取。
-3. **统计 spec 文件数**：用于后续缺陷密度计算的文档总数。
-4. **读取 review.md template**：`../../openspec-schema/schemas/spec-driven-enhanced/templates/review.md`，作为组装最终 review.md 的格式依据。
+3. **读取 review.md template**：`../../openspec-schema/schemas/spec-driven-enhanced/templates/review.md`，作为组装最终 review.md 的格式依据。
 
 主会话**不读取** proposal.md / specs/**/*.md / design.md / 产品级架构文档的内容；由各 agent 在 prompt 中按需读取。
 
@@ -127,8 +125,7 @@ skill 在 **change-dir** 查找输入文件、输出产出文件：
 
 **缺陷密度计算公式**：
 ```
-单文档缺陷密度 = 该文档的问题分数之和 / 1
-全局缺陷密度 = 所有文档的问题分数之和 / 实际存在的文档总数
+单文档缺陷密度 = 该文档的问题分数之和
 ```
 
 问题分值：**CRITICAL=10分, HIGH=3分, MEDIUM=1分, LOW=0.1分**
@@ -137,14 +134,21 @@ skill 在 **change-dir** 查找输入文件、输出产出文件：
 - proposal.md：1 个 HIGH（3 分）+ 2 个 MEDIUM（2 分）= 5 分
 - spec1.md：1 个 CRITICAL（10 分）= 10 分
 - design.md：3 个 MEDIUM（3 分）= 3 分
-- 全局缺陷密度 = (5 + 10 + 3) / 3 = 6.0
 
 ### [4] AI 建议决策
 
-根据缺陷密度和 CRITICAL 问题数，给出 AI 建议：
-- **PASS**：所有文档单文档缺陷密度均 ≤ 2.0，且无 CRITICAL 问题
-- **PASS WITH CONDITIONS**：无 CRITICAL 问题，但有文档单文档缺陷密度 > 2.0（仅 MEDIUM/LOW 累积超标）
-- **REJECT**：任一文档有 CRITICAL 问题，或全局缺陷密度 > 5.0
+根据各文档缺陷密度、CRITICAL 问题数和 HIGH 问题数，给出 AI 建议。评审目标是**判定文档是否达到进入 tasks 阶段的最低质量标准**，而非穷举所有可改进点。
+
+**问题分级判定标准**（reviewer 必须按此归类）：
+- **CRITICAL**：存在事实错误、与上游文档直接矛盾、无法通过实现弥补的根本缺陷、或违反安全/合规等硬性约束。必须修复，否则不能 PASS。
+- **HIGH**：缺少关键信息或分析不足，显著影响质量。必须全部修复才能 PASS；带 1-2 个 HIGH 可 PASS WITH CONDITIONS。
+- **MEDIUM**：表述可更清晰、边界可更完整、建议补充的优化项。
+- **LOW**：格式、拼写、minor 文案。
+
+**AI 建议决策**：
+- **PASS**：无 CRITICAL 和 HIGH；单文档缺陷密度 ≤ 3.0
+- **PASS WITH CONDITIONS**：无 CRITICAL；单文档缺陷密度 > 3.0 但 ≤ 6.0（由 1-2 个 HIGH 或较多 MEDIUM/LOW 导致）
+- **REJECT**：存在 CRITICAL；或单文档缺陷密度 > 6.0
 
 ### [5] 写入 review.md
 
@@ -166,7 +170,7 @@ skill 在 **change-dir** 查找输入文件、输出产出文件：
 ### 循环条件
 
 以下两个条件同时满足时继续循环：
-1. 当前 `review.md` 的 AI 建议决策不是 **PASS**
+1. 当前 `review.md` 的 AI 建议决策是 **REJECT**
 2. 已执行的修复轮次 < 3
 
 ### 每轮循环步骤
@@ -174,12 +178,12 @@ skill 在 **change-dir** 查找输入文件、输出产出文件：
 #### 步骤 1：主会话判断是否需要修复
 
 主会话从当前 `review.md` 的 `## Review Conclusion` 部分读取 AI 建议决策（不需要读取完整问题清单）：
-- **PASS** → 跳出循环，提示用户 autofix 完成
-- **PASS WITH CONDITIONS / REJECT** → 继续本轮修复
+- **PASS** 或 **PASS WITH CONDITIONS** → 跳出循环，提示用户 autofix 完成；PASS WITH CONDITIONS 时 Tech Leader 需在最终决策中明确附加条件及闭环时限，附加条件可与 tasks 并行推进，但须在归档前完成
+- **REJECT** → 继续本轮修复（说明存在 CRITICAL，或单文档缺陷密度 > 6.0）
 
 #### 步骤 2：并行派遣修复 agent
 
-根据实际存在的文件，并行派遣修复 agent。每个 agent 负责读取 `review.md` 中的问题清单、定位自己负责的文件、执行修复并写回原文件。
+根据实际存在的文件，并行派遣修复 agent。每个 agent 负责读取本轮 `review.md` 中的问题清单、定位自己负责的文件、执行修复并写回原文件。
 
 - **`product`（修复 proposal + specs）**：当 `proposal.md` 或 `specs/**/*.md` 存在时派遣；负责修复 location 落在这些文件上的问题
 - **`architect`（修复 design）**：当 `design.md` 存在时派遣；负责修复 location 落在 `design.md` 上的问题
@@ -189,14 +193,19 @@ skill 在 **change-dir** 查找输入文件、输出产出文件：
 - location 中文件路径属于 `design.md` 的问题 → 由 `architect` 修复
 - 一个问题跨多个文件时，各文件由对应 agent 分别修复；agent 读取问题时应自行判断与本职相关的部分
 
+**修复范围**（autofix 每轮保持全新上下文，不以上一轮问题是否关闭作为判断标准）：
+- **按优先级修复**：本轮评审中的 CRITICAL → HIGH → MEDIUM → LOW 问题
+- **信息不足时保留**：因信息不足无法修复的问题，转入「遗留问题 / 附加条件」，供 Tech Leader 决策时参考
+
 #### 步骤 3：agent 修复并写回
 
 修复 agent 按以下要求执行：
-1. 读取 `review.md` 中自己负责文件的问题清单
+1. 读取本轮 `review.md` 中自己负责文件的问题清单
 2. 读取对应模板（proposal/spec/design template）确认格式约束
-3. 对 MEDIUM / HIGH / CRITICAL 问题执行修复；LOW 问题可选择性修复
+3. 按优先级 CRITICAL → HIGH → MEDIUM → LOW 依次修复；LOW 问题可视修复成本跳过
 4. 使用 `Edit` 工具直接修改原文件，禁止重写无关章节
-5. 输出修改摘要：修改了哪些文件、修复了哪些问题、引入了哪些值得重新评审的变化
+5. 若某个问题因信息不足无法修复，在修改摘要中说明并标记为残留风险
+6. 输出修改摘要：修改了哪些文件、修复了哪些问题（含原问题分级）、残留风险
 
 #### 步骤 4：重新评审并追加 Round
 
@@ -224,34 +233,91 @@ skill 在 **change-dir** 查找输入文件、输出产出文件：
 
 ## 评审标准
 
-以下维度清单用于主会话调度、状态跟踪和计分。各维度的具体评审定义见对应 agent prompt 中的「评审标准定义」。
+以下维度清单用于主会话调度、状态跟踪和计分。**各维度不再追求“找出尽量多问题”，而是按「通过标准」判定：满足通过标准时，不在该维度提出问题；未满足时，按问题分级标准记录 CRITICAL / HIGH / MEDIUM / LOW。**
 
-**跨文档一致性与格式合规**（由 `product-reviewer（cross-doc）` 统一评审）：
-- 模板符合性
-- 内部一致性
-- 同一外部行为一致性
-- 范围一致性
-- 跨文档叙事连贯性
-- 写作质量与外部视角
+### 跨文档一致性与格式合规（由 `product-reviewer（cross-doc）` 统一评审）
 
-**Proposal 质量**（由 `product-reviewer（proposal + specs）` 评审）：
-- 动机合理性
-- 方案合理性
+1. **模板符合性**
+   - 通过标准：各文档章节结构、必填项、自检清单与对应 template 一致；缺失章节有合理说明或标注为 N/A。
+   - 触发问题：关键必填项缺失、章节顺序严重错乱、未按模板自检清单执行。
 
-**Specs 质量**（由 `product-reviewer（proposal + specs）` 评审）：
-- 需求合理性与必要性
-- 需求完整性与边界
-- 需求清晰性与可验收性
-- 异常路径与非功能需求
+2. **内部一致性**
+   - 通过标准：Capability、Requirement、Design/Decisions 之间无矛盾；Interface Changes 覆盖 proposal Impact 中识别的接口/协议/数据格式影响方向；Risks / Upgrade Impact 覆盖 specs 中 NFR 的关键风险。
+   - 触发问题：同一 Requirement 在 design 中未被覆盖、Impact 与 Interface Changes 范围矛盾、NFR 风险无对应处理。
 
-**Design 质量**（由 `architect-reviewer` 评审）：
-- 方案可行性与合理性
-- 方案竞争力
-- 架构一致性
-- 设计内部一致性
-- 可维护性与故障处理
-- 决策备选方案
-- 性能与升级影响评估
+3. **同一外部行为一致性**
+   - 通过标准：同一 Capability / Requirement 对应的外部可见行为在三类文档中的描述一致（正常路径、异常路径、边界条件）。
+   - 触发问题：正常/异常/边界行为在不同文档中描述冲突或遗漏。
+
+4. **范围一致性**
+   - 通过标准：proposal 的 Capabilities / What Changes / Impact 所表达的范围在 specs 和 design 中得到尊重；design 的 Goals / Non-Goals 与 proposal 的范围一致。
+   - 触发问题：design 引入 proposal 未声明的范围、specs 遗漏 proposal 明确承诺的能力。
+
+5. **跨文档叙事连贯性**
+   - 通过标准：三类文档组合起来形成清晰、可读的变更故事线；专有名词、术语一致。
+   - 触发问题：术语前后不一致、叙事断裂到无法判断变更目的。
+
+6. **写作质量与外部视角**
+   - 通过标准：从外部调用方/用户视角描述可见行为；proposal/spec 只承载 **why** 和 **what**，design 承载 **how**；术语准确、长句可理解；文字本身能独立表达方案。
+   - 触发问题：proposal/spec 中出现研发视角的内部架构、数据结构、算法、接口实现等 how 细节；关键段落歧义到影响理解、术语错误导致误解。
+
+### Proposal 质量（由 `product-reviewer（proposal + specs）` 评审）
+
+7. **动机合理性**
+   - 通过标准：Why 清晰说明问题根因、业务价值、影响范围；核心假设有数据或现状支撑；不只是表面描述。
+   - 触发问题：问题根因缺失、业务价值无法量化或无法追溯、影响范围未定义。
+
+8. **方案合理性**
+   - 通过标准：Capabilities 从外部调用方/用户视角定义，是可见的行为能力或质量属性承诺；只描述 **what**（外部可见行为），不描述 **how**（实现方案、技术选型、内部架构）；覆盖完整且粒度适当（能独立验收、避免为内部实现动作拆分过细）；命名规范；Acceptance Criteria 可验证；考虑过替代方案。
+   - 触发问题：Capabilities 为内部实现动作、包含研发视角的技术方案或架构细节、Acceptance Criteria 不可验证、完全无替代方案分析。
+
+### Specs 质量（由 `product-reviewer（proposal + specs）` 评审）
+
+9. **需求合理性与必要性**
+   - 通过标准：每条 Requirement 合理、必要，不过度、不遗漏、不矛盾，能追溯到 proposal 的 Capability。
+   - 触发问题：Requirement 与 Capability 无法对应、存在明显过度设计或遗漏核心需求、需求间矛盾。
+
+10. **需求完整性与边界**
+    - 通过标准：Requirement 集合从领域视角覆盖问题域，边界明确（不做什么 + 理由）。
+    - 触发问题：核心场景缺失、边界未说明导致范围失控。
+
+11. **需求清晰性与可验收性**
+    - 通过标准：每条 Requirement 从用户/调用方视角清晰无歧义，只描述 **what**（外部可见行为与预期结果），不描述 **how**（内部实现步骤）；可独立验收；Scenario 使用 WHEN/THEN 表达可验证的预期结果，测试人员能据此推导集成测试用例。
+    - 触发问题：Requirement 描述内部实现动作而非外部可见行为、无法验收、Scenario 缺少 THEN 或预期结果模糊。
+
+12. **异常路径与非功能需求**
+    - 通过标准：异常路径从业务语义出发；Non-Functional Requirements 覆盖所需维度，指标可量化、可验证并落地到 Requirement。
+    - 触发问题：核心异常路径缺失、NFR 指标不可量化或与 Requirement 脱节。
+
+### Design 质量（由 `architect-reviewer` 评审）
+
+13. **方案可行性与合理性**
+    - 通过标准：技术方案能满足 specs 的每条 Requirement；关键决策有 trade-off 分析。
+    - 触发问题：技术方案无法满足 Requirement、关键决策无任何 trade-off。
+
+14. **方案竞争力**
+    - 通过标准：对比业界标准或已知方案，在性能、可扩展性、成本等关键维度有说服力。
+    - 触发问题：关键维度完全未与业界对比、明显劣于标准方案却无正当理由。
+
+15. **架构一致性**
+    - 通过标准：不违反 `docs/architecture/` 中的架构原则；如有偏差须显式说明原因。
+    - 触发问题：违反已声明的架构原则且未说明原因。
+
+16. **设计内部一致性**
+    - 通过标准：Decision 之间无矛盾，接口定义与实现方案匹配。
+    - 触发问题：Decisions 相互矛盾、接口与实现不匹配。
+
+17. **可维护性与故障处理**
+    - 通过标准：复杂度合理、不过度工程化；关键路径的失败模式、降级策略、恢复机制充分。
+    - 触发问题：关键路径无失败模式分析、无降级策略、复杂度明显过度。
+
+18. **决策备选方案**
+    - 通过标准：有选择空间的决策有备选方案和 trade-off 分析。
+    - 触发问题：重大决策无备选方案、无选择理由。
+
+19. **性能与升级影响评估**
+    - 通过标准：关键路径延迟和吞吐量有量化分析；Upgrade Impact 识别升级流程风险并对应 spec NFR 目标。
+    - 触发问题：关键性能指标无量化、升级风险未识别。
 
 ---
 
@@ -274,17 +340,35 @@ skill 在 **change-dir** 查找输入文件、输出产出文件：
 
 **review_output_path**：`review.md`（change-dir，多视角合并到同一文件）
 
-**评审维度与标准**（按此逐项评审；具体章节要求以 template 文件为准）：
+**评审维度与标准**（按此逐项评审；具体章节要求以 template 文件为准；**满足「通过标准」的维度不必提出问题，只在未满足时按问题分级标准记录问题**）：
+
+**问题分级标准**：
+- **CRITICAL**：事实错误、与上游文档直接矛盾、无法通过实现弥补的根本缺陷、违反安全/合规约束。
+- **HIGH**：缺少关键信息或分析不足，显著影响质量。
+- **MEDIUM**：表述可更清晰、边界可更完整。
+- **LOW**：格式、拼写、minor 文案。
 
 **Proposal 质量**
-- **动机合理性**：Why 清晰说明问题根因、业务价值、影响范围，不只是表面描述
-- **方案合理性**：Capabilities 从外部调用方/用户视角定义，是可见的行为能力或质量属性承诺；覆盖完整且粒度适当（能独立验收、避免为内部实现动作拆分过细）；命名规范；Acceptance Criteria 可验证；考虑过替代方案
+- **动机合理性**
+  - 通过标准：Why 清晰说明问题根因、业务价值、影响范围；核心假设有数据或现状支撑。
+  - 触发问题：问题根因缺失、业务价值无法追溯、影响范围未定义。
+- **方案合理性**
+  - 通过标准：Capabilities 从外部视角定义，只描述 **what**（外部可见行为），不描述 **how**（实现方案、技术选型、内部架构）；可独立验收；Acceptance Criteria 可验证；考虑过替代方案。
+  - 触发问题：Capabilities 为内部实现动作、包含研发视角的技术方案或架构细节、Acceptance Criteria 不可验证、完全无替代方案分析。
 
 **Specs 质量**
-- **需求合理性与必要性**：每条 Requirement 合理、必要，不过度、不遗漏、不矛盾，能追溯到 proposal 的 Capability
-- **需求完整性与边界**：Requirement 集合从领域视角覆盖问题域，边界明确（不做什么 + 理由）
-- **需求清晰性与可验收性**：每条 Requirement 清晰无歧义，可独立验收；Scenario 使用 WHEN/THEN 表达可验证的预期结果，测试人员能据此推导集成测试用例
-- **异常路径与非功能需求**：异常路径从业务语义出发；Non-Functional Requirements 覆盖所需维度，指标可量化、可验证并落地到 Requirement
+- **需求合理性与必要性**
+  - 通过标准：每条 Requirement 合理、必要、不矛盾，能追溯到 proposal 的 Capability。
+  - 触发问题：Requirement 与 Capability 无法对应、明显过度/遗漏核心需求、需求间矛盾。
+- **需求完整性与边界**
+  - 通过标准：Requirement 集合覆盖问题域，边界明确（不做什么 + 理由）。
+  - 触发问题：核心场景缺失、边界未说明导致范围失控。
+- **需求清晰性与可验收性**
+  - 通过标准：每条 Requirement 从用户/调用方视角清晰无歧义，只描述 **what**（外部可见行为与预期结果），不描述 **how**（内部实现步骤）、可独立验收；Scenario 使用 WHEN/THEN 表达可验证预期。
+  - 触发问题：Requirement 描述内部实现动作而非外部可见行为、无法验收、Scenario 缺少 THEN 或预期结果模糊。
+- **异常路径与非功能需求**
+  - 通过标准：异常路径从业务语义出发；NFR 指标可量化、可验证并落地到 Requirement。
+  - 触发问题：核心异常路径缺失、NFR 指标不可量化或与 Requirement 脱节。
 
 **输出**：
 问题清单（CRITICAL / HIGH / MEDIUM / LOW），每个问题标注 Location（文件:章节）。
@@ -310,16 +394,36 @@ skill 在 **change-dir** 查找输入文件、输出产出文件：
 
 **review_output_path**：`review.md`（change-dir，多视角合并到同一文件）
 
-**评审维度与标准**（按此逐项评审；具体章节要求以 template 文件为准）：
+**评审维度与标准**（按此逐项评审；具体章节要求以 template 文件为准；**满足「通过标准」的维度不必提出问题，只在未满足时按问题分级标准记录问题**）：
+
+**问题分级标准**：
+- **CRITICAL**：事实错误、与上游文档直接矛盾、无法通过实现弥补的根本缺陷、违反安全/合规约束。
+- **HIGH**：缺少关键信息或分析不足，显著影响质量。
+- **MEDIUM**：表述可更清晰、边界可更完整。
+- **LOW**：格式、拼写、minor 文案。
 
 **Design 质量**
-- **方案可行性与合理性**：技术方案能满足 specs 的每条 Requirement；关键决策有 trade-off 分析
-- **方案竞争力**：对比业界标准或已知方案，在性能、可扩展性、成本等关键维度有说服力
-- **架构一致性**：不违反 docs/architecture/ 中的架构原则，如有偏差须显式说明原因
-- **设计内部一致性**：Decision 之间无矛盾，接口定义与实现方案匹配
-- **可维护性与故障处理**：复杂度合理、不过度工程化；关键路径的失败模式、降级策略、恢复机制充分
-- **决策备选方案**：有选择空间的决策有备选方案和 trade-off 分析
-- **性能与升级影响评估**：关键路径延迟和吞吐量有量化分析；Upgrade Impact 识别升级流程风险并对应 spec NFR 目标
+- **方案可行性与合理性**
+  - 通过标准：技术方案能满足 specs 的每条 Requirement；关键决策有 trade-off 分析。
+  - 触发问题：技术方案无法满足 Requirement、关键决策无任何 trade-off。
+- **方案竞争力**
+  - 通过标准：对比业界标准或已知方案，在性能、可扩展性、成本等关键维度有说服力。
+  - 触发问题：关键维度完全未与业界对比、明显劣于标准方案却无正当理由。
+- **架构一致性**
+  - 通过标准：不违反 docs/architecture/ 中的架构原则；如有偏差须显式说明原因。
+  - 触发问题：违反已声明的架构原则且未说明原因。
+- **设计内部一致性**
+  - 通过标准：Decision 之间无矛盾，接口定义与实现方案匹配。
+  - 触发问题：Decisions 相互矛盾、接口与实现不匹配。
+- **可维护性与故障处理**
+  - 通过标准：复杂度合理、不过度工程化；关键路径的失败模式、降级策略、恢复机制充分。
+  - 触发问题：关键路径无失败模式分析、无降级策略、复杂度明显过度。
+- **决策备选方案**
+  - 通过标准：有选择空间的决策有备选方案和 trade-off 分析。
+  - 触发问题：重大决策无备选方案、无选择理由。
+- **性能与升级影响评估**
+  - 通过标准：关键路径延迟和吞吐量有量化分析；Upgrade Impact 识别升级流程风险并对应 spec NFR 目标。
+  - 触发问题：关键性能指标无量化、升级风险未识别。
 
 **输出**：
 问题清单（CRITICAL / HIGH / MEDIUM / LOW），每个问题标注 Location（文件:章节）。
@@ -344,14 +448,32 @@ skill 在 **change-dir** 查找输入文件、输出产出文件：
 
 **review_output_path**：`review.md`（change-dir，多视角合并到同一文件）
 
-**评审维度与标准**（按此逐项评审；具体章节要求以 template 文件为准；第 2-5 项需至少两个文档存在时才可检查）：
+**评审维度与标准**（按此逐项评审；具体章节要求以 template 文件为准；第 2-5 项需至少两个文档存在时才可检查；**满足「通过标准」的维度不必提出问题，只在未满足时按问题分级标准记录问题**）：
 
-1. **模板符合性**：proposal/specs/design 是否分别遵循对应模板的章节结构、必填项和自检清单
-2. **内部一致性**：Capability、Requirement、Design/Decisions 之间无矛盾；Interface Changes 覆盖 proposal Impact 中识别的接口/协议/数据格式影响方向；Risks / Upgrade Impact 覆盖 specs 中 NFR 的关键风险
-3. **同一外部行为一致性**：同一 Capability / Requirement 对应的外部可见行为在三类文档中的描述一致（包括正常路径、异常路径、边界条件）
-4. **范围一致性**：proposal 的 Capabilities / What Changes / Impact 所表达的范围在 specs 和 design 中得到尊重；design 的 Goals / Non-Goals 与 proposal 的范围一致
-5. **跨文档叙事连贯性**：三类文档组合起来形成清晰、可读的变更故事线；专有名词、术语一致
-6. **写作质量与外部视角**：从外部调用方/用户视角描述可见行为，避免源码级细节；术语准确、长句拆分、叙事清晰；鼓励图文并茂，但文字本身能独立表达方案
+**问题分级标准**：
+- **CRITICAL**：事实错误、与上游文档直接矛盾、无法通过实现弥补的根本缺陷、违反安全/合规约束。
+- **HIGH**：缺少关键信息或分析不足，显著影响质量。
+- **MEDIUM**：表述可更清晰、术语可更统一。
+- **LOW**：格式、拼写、minor 文案。
+
+1. **模板符合性**
+   - 通过标准：proposal/specs/design 分别遵循对应模板的章节结构、必填项和自检清单；缺失章节有合理说明或标注 N/A。
+   - 触发问题：关键必填项缺失、章节顺序严重错乱、未按模板自检清单执行。
+2. **内部一致性**
+   - 通过标准：Capability、Requirement、Design/Decisions 之间无矛盾；Interface Changes 覆盖 proposal Impact 中识别的接口/协议/数据格式影响方向；Risks / Upgrade Impact 覆盖 specs 中 NFR 的关键风险。
+   - 触发问题：同一 Requirement 在 design 中未被覆盖、Impact 与 Interface Changes 范围矛盾、NFR 风险无对应处理。
+3. **同一外部行为一致性**
+   - 通过标准：同一 Capability / Requirement 对应的外部可见行为在三类文档中的描述一致（正常路径、异常路径、边界条件）。
+   - 触发问题：正常/异常/边界行为在不同文档中描述冲突或遗漏。
+4. **范围一致性**
+   - 通过标准：proposal 的 Capabilities / What Changes / Impact 所表达的范围在 specs 和 design 中得到尊重；design 的 Goals / Non-Goals 与 proposal 的范围一致。
+   - 触发问题：design 引入 proposal 未声明的范围、specs 遗漏 proposal 明确承诺的能力。
+5. **跨文档叙事连贯性**
+   - 通过标准：三类文档组合起来形成清晰、可读的变更故事线；专有名词、术语一致。
+   - 触发问题：术语前后不一致、叙事断裂到无法判断变更目的。
+6. **写作质量与外部视角**
+   - 通过标准：从外部调用方/用户视角描述可见行为；proposal/spec 只承载 **why** 和 **what**，design 承载 **how**；术语准确、长句可理解；文字本身能独立表达方案。
+   - 触发问题：proposal/spec 中出现研发视角的内部架构、数据结构、算法、接口实现等 how 细节；关键段落歧义到影响理解、术语错误导致误解。
 
 **输出**：
 问题清单（CRITICAL / HIGH / MEDIUM / LOW），每个问题标注 Location（文件:章节）。
@@ -364,60 +486,68 @@ skill 在 **change-dir** 查找输入文件、输出产出文件：
 ### product agent（autofix 修复 proposal + specs）
 
 ```
-当前是 review 的 autofix 阶段，负责根据 review.md 中的问题清单修复 proposal.md 和 specs/**/*.md。
+当前是 review 的 autofix 阶段，负责根据本轮 review.md 中的问题清单修复 proposal.md 和 specs/**/*.md。
 
-**任务**：修复属于你负责文件的问题。
+**任务**：按优先级 CRITICAL → HIGH → MEDIUM → LOW 修复属于你负责文件的问题，LOW 问题可视修复成本跳过。
 
 **负责修复的文件**：
 - proposal.md：<路径>（如存在）
 - specs/**/*.md：<路径列表>（如存在）
 
 **参考输入**：
-- review.md：<路径>（读取其中 Location 落在上述文件的问题，按优先级 CRITICAL → HIGH → MEDIUM → LOW 依次修复）
+- review.md：<路径>（读取其中 Location 落在上述文件的问题）
 - proposal.md 模板：`../../openspec-schema/schemas/spec-driven-enhanced/templates/proposal.md`
 - spec 模板：`../../openspec-schema/schemas/spec-driven-enhanced/templates/spec.md`
+
+**修复范围**：
+1. **按优先级修复**：本轮 review.md 中 Location 落在负责文件的问题，按 CRITICAL → HIGH → MEDIUM → LOW 顺序处理
+2. **LOW 问题**：格式、拼写、minor 文案等 LOW 问题可视修复成本跳过
+3. **信息不足时保留**：因信息不足无法修复的问题，在修改摘要中列出并说明原因
 
 **修复规则**：
 1. 只修改 Location 落在 proposal.md 或 specs/**/*.md 的问题
 2. 修复时必须保持对应模板的章节结构和必填项
-3. 优先修复 CRITICAL / HIGH / MEDIUM；LOW 问题可选择性修复
-4. 禁止为修复一个问题而破坏其他已通过评审的维度
-5. 禁止重写无关章节；优先使用 Edit 做局部修改
-6. 若某个问题因信息不足无法修复，在修改摘要中说明并标记为残留风险
+3. 禁止为修复一个问题而破坏其他已通过评审的维度
+4. 禁止重写无关章节；优先使用 Edit 做局部修改
+5. 若某个问题因信息不足无法修复，在修改摘要中说明并标记为残留风险
 
 **输出**：
 1. 直接修改原文件（proposal.md / specs/**/*.md）
-2. 修改摘要：修复了哪些问题、修改了哪些文件、残留风险
+2. 修改摘要：修复了哪些问题（含原分级）、修改了哪些文件、未修复的问题及原因、残留风险
 ```
 
 ### architect agent（autofix 修复 design）
 
 ```
-当前是 review 的 autofix 阶段，负责根据 review.md 中的问题清单修复 design.md。
+当前是 review 的 autofix 阶段，负责根据本轮 review.md 中的问题清单修复 design.md。
 
-**任务**：修复属于 design.md 的问题。
+**任务**：按优先级 CRITICAL → HIGH → MEDIUM → LOW 修复属于 design.md 的问题；LOW 问题可视修复成本跳过。
 
 **负责修复的文件**：
 - design.md：<路径>（如存在）
 
 **参考输入**：
-- review.md：<路径>（读取其中 Location 落在 design.md 的问题，按优先级 CRITICAL → HIGH → MEDIUM → LOW 依次修复）
+- review.md：<路径>（读取其中 Location 落在 design.md 的问题）
 - 上游文档（按需读取，确保修复后仍然覆盖 specs 的 Requirement）：
   - proposal.md：<路径>
   - specs/**/*.md：<路径列表>
 - design.md 模板：`../../openspec-schema/schemas/spec-driven-enhanced/templates/design.md`
 
+**修复范围**：
+1. **按优先级修复**：本轮 review.md 中 Location 落在 design.md 的问题，按 CRITICAL → HIGH → MEDIUM → LOW 顺序处理
+2. **LOW 问题**：格式、拼写、minor 文案等 LOW 问题可视修复成本跳过
+3. **信息不足时保留**：因信息不足无法修复的问题，在修改摘要中列出并说明原因
+
 **修复规则**：
 1. 只修改 Location 落在 design.md 的问题
 2. 修复时必须保持 design.md 模板的章节结构和必填项
-3. 优先修复 CRITICAL / HIGH / MEDIUM；LOW 问题可选择性修复
-4. 禁止为修复一个问题而破坏其他已通过评审的维度
-5. 禁止重写无关章节；优先使用 Edit 做局部修改
-6. 若某个问题因信息不足无法修复，在修改摘要中说明并标记为残留风险
+3. 禁止为修复一个问题而破坏其他已通过评审的维度
+4. 禁止重写无关章节；优先使用 Edit 做局部修改
+5. 若某个问题因信息不足无法修复，在修改摘要中说明并标记为残留风险
 
 **输出**：
 1. 直接修改原文件（design.md）
-2. 修改摘要：修复了哪些问题、修改了哪些文件、残留风险
+2. 修改摘要：修复了哪些问题（含原分级）、修改了哪些文件、未修复的问题及原因、残留风险
 ```
 
 ---

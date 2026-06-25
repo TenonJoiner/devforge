@@ -16,7 +16,7 @@
 |---|----------|----------|-------|-------------|
 | 1 | <!-- CRITICAL/HIGH/MEDIUM/LOW --> | <!-- 文件:章节 --> | <!-- 问题描述 --> | <!-- 修复说明，或"未修复：原因" --> |
 
-**Round Result**: <!-- 本轮各文档缺陷密度：proposal.md: X.X | specs/*.md: X.X | design.md: X.X（与 ≤ 2.0 标准对比） -->
+**Round Result**: <!-- 本轮各文档缺陷密度：proposal.md: X.X | specs/*.md: X.X | design.md: X.X（与 ≤ 3.0 标准对比） -->
 
 ## Review Conclusion
 
