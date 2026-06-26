@@ -37,44 +37,7 @@
 - 相关 lint / 静态分析通过
 - 不引入未完成的中间状态
 
-### 整理临时 commit
-
-开发过程中允许存在临时快照。在提交 MR/PR 前，必须将临时快照整理为 atomic commit。
-
-AI 自动执行时，禁止使用交互式 `git rebase -i`。
-
-#### 所有临时快照属于同一 task
-
-重置到基线，一次性提交为单个 atomic commit：
-
-```bash
-git reset <base-branch>
-git add .
-git commit -m "<type>[(<scope>)]: <subject>"
-```
-
-其中 `<base-branch>` 是切出当前分支的基线（通常为 `main` 或 `release/<version>`）。
-
-#### 需要拆分为多个 atomic commit 或复杂整理
-
-以下情况必须询问用户，不得擅自执行交互式 rebase：
-
-- 当前分支包含多个 task 的变更，需要拆分成多个 atomic commit
-- 无法通过非交互方式安全完成整理
-
-向用户提出拆分方案：
-
-> 我计划将当前分支拆分为以下 N 个 atomic commit：
-> 1. `type(scope): subject` — 变更范围说明
-> 2. ...
->
-> 请确认该方案，或说明需要调整的地方。
-
-如果分支已 push 到远程，整理后执行：
-
-```bash
-git push --force-with-lease
-```
+> 临时快照的整理命令见 [MR/PR 创建流程](#mrpr-创建流程) 第 3 步及 [整理临时 commit](#整理临时-commit) 小节。
 
 ## Conventional Commits
 
@@ -209,6 +172,45 @@ git push --force-with-lease
 
 - 默认使用普通 merge（non-squash），保持 atomic commit 历史
 - 如果团队约定使用 squash merge，开发分支合并后 必须 删除，禁止在同一分支上继续开发
+
+### 整理临时 commit
+
+开发过程中允许存在临时快照。在提交 MR/PR 前，必须将临时快照整理为 atomic commit。
+
+AI 自动执行时，禁止使用交互式 `git rebase -i`。
+
+#### 所有临时快照属于同一 task
+
+重置到基线，一次性提交为单个 atomic commit：
+
+```bash
+git reset <base-branch>
+git add .
+git commit -m "<type>[(<scope>)]: <subject>"
+```
+
+其中 `<base-branch>` 是切出当前分支的基线（通常为 `main` 或 `release/<version>`）。
+
+#### 需要拆分为多个 atomic commit 或复杂整理
+
+以下情况必须询问用户，不得擅自执行交互式 rebase：
+
+- 当前分支包含多个 task 的变更，需要拆分成多个 atomic commit
+- 无法通过非交互方式安全完成整理
+
+向用户提出拆分方案：
+
+> 我计划将当前分支拆分为以下 N 个 atomic commit：
+> 1. `type(scope): subject` — 变更范围说明
+> 2. ...
+>
+> 请确认该方案，或说明需要调整的地方。
+
+如果分支已 push 到远程，整理后执行：
+
+```bash
+git push --force-with-lease
+```
 
 ## Worktree 规范
 
