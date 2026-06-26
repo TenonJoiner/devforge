@@ -177,7 +177,9 @@ rebase 交互式编辑规则：
 
 禁止在 rebase 未完成、冲突未本地解决的情况下直接推送并创建 MR/PR。
 
-### Merge 方式
+### MR/PR 合并方式
+
+本节指平台接受 MR/PR 时采用的合并方式，与开发者本地同步目标分支的 rebase 策略无关。
 
 - 默认使用普通 merge（non-squash），保持 atomic commit 历史
 - 如果团队约定使用 squash merge，开发分支合并后 必须 删除，禁止在同一分支上继续开发
