@@ -39,7 +39,7 @@
 
 ### 整理临时 commit
 
-当当前分支存在临时快照时，在创建正式 commit 前执行：
+开发过程中允许存在临时快照。在提交 MR/PR 前，若当前分支存在临时快照，执行：
 
 ```bash
 git rebase -i <base-branch>
@@ -151,7 +151,14 @@ rebase 交互式编辑规则：
    git fetch origin
    ```
 
-3. 确定当前分支独有提交，用于 MR/PR 描述和变更归因：
+3. 整理临时 commit：
+   若当前分支存在开发过程中的临时快照，执行：
+   ```bash
+   git rebase -i <base-branch>
+   ```
+   将其合并为 atomic commit。`<base-branch>` 为切出当前分支的基线（通常与目标分支一致）。
+
+4. 确定当前分支独有提交，用于 MR/PR 描述和变更归因：
    ```bash
    git log --oneline --left-right origin/<target-branch>...HEAD
    ```
@@ -160,20 +167,20 @@ rebase 交互式编辑规则：
 
    > 禁止使用双点 `..`（如 `git log origin/<target-branch>..HEAD`）。当当前分支历史上包含 merge commit 时，双点语法可能把目标分支侧提交也纳入结果，导致 MR/PR 描述错误归因。
 
-4. 将当前分支变基到目标分支：
+5. 将当前分支变基到目标分支：
    ```bash
    git rebase origin/<target-branch>
    ```
    若提示已是最新，则跳过后续冲突解决，直接推送。
 
-5. 本地解决冲突（如有），确保冲突解决后代码可编译且相关测试通过。
+6. 本地解决冲突（如有），确保冲突解决后代码可编译且相关测试通过。
 
-6. 将当前分支推送到远程：
+7. 将当前分支推送到远程：
    ```bash
    git push --force-with-lease origin <current-branch>
    ```
 
-7. 创建 MR/PR，目标分支为 `<target-branch>`。
+8. 创建 MR/PR，目标分支为 `<target-branch>`。
 
 禁止在 rebase 未完成、冲突未本地解决的情况下直接推送并创建 MR/PR。
 
