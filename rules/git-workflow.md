@@ -41,9 +41,19 @@
 
 开发过程中允许存在临时快照。在提交 MR/PR 前，必须将临时快照整理为 atomic commit。
 
-AI 自动执行时，禁止使用交互式 `git rebase -i`，改用以下非交互方式：
+AI 自动执行时，禁止使用交互式 `git rebase -i`。
 
-#### 所有临时快照属于同一 task
+#### 开发中减少临时快照
+
+如果最新改动应补充到上一个 commit，而不是新增一个 commit：
+
+```bash
+git commit --amend --no-edit
+```
+
+#### 提交 MR/PR 前整理已有临时快照
+
+**所有临时快照属于同一 task**
 
 重置到基线，一次性提交为单个 atomic commit：
 
@@ -55,19 +65,17 @@ git commit -m "<type>[(<scope>)]: <subject>"
 
 其中 `<base-branch>` 是切出当前分支的基线（通常为 `main` 或 `release/<version>`）。
 
-#### 只需把最新改动合并到上一个 commit
-
-```bash
-git commit --amend --no-edit
-```
-
-#### 需要拆分为多个 atomic commit 或复杂整理
+**需要拆分为多个 atomic commit 或复杂整理**
 
 以下情况必须询问用户，不得擅自执行交互式 rebase：
 
 - 当前分支包含多个 task 的变更，需要拆分成多个 atomic commit
 - 临时快照已 push 到远程且可能被他人使用
 - 无法通过非交互方式安全完成整理
+
+询问用户模板：
+
+> 当前分支包含多个 task / 复杂变更，需要拆分为多个 atomic commit。请说明应拆分为几个 commit，每个 commit 包含哪些文件或变更，以及对应的 commit message。
 
 如果临时 commit 已经 push 到远程但只有你一个人开发，整理后可执行：
 
@@ -160,7 +168,8 @@ git push --force-with-lease
    ```
 
 3. 整理临时 commit：
-   若当前分支存在开发过程中的临时快照，按「整理临时 commit」小节的非交互方式将其整理为 atomic commit。例如所有快照属于同一 task 时：
+   若当前分支存在开发过程中的临时快照，按「整理临时 commit」小节的非交互方式整理为 atomic commit。复杂情况询问用户。
+   例如所有快照属于同一 task 时：
    ```bash
    git reset <base-branch>
    git add .
