@@ -206,12 +206,6 @@ git commit -m "<type>[(<scope>)]: <subject>"
 >
 > 请确认该方案，或说明需要调整的地方。
 
-如果分支已 push 到远程，整理后执行：
-
-```bash
-git push --force-with-lease
-```
-
 ## Worktree 规范
 
 ### 目录与分支映射
