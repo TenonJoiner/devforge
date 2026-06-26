@@ -169,14 +169,9 @@ rebase 交互式编辑规则：
 5. 本地解决冲突（如有），确保冲突解决后代码可编译且相关测试通过。
 
 6. 将当前分支推送到远程：
-   - 若分支首次推送：
-     ```bash
-     git push origin <current-branch>
-     ```
-   - 若分支已存在于远程：
-     ```bash
-     git push --force-with-lease origin <current-branch>
-     ```
+   ```bash
+   git push --force-with-lease origin <current-branch>
+   ```
 
 7. 创建 MR/PR，目标分支为 `<target-branch>`。
 
