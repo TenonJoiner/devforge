@@ -43,17 +43,7 @@
 
 AI 自动执行时，禁止使用交互式 `git rebase -i`。
 
-#### 开发中减少临时快照
-
-如果最新改动应补充到上一个 commit，而不是新增一个 commit：
-
-```bash
-git commit --amend --no-edit
-```
-
-#### 提交 MR/PR 前整理已有临时快照
-
-**所有临时快照属于同一 task**
+#### 所有临时快照属于同一 task
 
 重置到基线，一次性提交为单个 atomic commit：
 
@@ -65,7 +55,7 @@ git commit -m "<type>[(<scope>)]: <subject>"
 
 其中 `<base-branch>` 是切出当前分支的基线（通常为 `main` 或 `release/<version>`）。
 
-**需要拆分为多个 atomic commit 或复杂整理**
+#### 需要拆分为多个 atomic commit 或复杂整理
 
 以下情况必须询问用户，不得擅自执行交互式 rebase：
 
