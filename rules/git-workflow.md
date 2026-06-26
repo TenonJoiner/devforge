@@ -140,17 +140,24 @@ rebase 交互式编辑规则：
 
 ### MR/PR 创建流程
 
-创建 MR/PR 前，必须完成以下步骤：
+#### 前置决策：选择同步策略
+
+创建 MR/PR 前，先根据仓库合并策略确定目标分支同步方式：
+
+| 同步方式 | 适用场景 | 推送方式 |
+|---------|---------|---------|
+| `merge`（默认） | 接受 merge commit 的仓库 | 普通推送 |
+| `rebase` | 强制 ff-only / 要求线性历史的仓库 | 已推送分支需 force push |
+
+> `origin/HEAD` 或 IDE 提示的 "Main branch" 均不可作为目标分支依据，必须以本规则为准。
+
+#### 执行步骤
 
 1. 确认目标分支：默认目标分支为 `main`；从 `release/<version>` 切出的分支，目标分支为对应 `release/<version>`
-
-   > `origin/HEAD` 或 IDE 提示的 "Main branch" 均不可作为目标分支依据，必须以本规则为准。
-
 2. 获取目标分支最新变更：
    ```bash
    git fetch origin
    ```
-
 3. 确定当前分支独有提交，用于 MR/PR 描述和变更归因：
    ```bash
    git log --oneline --left-right origin/<target-branch>...HEAD
@@ -160,18 +167,28 @@ rebase 交互式编辑规则：
 
    > 禁止使用双点 `..`（如 `git log origin/<target-branch>..HEAD`）。当当前分支历史上包含 merge commit 时，双点语法可能把目标分支侧提交也纳入结果，导致 MR/PR 描述错误归因。
 
-4. 将目标分支合并到当前分支：
-   ```bash
-   git merge origin/<target-branch>
-   ```
+4. 按前置决策同步目标分支：
+   - 若选择 **merge**：
+     ```bash
+     git merge origin/<target-branch>
+     ```
+   - 若选择 **rebase**：
+     ```bash
+     git rebase origin/<target-branch>
+     ```
    若提示已是最新，则跳过后续冲突解决，直接推送。
 
 5. 本地解决冲突（如有），确保冲突解决后代码可编译且相关测试通过。
 
 6. 将当前分支推送到远程：
-   ```bash
-   git push origin <current-branch>
-   ```
+   - 若选择 **merge**，或分支首次推送：
+     ```bash
+     git push origin <current-branch>
+     ```
+   - 若选择 **rebase** 且分支已存在于远程：
+     ```bash
+     git push --force-with-lease origin <current-branch>
+     ```
 
 7. 创建 MR/PR，目标分支为 `<target-branch>`。
 
