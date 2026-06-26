@@ -39,33 +39,41 @@
 
 ### 整理临时 commit
 
-开发过程中允许存在临时快照。在提交 MR/PR 前，若当前分支存在临时快照，执行：
+开发过程中允许存在临时快照。在提交 MR/PR 前，必须将临时快照整理为 atomic commit。
+
+AI 自动执行时，禁止使用交互式 `git rebase -i`，改用以下非交互方式：
+
+#### 所有临时快照属于同一 task
+
+重置到基线，一次性提交为单个 atomic commit：
 
 ```bash
-git rebase -i <base-branch>
+git reset <base-branch>
+git add .
+git commit -m "<type>[(<scope>)]: <subject>"
 ```
 
 其中 `<base-branch>` 是切出当前分支的基线（通常为 `main` 或 `release/<version>`）。
 
-rebase 交互式编辑规则：
+#### 只需把最新改动合并到上一个 commit
 
-- 保留第一个 commit 作为 base，使用 `pick`
-- 后续属于同一 task 的临时 commit 使用 `fixup` 合并到前一个 commit
-- 如需修改 commit message，使用 `reword`
-- 不属于当前 task 的变更 必须 先移出当前分支
+```bash
+git commit --amend --no-edit
+```
 
-如果 rebase 发生冲突：
+#### 需要拆分为多个 atomic commit 或复杂整理
 
-1. 解决冲突
-2. `git add <resolved-files>`
-3. `git rebase --continue`
-4. 如果冲突无法安全解决，执行 `git rebase --abort` 并通知用户
+以下情况必须询问用户，不得擅自执行交互式 rebase：
 
-如果临时 commit 已经 push 到远程：
+- 当前分支包含多个 task 的变更，需要拆分成多个 atomic commit
+- 临时快照已 push 到远程且可能被他人使用
+- 无法通过非交互方式安全完成整理
 
-1. 评估是否可以安全 force push
-2. 如果该分支只有你一个人开发，执行 `git push --force-with-lease`
-3. 如果分支已被他人使用，必须 先询问用户，不得擅自 force push
+如果临时 commit 已经 push 到远程但只有你一个人开发，整理后可执行：
+
+```bash
+git push --force-with-lease
+```
 
 ## Conventional Commits
 
@@ -152,11 +160,13 @@ rebase 交互式编辑规则：
    ```
 
 3. 整理临时 commit：
-   若当前分支存在开发过程中的临时快照，执行：
+   若当前分支存在开发过程中的临时快照，按「整理临时 commit」小节的非交互方式将其整理为 atomic commit。例如所有快照属于同一 task 时：
    ```bash
-   git rebase -i <base-branch>
+   git reset <base-branch>
+   git add .
+   git commit -m "<type>[(<scope>)]: <subject>"
    ```
-   将其合并为 atomic commit。`<base-branch>` 为切出当前分支的基线（通常与目标分支一致）。
+   `<base-branch>` 为切出当前分支的基线（通常与目标分支一致）。
 
 4. 确定当前分支独有提交，用于 MR/PR 描述和变更归因：
    ```bash
@@ -173,7 +183,14 @@ rebase 交互式编辑规则：
    ```
    若提示已是最新，则跳过后续冲突解决，直接推送。
 
-6. 本地解决冲突（如有），确保冲突解决后代码可编译且相关测试通过。
+6. 本地解决冲突（如有）：
+   若 `git rebase` 发生冲突：
+   1. 解决冲突
+   2. `git add <resolved-files>`
+   3. `git rebase --continue`
+   4. 如果冲突无法安全解决，执行 `git rebase --abort` 并通知用户
+
+   冲突解决后，确保代码可编译且相关测试通过。
 
 7. 将当前分支推送到远程：
    ```bash
