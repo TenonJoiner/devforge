@@ -70,7 +70,11 @@ git commit -m "<type>[(<scope>)]: <subject>"
 >
 > 请确认该方案，或说明需要调整的地方。
 
-如果分支已 push 到远程，整理后需要 force push。按「人机交互边界」规则处理。
+如果分支已 push 到远程，整理后执行：
+
+```bash
+git push --force-with-lease
+```
 
 ## Conventional Commits
 
@@ -253,7 +257,6 @@ git commit -m "<type>[(<scope>)]: <subject>"
 
 以下情况 agent 必须 先询问用户，不得擅自执行：
 
-- 对已经 push 且可能被他人使用的分支执行 force push
 - 删除未合并的分支或 worktree
 - rebase 冲突无法安全解决
 - 不确定某个变更属于哪个 task 时
