@@ -10,14 +10,15 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent, AskUserQuestion]
 
 本 skill 把一份代码仓库的真实编码风格，转化为可直接供 coding agent 使用的 `.claude/rules/coding-style-<lang>.md` 规范文件。
 
-流程分为 5 个阶段：
+流程分为 6 个阶段：
 1. 生成仓库地图
 2. 提取实际风格事实
 3. 冲突分析
 4. 生成规范文件
 5. 自动验证与修复
+6. 清理中间产物
 
-所有中间产物和最终规范都写入当前仓库的 `.claude/rules/` 目录。
+所有中间产物在流程过程中写入当前仓库的 `.claude/rules/` 目录，最终阶段只保留 `coding-style-<lang>.md`。
 
 主会话负责任务调度、用户确认和推进判定；深度分析、内容创作由子 agent 完成。agent 产出的报告主会话可直接阅读，用于确认关键决策点。
 
@@ -355,11 +356,33 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent, AskUserQuestion]
 - 所有 HIGH 问题已修复或记录为已知例外
 - 规范文件结构完整
 
+## 第 6 阶段：清理中间产物
+
+**目标**：在最终规范生成并验证通过后，删除不再需要的中间产物，只保留最终规范文件。
+
+### 主会话动作
+
+1. 确认所有语言的 `coding-style-<lang>.md` 已生成且通过第 5 阶段验证
+2. 针对本次流程生成的每种语言，删除以下中间产物：
+   - `.claude/rules/code-style-facts-<lang>.md`
+   - `.claude/rules/gap-analysis-<lang>.md`
+   - `.claude/rules/coding-style-validation-<lang>.md`
+3. 删除第 1 阶段的仓库地图：
+   - `.claude/rules/codebase-analysis-report.md`
+4. 删除完成后，通过 `Glob` 确认 `.claude/rules/` 下仅保留 `coding-style-<lang>.md` 及用户原本存在的其他文件
+5. 若发现本阶段应删除的文件残留，重新执行删除并记录
+
+### 禁忌项
+
+- 禁止删除用户原本已存在于 `.claude/rules/` 下的其他文件
+- 禁止在最终规范未通过验证前删除中间产物，以免需要回退或修复时丢失依据
+
 ## 完成汇报
 
 所有阶段结束后，向用户汇报：
 - 为哪些语言生成了规范
-- 输出文件清单（`.claude/rules/coding-style-<lang>.md`）
+- 最终保留的输出文件清单（`.claude/rules/coding-style-<lang>.md`）
+- 已清理的中间产物清单
 - 每个规范的规则条数（必须 / 推荐 / 禁止 / 历史例外）——取自最终验证报告中的“规范规则统计”
 - 残留问题（如有）——取自最终验证报告
 
@@ -389,8 +412,13 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent, AskUserQuestion]
 
 | 文件 | 阶段 | 说明 |
 |------|------|------|
+| `.claude/rules/coding-style-<lang>.md` | 第 4 阶段生成，第 6 阶段保留 | 最终编码规范 |
+
+以下中间产物在生成过程中写入 `.claude/rules/`，第 6 阶段完成后删除：
+
+| 文件 | 阶段 | 说明 |
+|------|------|------|
 | `.claude/rules/codebase-analysis-report.md` | 第 1 阶段 | 仓库地图与语言评估 |
 | `.claude/rules/code-style-facts-<lang>.md` | 第 2 阶段 | 各语言实际风格事实 |
 | `.claude/rules/gap-analysis-<lang>.md` | 第 3 阶段 | 通用规范与仓库实际差距 |
-| `.claude/rules/coding-style-<lang>.md` | 第 4 阶段 | 最终编码规范 |
 | `.claude/rules/coding-style-validation-<lang>.md` | 第 5 阶段 | 验证报告 |
