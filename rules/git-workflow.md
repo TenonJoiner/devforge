@@ -60,18 +60,17 @@ git commit -m "<type>[(<scope>)]: <subject>"
 以下情况必须询问用户，不得擅自执行交互式 rebase：
 
 - 当前分支包含多个 task 的变更，需要拆分成多个 atomic commit
-- 临时快照已 push 到远程且可能被他人使用
 - 无法通过非交互方式安全完成整理
 
-询问用户模板：
+向用户提出拆分方案：
 
-> 当前分支包含多个 task / 复杂变更，需要拆分为多个 atomic commit。请说明应拆分为几个 commit，每个 commit 包含哪些文件或变更，以及对应的 commit message。
+> 我计划将当前分支拆分为以下 N 个 atomic commit：
+> 1. `type(scope): subject` — 变更范围说明
+> 2. ...
+>
+> 请确认该方案，或说明需要调整的地方。
 
-如果临时 commit 已经 push 到远程但只有你一个人开发，整理后可执行：
-
-```bash
-git push --force-with-lease
-```
+如果分支已 push 到远程，整理后需要 force push。按「人机交互边界」规则处理。
 
 ## Conventional Commits
 
