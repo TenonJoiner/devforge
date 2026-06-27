@@ -1,6 +1,6 @@
 {
   "name": "devforge",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "复杂基础软件开发 TeamSkills 框架 — 三层工作流（产品级/特性级/代码级）+ 多 Agent 协作 + 自动化质量守护",
   "author": {
     "name": "TenonJoiner",

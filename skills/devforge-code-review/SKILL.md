@@ -7,6 +7,12 @@ parameters:
     description: 评审后自动修复代码（默认只评审不修复）
     required: false
     default: false
+  - name: diff-range
+    description: 指定 diff 范围命令（由 devforge-pr-review 等调用方注入）
+    required: false
+  - name: report-output-path
+    description: 评审报告输出路径（由调用方注入，如 devforge-pr-review）
+    required: false
 ---
 
 # devforge-code-review — 五维度代码评审
@@ -47,6 +53,13 @@ parameters:
 | task group 完成后 | 当前 task group 对应的 `git diff`（自上次评审以来的变更） | 自动触发 |
 | Q.4 全量收尾 | `git diff $(git merge-base HEAD main)..HEAD`（完整 proposal 变更） | 质量收尾阶段 |
 | 指定文件 | `file-pattern` 匹配的文件 | `/df:code-review <pattern>` |
+| 指定 diff 范围 | 由调用方传入的 `diff-range` 命令 | `/df:code-review --diff-range "git diff ..."` |
+
+**`diff-range` 参数处理**：
+
+- 若 `diff-range` 参数存在，直接使用该命令作为本次评审的 diff 范围，不再自动推断。
+- `diff-range` 由调用方（如 `devforge-pr-review`）负责计算，通常形式为 `git diff origin/<base>...HEAD`。
+- 若 `diff-range` 为空，按上表其他场景自动推断。
 
 **范围铁律**：评审只针对本次变更范围内的代码。发现范围外的问题时，记录为LOW变体分析发现，不阻塞本次合并。
 
@@ -222,6 +235,12 @@ Correctness 和 Security 维度中的部分检查项引用 `coding-style-<lang>.
 | 已遵循 coding-style 的豁免场景 | 如状态机函数长度在豁免范围内 | 所有 |
 
 > **为什么用硬规则排除**：假阳性排除避免评审在已知安全的模式上浪费时间。规则由项目经验和语言特性沉淀而来，不依赖评审者的主观判断。
+
+## 报告输出路径
+
+- 若 `report-output-path` 参数存在，将评审报告写入该路径。
+- 若 `report-output-path` 为空，由 skill 选择默认路径（如 `/tmp/code-review-report-<ts>.md`）。
+- 报告路径通过 `report_output_path` 字段注入 `code-reviewer` agent。
 
 ## 审修闭环输出格式
 
