@@ -70,7 +70,6 @@ glab mr view <number> -F json
 
 | 检查项 | 阈值 | 未通过时的处理 |
 |--------|------|---------------|
-| MR 大小 | additions + deletions > 1000 行 → 过大 | 输出 INFORMATIONAL 提示，建议拆分 |
 | 描述非空 | body 为空或 < 50 字符 → 不合格 | 输出 MEDIUM 问题 |
 | 标题规范 | 标题为空或仅为 "fix bug" 等无信息标题 → 不合格 | 输出 MEDIUM 问题 |
 
@@ -115,7 +114,7 @@ glab mr view <number> -F json
 使用已计算的 diff 范围调用 `devforge-code-review`，将中间评审报告写到 MR 专属路径：
 
 ```
-/df:code-review --diff-range "git diff origin/<base_branch>...<head_branch>" --report-output-path ai-review-report-<mr_number>.md
+/df:code-review --diff-range "git diff origin/<base_branch>...<head_branch>" --report-output-path /tmp/pr-review-report-<mr_number>.md
 ```
 
 主会话通过 Skill 工具加载 `devforge-code-review`，传入 `diff-range` 和 `report-output-path` 参数。代码评审由 `devforge-code-review` 独立完成，pr-review 不干预其内部 agent 调度。
@@ -130,7 +129,7 @@ glab mr view <number> -F json
 |------|------|------|
 | `任务模式` | 文档变更评审 | `文档变更评审` |
 | `diff_range` | 已计算的 diff 命令 | `git diff origin/main...HEAD` |
-| `report_output_path` | 评审报告写入路径 | `ai-review-report-<mr_number>.md` |
+| `report_output_path` | 评审报告写入路径 | `/tmp/pr-review-report-<mr_number>.md` |
 
 评审维度：
 - **完整性**：变更是否说明了背景、目的、影响范围
@@ -143,19 +142,19 @@ glab mr view <number> -F json
 
 **步骤 6：读取中间评审报告**
 
-无论是从 `devforge-code-review` 还是 `product-reviewer` 产出，均从**项目根目录下的 `ai-review-report-<mr_number>.md`**（即 `--report-output-path` 指定的路径）提取：
+无论是从 `devforge-code-review` 还是 `product-reviewer` 产出，均从 **`/tmp/pr-review-report-<mr_number>.md`**（即 `--report-output-path` 指定的路径）提取：
 - 完整问题统计：CRITICAL / HIGH / MEDIUM / LOW 数量，用于生成外层摘要
 - 完整报告内容：折叠在 `<details>` 块中，不重复出现在外层摘要里
 
 **注意**：`/tmp` 下的 `code-review-*-d*.md` 等文件是 `devforge-code-review` 的 subagent 中间产物，**不要用于生成 MR 评论**，应被忽略。
 
-若 `ai-review-report-<mr_number>.md` 不存在或为空，报错并停止。
+若 `/tmp/pr-review-report-<mr_number>.md` 不存在或为空，报错并停止。
 
 ### 第 5 阶段：结论合成与输出
 
 **步骤 7：合成 MR 级最终结论（verdict）**
 
-综合 MR 元数据检查结果和 `ai-review-report-<mr_number>.md` 中的问题统计，给出最终结论：
+综合 MR 元数据检查结果和 `/tmp/pr-review-report-<mr_number>.md` 中的问题统计，给出最终结论：
 
 | 最终结论（verdict） | 条件 | 含义 |
 |------|------|------|
@@ -171,7 +170,7 @@ glab mr view <number> -F json
   输出结构化评审报告到会话，包含：
   - MR 元数据摘要（变更文件数、+/- 行数、代码/文档/其他分类统计）
   - MR 元数据检查结果
-  - `ai-review-report-<mr_number>.md` 摘要（问题统计 + 关键发现概述）
+  - `/tmp/pr-review-report-<mr_number>.md` 摘要（问题统计 + 关键发现概述）
   - 最终结论（verdict）
 
 - **CI 模式（`ci` 为 true）**：
@@ -182,13 +181,16 @@ glab mr view <number> -F json
        - **代码**：其余源码/脚本/配置文件（如 `.c`、`.go`、`.py`、`.sh`、`.yml`、`.json` 等）
        - **其他**：不属于以上两类的文件
      - 汇总写入摘要表格：总文件数、总行数（+/-）、代码/文档/其他分类文件数及行数。
-  2. 从 `ai-review-report-<mr_number>.md` 生成总结评论正文 `ai-review-comment-<mr_number>.md`：
+  2. 从 `/tmp/pr-review-report-<mr_number>.md` 生成总结评论正文 `/tmp/pr-review-comment-<mr_number>.md`：
      - **外层严格只放摘要**：MR 标题、变更统计表格、评审结论、问题计数表。
-     - 完整报告的问题详情**必须**放在 `<details>`/`<summary>` 折叠块内，不能散落在外层。
+     - 外层摘要**只展示数量**，不展示任何具体问题的标题、文件位置或描述。
+     - 完整报告的问题详情**必须**放在 `<details>`/`<summary>` 折叠块内；该折叠块内容是 `/tmp/pr-review-report-<mr_number>.md` 的**完整、原样内容**，必须包含 CRITICAL/HIGH/MEDIUM/LOW 全部问题，禁止遗漏、简化或仅放 MEDIUM/LOW。
+     - 主会话读取 `/tmp/pr-review-report-<mr_number>.md` 后，**直接将其完整 markdown 内容粘贴进 `<details>` 块**，禁止重新概括、删减、改写、只摘录部分问题，或用自己的话重写发现。
+     - 禁止把 CRITICAL/HIGH 的具体发现提前抽到外层的“阻塞项”“强烈建议”等段落；如果 MR 元数据检查未通过，可在外层用一句话标注（如 “MR 描述过短”），但详情仍归入完整报告。
      - 摘要格式固定如下（计数必须与完整报告一致）：
 
        ```markdown
-       ## MR 评审摘要：<MR 标题>
+       ## MR 评审报告：<MR 标题>
 
        本次 MR 变更统计如下：
 
@@ -211,17 +213,17 @@ glab mr view <number> -F json
        <details>
        <summary>展开查看完整评审报告</summary>
 
-       [ai-review-report-<mr_number>.md 完整内容]
+       [将 /tmp/pr-review-report-<mr_number>.md 的完整内容原样粘贴于此，禁止概括/删减/重写]
 
        </details>
        ```
   3. 通过平台 CLI 将总结评论贴到 PR/MR 页面：
      ```bash
      # GitHub
-     gh pr comment <number> --body-file ai-review-comment-<mr_number>.md
+     gh pr comment <number> --body-file /tmp/pr-review-comment-<mr_number>.md
 
      # GitLab
-     glab mr note <number> -m "$(cat ai-review-comment-<mr_number>.md)"
+     glab mr note <number> -m "$(cat /tmp/pr-review-comment-<mr_number>.md)"
      ```
   4. 输出 JSON 结果到标准输出，供 CI 解析并判断是否阻塞合并：
      ```json
@@ -233,7 +235,7 @@ glab mr view <number> -F json
        "high": 1,
        "medium": 2,
        "low": 1,
-       "report_path": "ai-review-report-<mr_number>.md",
+       "report_path": "/tmp/pr-review-report-<mr_number>.md",
        "comment_posted": true
      }
      ```
@@ -245,7 +247,7 @@ glab mr view <number> -F json
 
 - **单条总结评论 + 折叠完整报告**：外层摘要包含 MR 标题、变更分类统计表格、评审结论与各级别计数；完整报告用 `<details>`/`<summary>` 折叠块展示，不重复出现在摘要中。
 - **每次发新评论**：每次 CI 运行都发一条新评论，不更新已有评论（第一期简化实现）。
-- `ai-review-report-<mr_number>.md` 同时作为 CI artifact 保存。
+- `/tmp/pr-review-report-<mr_number>.md` 同时作为 CI artifact 保存。
 
 ## 关联
 
