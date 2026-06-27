@@ -143,9 +143,11 @@ glab mr view <number> -F json
 
 **步骤 6：读取中间评审报告**
 
-无论是从 `devforge-code-review` 还是 `product-reviewer` 产出，均从 `ai-review-report-<mr_number>.md` 提取：
+无论是从 `devforge-code-review` 还是 `product-reviewer` 产出，均从**项目根目录下的 `ai-review-report-<mr_number>.md`**（即 `--report-output-path` 指定的路径）提取：
 - 完整问题统计：CRITICAL / HIGH / MEDIUM / LOW 数量，用于生成外层摘要
 - 完整报告内容：折叠在 `<details>` 块中，不重复出现在外层摘要里
+
+**注意**：`/tmp` 下的 `code-review-*-d*.md` 等文件是 `devforge-code-review` 的 subagent 中间产物，**不要用于生成 MR 评论**，应被忽略。
 
 若 `ai-review-report-<mr_number>.md` 不存在或为空，报错并停止。
 
@@ -167,18 +169,35 @@ glab mr view <number> -F json
 
 - **手动模式（`ci` 未设置或 false）**：
   输出结构化评审报告到会话，包含：
-  - MR 元数据摘要
+  - MR 元数据摘要（变更文件数、+/- 行数、代码/文档/其他分类统计）
   - MR 元数据检查结果
   - `ai-review-report-<mr_number>.md` 摘要（问题统计 + 关键发现概述）
   - 最终结论（verdict）
 
 - **CI 模式（`ci` 为 true）**：
-  1. 从 `ai-review-report-<mr_number>.md` 生成总结评论正文 `ai-review-comment-<mr_number>.md`：
-     - 外层只放摘要，不重复完整报告的问题描述或分级说明。
+  1. 生成 MR 变更分类统计：
+     - 使用 `git diff --numstat <diff_range>` 获取本次 diff 每个文件的增删行数。
+     - 按扩展名分类：
+       - **文档**：`.md`、`.txt`、`.rst`、`.adoc`
+       - **代码**：其余源码/脚本/配置文件（如 `.c`、`.go`、`.py`、`.sh`、`.yml`、`.json` 等）
+       - **其他**：不属于以上两类的文件
+     - 汇总写入摘要表格：总文件数、总行数（+/-）、代码/文档/其他分类文件数及行数。
+  2. 从 `ai-review-report-<mr_number>.md` 生成总结评论正文 `ai-review-comment-<mr_number>.md`：
+     - **外层严格只放摘要**：MR 标题、变更统计表格、评审结论、问题计数表。
+     - 完整报告的问题详情**必须**放在 `<details>`/`<summary>` 折叠块内，不能散落在外层。
      - 摘要格式固定如下（计数必须与完整报告一致）：
 
        ```markdown
        ## MR 评审摘要：<MR 标题>
+
+       本次 MR 变更统计如下：
+
+       | 分类 | 文件数 | 新增行数 | 删除行数 |
+       |---|---|---|---|
+       | 代码 | Nc | +Xc | -Yc |
+       | 文档 | Nd | +Xd | -Yd |
+       | 其他 | No | +Xo | -Yo |
+       | **总计** | **N** | **+X** | **-Y** |
 
        **评审结论：** 请求修改（REQUEST_CHANGES）
 
@@ -188,18 +207,23 @@ glab mr view <number> -F json
        | HIGH | N | 强烈建议修改 |
        | MEDIUM | N | 优化建议 |
        | LOW | N | 轻微问题 / 变体分析 |
-       ```
 
-     - 使用 `<details>`/`<summary>` 折叠块包裹 `ai-review-report-<mr_number>.md` 的完整内容，供展开查看。
-  2. 通过平台 CLI 将总结评论贴到 PR/MR 页面：
+       <details>
+       <summary>展开查看完整评审报告</summary>
+
+       [ai-review-report-<mr_number>.md 完整内容]
+
+       </details>
+       ```
+  3. 通过平台 CLI 将总结评论贴到 PR/MR 页面：
      ```bash
      # GitHub
      gh pr comment <number> --body-file ai-review-comment-<mr_number>.md
 
      # GitLab
-     glab mr note <number> --message-file ai-review-comment-<mr_number>.md
+     glab mr note <number> -m "$(cat ai-review-comment-<mr_number>.md)"
      ```
-  3. 输出 JSON 结果到标准输出，供 CI 解析并判断是否阻塞合并：
+  4. 输出 JSON 结果到标准输出，供 CI 解析并判断是否阻塞合并：
      ```json
      {
        "verdict": "REQUEST_CHANGES",
@@ -213,13 +237,13 @@ glab mr view <number> -F json
        "comment_posted": true
      }
      ```
-  4. 退出码：
+  5. 退出码：
      - `0`：最终结论（verdict）为 APPROVE 或 COMMENT
      - `1`：最终结论（verdict）为 REQUEST_CHANGES
 
 ## CI 模式评论策略
 
-- **单条总结评论 + 折叠完整报告**：外层摘要只包含 verdict 与各级别计数；完整报告用 `<details>`/`<summary>` 折叠块展示，不重复出现在摘要中。
+- **单条总结评论 + 折叠完整报告**：外层摘要包含 MR 标题、变更分类统计表格、评审结论与各级别计数；完整报告用 `<details>`/`<summary>` 折叠块展示，不重复出现在摘要中。
 - **每次发新评论**：每次 CI 运行都发一条新评论，不更新已有评论（第一期简化实现）。
 - `ai-review-report-<mr_number>.md` 同时作为 CI artifact 保存。
 

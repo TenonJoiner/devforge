@@ -8,10 +8,10 @@ parameters:
     required: false
     default: false
   - name: diff-range
-    description: 指定 diff 范围命令（由 devforge-pr-review 等调用方注入）
+    description: 指定 diff 范围命令（由调用方注入）
     required: false
   - name: report-output-path
-    description: 评审报告输出路径（由调用方注入，如 devforge-pr-review）
+    description: 评审报告输出路径（由调用方注入）
     required: false
 ---
 
@@ -58,7 +58,7 @@ parameters:
 **`diff-range` 参数处理**：
 
 - 若 `diff-range` 参数存在，直接使用该命令作为本次评审的 diff 范围，不再自动推断。
-- `diff-range` 由调用方（如 `devforge-pr-review`）负责计算，通常形式为 `git diff origin/<base>...HEAD`。
+- `diff-range` 由调用方负责计算，通常形式为 `git diff origin/<base>...HEAD`。
 - 若 `diff-range` 为空，按上表其他场景自动推断。
 
 **范围铁律**：评审只针对本次变更范围内的代码。发现范围外的问题时，记录为LOW变体分析发现，不阻塞本次合并。
@@ -219,6 +219,21 @@ Correctness 和 Security 维度中的部分检查项引用 `coding-style-<lang>.
 | `领域信号` | 从代码结构/架构文档识别的领域特征 | `存储/WAL` / `高性能服务` |
 | `report_output_path` | 评审报告写入路径 | `/tmp/code-review-report-<ts>.md` |
 | `subagent_dimension` | 深度评审多实例时，每个 subagent 负责的单一维度 | `D4-Security` |
+
+## 评审执行与报告汇总
+
+### 轻量评审
+
+- 派遣单个 `code-reviewer` agent。
+- `code-reviewer` 直接读取 diff、执行评审，并将完整报告写入 `report_output_path`。
+
+### 深度评审
+
+1. 并行派遣 5 个 `code-reviewer` subagent，每个负责一个维度（D1-D5）。
+2. 每个 subagent 的临时报告写入独立中间文件，例如 `/tmp/code-review-<ts>-d1.md` 至 `/tmp/code-review-<ts>-d5.md`，避免相互覆盖。
+3. 所有 subagent 完成后，主会话读取这 5 份中间报告，按 CRITICAL/HIGH/MEDIUM/LOW 汇总、去重、重新编号，生成一份统一报告。
+4. **最终统一报告必须写入调用方指定的 `report_output_path`**。
+5. `/tmp` 中的维度中间文件仅供汇总使用，不对外暴露；调用方只读取最终 `report_output_path`。
 
 ## 假阳性排除规则（硬规则）
 
