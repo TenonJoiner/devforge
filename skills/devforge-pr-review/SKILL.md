@@ -144,8 +144,8 @@ glab mr view <number> -F json
 **步骤 6：读取中间评审报告**
 
 无论是从 `devforge-code-review` 还是 `product-reviewer` 产出，均从 `ai-review-report-<mr_number>.md` 提取：
-- 完整问题统计：CRITICAL / HIGH / MEDIUM / LOW 数量
-- 完整问题列表：用于生成 MR 总结评论（顶部展示统计，完整内容折叠在 `<details>` 块中）
+- 完整问题统计：CRITICAL / HIGH / MEDIUM / LOW 数量，用于生成外层摘要
+- 完整报告内容：折叠在 `<details>` 块中，不重复出现在外层摘要里
 
 若 `ai-review-report-<mr_number>.md` 不存在或为空，报错并停止。
 
@@ -174,8 +174,23 @@ glab mr view <number> -F json
 
 - **CI 模式（`ci` 为 true）**：
   1. 从 `ai-review-report-<mr_number>.md` 生成总结评论正文 `ai-review-comment-<mr_number>.md`：
-     - 顶部展示最终结论（verdict）和问题统计表
-     - 使用 `<details>`/`<summary>` 折叠块包裹 `ai-review-report-<mr_number>.md` 的完整内容，让 MR 页面既能快速看到结论，又能展开查看完整报告
+     - 外层只放摘要，不重复完整报告的问题描述或分级说明。
+     - 摘要格式固定如下（计数必须与完整报告一致）：
+
+       ```markdown
+       ## MR 评审摘要：<MR 标题>
+
+       **评审结论：** 请求修改（REQUEST_CHANGES）
+
+       | 级别 | 数量 | 语义 |
+       |---|---|---|
+       | CRITICAL | N | 阻塞合并 |
+       | HIGH | N | 强烈建议修改 |
+       | MEDIUM | N | 优化建议 |
+       | LOW | N | 轻微问题 / 变体分析 |
+       ```
+
+     - 使用 `<details>`/`<summary>` 折叠块包裹 `ai-review-report-<mr_number>.md` 的完整内容，供展开查看。
   2. 通过平台 CLI 将总结评论贴到 PR/MR 页面：
      ```bash
      # GitHub
@@ -204,7 +219,7 @@ glab mr view <number> -F json
 
 ## CI 模式评论策略
 
-- **单条总结评论 + 折叠完整报告**：把所有发现汇总为一条评论；评论顶部是 verdict + 问题统计，下方用 `<details>`/`<summary>` 折叠块展示 `ai-review-report-<mr_number>.md` 的完整内容。
+- **单条总结评论 + 折叠完整报告**：外层摘要只包含 verdict 与各级别计数；完整报告用 `<details>`/`<summary>` 折叠块展示，不重复出现在摘要中。
 - **每次发新评论**：每次 CI 运行都发一条新评论，不更新已有评论（第一期简化实现）。
 - `ai-review-report-<mr_number>.md` 同时作为 CI artifact 保存。
 

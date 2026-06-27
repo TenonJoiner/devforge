@@ -218,7 +218,6 @@ Correctness 和 Security 维度中的部分检查项引用 `coding-style-<lang>.
 | `diff_range` | skill 计算后注入的 git diff 命令或范围 | `git diff HEAD` / `git diff $(git merge-base HEAD main)..HEAD` |
 | `领域信号` | 从代码结构/架构文档识别的领域特征 | `存储/WAL` / `高性能服务` |
 | `report_output_path` | 评审报告写入路径 | `/tmp/code-review-report-<ts>.md` |
-| `report_template_path` | 报告模板（如存在） | `templates/review-report.md` |
 | `subagent_dimension` | 深度评审多实例时，每个 subagent 负责的单一维度 | `D4-Security` |
 
 ## 假阳性排除规则（硬规则）
@@ -266,7 +265,7 @@ Correctness 和 Security 维度中的部分检查项引用 `coding-style-<lang>.
 
 ### CRITICAL（阻塞合并）
 
-#### Finding 1: [一句话标题] — [文件:行号]
+#### Finding 1: [一句话标题] — `[文件:行号]`（纯文本，禁止超链接 / permalink）
 
 - **Category:** [Correctness | Readability | Architecture | Security | Performance]
 - **Description:** [问题描述]
