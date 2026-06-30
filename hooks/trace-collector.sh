@@ -6,8 +6,22 @@
 
 set -e
 
-# 生成或读取持久化的 session ID
-SESSION_FILE="/tmp/devforge-trace-session-id"
+# 找到 Claude 会话锚点 PID：从当前进程向上走，跳过中间 shell 层
+# 多会话并发时每个 Claude 进程有独立 PID，避免共享单个 session-id 文件
+_ANCHOR=$PPID
+while true; do
+    _COMM=$(ps -o comm= -p $_ANCHOR 2>/dev/null | tr -d ' ' || echo "")
+    case "$_COMM" in
+        bash|sh|zsh|dash|ksh)
+            _NEXT=$(ps -o ppid= -p $_ANCHOR 2>/dev/null | tr -d ' ' || echo "")
+            [ -z "$_NEXT" ] || [ "$_NEXT" = "0" ] || [ "$_NEXT" = "1" ] && break
+            _ANCHOR=$_NEXT
+            ;;
+        *) break ;;
+    esac
+done
+
+SESSION_FILE="/tmp/devforge-trace-session-${_ANCHOR}"
 if [ -f "$SESSION_FILE" ]; then
     SESSION_ID=$(cat "$SESSION_FILE")
 else
@@ -17,7 +31,6 @@ fi
 
 TRACE_FILE="/tmp/devforge-trace-${SESSION_ID}.jsonl"
 SEQ_FILE="/tmp/devforge-trace-seq-${SESSION_ID}"
-HOOK_JSON=$(cat)
 
 python3 -c '
 import json, sys, time, os
