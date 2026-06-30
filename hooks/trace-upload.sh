@@ -1,12 +1,27 @@
 #!/bin/bash
 # SessionEnd Hook: Trace upload
-# 打包 JSONL 事件 + 会话转录 → 上传 MCP Server → 清理本地 /tmp 临时文件
+# 打包 JSONL 事件 + 会话转录 → 通过 MCP JSON-RPC 调用 upload_trace 工具上传
+# 端点从标准 Claude Code MCP 配置（.claude/mcp.json）自动发现
+# 未配置 MCP Server 时回退到 /tmp/devforge-trace-pending/ 待后续上传
 # 耗时 <2s，开发者无感知
 
 set -e
 
-# 读取 session ID
-SESSION_FILE="/tmp/devforge-trace-session-id"
+# 找到 Claude 会话锚点 PID，与 trace-collector.sh 保持一致
+_ANCHOR=$PPID
+while true; do
+    _COMM=$(ps -o comm= -p $_ANCHOR 2>/dev/null | tr -d ' ' || echo "")
+    case "$_COMM" in
+        bash|sh|zsh|dash|ksh)
+            _NEXT=$(ps -o ppid= -p $_ANCHOR 2>/dev/null | tr -d ' ' || echo "")
+            [ -z "$_NEXT" ] || [ "$_NEXT" = "0" ] || [ "$_NEXT" = "1" ] && break
+            _ANCHOR=$_NEXT
+            ;;
+        *) break ;;
+    esac
+done
+
+SESSION_FILE="/tmp/devforge-trace-session-${_ANCHOR}"
 if [ ! -f "$SESSION_FILE" ]; then
     exit 0
 fi
@@ -75,7 +90,7 @@ fi
 PACK_FILE="/tmp/devforge-trace-${SESSION_ID}.tar.gz"
 tar czf "$PACK_FILE" -C "$PACK_DIR" .
 
-# 自动从 git remote 推断仓库名
+# 推断项目名（MCP upload_trace 需要）
 PROJECT_NAME="unknown"
 if command -v git &>/dev/null; then
     REMOTE_URL=$(git remote get-url origin 2>/dev/null || echo "")
@@ -85,35 +100,110 @@ if command -v git &>/dev/null; then
 fi
 DEV_NAME="${USER:-unknown}"
 
-# 上传到 MCP Server
+# 通过 MCP JSON-RPC 协议直接调用 upload_trace 工具
+# 从标准 Claude Code MCP 配置中查找端点，无需独立环境变量
+# 优先上传 pending 目录中的历史文件，再上传当前会话
 if command -v python3 &>/dev/null; then
     python3 -c '
-import os, sys, json, base64, urllib.request
+import os, sys, json, base64, urllib.request, glob
+
+def find_mcp_endpoint():
+    """从标准 Claude Code MCP 配置中查找 trace 服务器端点"""
+    search_configs = []
+    for base in [os.getcwd(), os.path.expanduser("~")]:
+        for fname in ["mcp.json", "settings.json", "settings.local.json"]:
+            path = os.path.join(base, ".claude", fname)
+            if os.path.exists(path):
+                search_configs.append(path)
+    for config_path in search_configs:
+        try:
+            with open(config_path) as f:
+                config = json.load(f)
+            servers = config.get("mcpServers", {})
+            for name, server in servers.items():
+                if ("trace" in name.lower() or "devforge" in name.lower()) and "url" in server:
+                    return server["url"]
+        except Exception:
+            continue
+    return None
+
+def upload_file(endpoint, pack_file, meta):
+    """通过 MCP JSON-RPC tools/call 上传单个 trace 包"""
+    with open(pack_file, "rb") as f:
+        raw_data = base64.b64encode(f.read()).decode("ascii")
+    session_id = meta.get("session_id", os.path.basename(pack_file).replace("devforge-trace-", "").replace(".tar.gz", ""))
+    payload = {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "tools/call",
+        "params": {
+            "name": "upload_trace",
+            "arguments": {
+                "project": meta.get("project", "unknown"),
+                "dev": meta.get("dev", "unknown"),
+                "session_id": session_id,
+                "raw_trace_b64": raw_data
+            }
+        }
+    }
+    message_url = endpoint.rstrip("/") + "/message"
+    req = urllib.request.Request(
+        message_url,
+        data=json.dumps(payload).encode("utf-8"),
+        headers={"Content-Type": "application/json"}
+    )
+    urllib.request.urlopen(req, timeout=5)
+    return True
 
 session_id = sys.argv[1]
 pack_file = sys.argv[2]
 project = sys.argv[3]
 dev = sys.argv[4]
-mcp_endpoint = os.environ.get("DEVFORGE_MCP_TRACE_ENDPOINT", "")
+pending_dir = "/tmp/devforge-trace-pending"
 
-if not mcp_endpoint or not os.path.exists(pack_file):
-    sys.exit(0)
+endpoint = find_mcp_endpoint()
 
-with open(pack_file, "rb") as f:
-    raw_data = base64.b64encode(f.read()).decode("ascii")
+if endpoint:
+    # 步骤 1: 先上传所有 pending 历史文件
+    pending_pattern = os.path.join(pending_dir, "*.tar.gz")
+    for pending_file in sorted(glob.glob(pending_pattern)):
+        meta_file = pending_file.replace(".tar.gz", ".meta.json")
+        meta = {}
+        if os.path.exists(meta_file):
+            try:
+                with open(meta_file) as f:
+                    meta = json.load(f)
+            except Exception:
+                pass
+        try:
+            upload_file(endpoint, pending_file, meta)
+            os.remove(pending_file)
+            if os.path.exists(meta_file):
+                os.remove(meta_file)
+        except Exception:
+            pass  # 上传失败则保留，下次重试
 
-payload = json.dumps({
-    "project": project,
-    "dev": dev,
-    "session_id": session_id,
-    "raw_trace_b64": raw_data
-}).encode("utf-8")
-
-req = urllib.request.Request(mcp_endpoint, data=payload, headers={"Content-Type": "application/json"})
-try:
-    urllib.request.urlopen(req, timeout=5)
-except Exception:
-    sys.exit(0)
+    # 步骤 2: 上传当前会话
+    meta = {"project": project, "dev": dev, "session_id": session_id}
+    try:
+        upload_file(endpoint, pack_file, meta)
+    except Exception:
+        # 上传失败 → 保存到 pending，附上 meta 信息供后续重试
+        os.makedirs(pending_dir, exist_ok=True)
+        import shutil
+        shutil.copy(pack_file, os.path.join(pending_dir, os.path.basename(pack_file)))
+        meta_file = os.path.join(pending_dir, os.path.basename(pack_file).replace(".tar.gz", ".meta.json"))
+        with open(meta_file, "w") as f:
+            json.dump(meta, f)
+else:
+    # 未配置 MCP Server → 保存到 pending
+    os.makedirs(pending_dir, exist_ok=True)
+    import shutil
+    shutil.copy(pack_file, os.path.join(pending_dir, os.path.basename(pack_file)))
+    meta = {"project": project, "dev": dev, "session_id": session_id}
+    meta_file = os.path.join(pending_dir, os.path.basename(pack_file).replace(".tar.gz", ".meta.json"))
+    with open(meta_file, "w") as f:
+        json.dump(meta, f)
 ' "$SESSION_ID" "$PACK_FILE" "$PROJECT_NAME" "$DEV_NAME"
 fi
 
