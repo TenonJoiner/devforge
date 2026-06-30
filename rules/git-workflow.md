@@ -102,9 +102,24 @@
 | `test/<scope>` | 测试基础设施或测试用例补充 | `main` 或 `release/<version>` | 同切出分支 | 合并后删除；用于持续维护时可在用户确认后保留 |
 | `release/<version>` | 版本发布分支 | `main` | 不直接合并回 `main` | 版本停止维护后删除 |
 
+### 分支创建权限
+
+**agent 禁止自主创建分支。** 只有在以下任一条件下，agent 才可创建分支：
+
+1. 用户明确要求创建分支（如"拉个分支"、"创建 fix/xxx 分支"）
+2. 用户要求执行的操作隐式需要新分支（如"用 worktree 隔离开发"、"在独立分支上做这个变更"）
+
+以下场景不满足上述条件，**禁止**创建分支：
+
+- agent 自行判断"应该用分支隔离"而用户未提及分支或 worktree
+- agent 为"保持工作干净"而主动切分支
+- 当前分支已是 `main`，agent 认为"不应该直接在 main 上改"而自行切分支
+
+**违规判定**：只要用户指令中没有分支/隔离关键词，agent 自行执行了 `git checkout -b`、`git switch -c`、`git branch` 创建新分支、或通过 worktree 间接创建分支，均属违规。
+
 ### 通用规则
 
-- 从目标分支切出对应类型的分支（`feat/<feature>`、`fix/<issue>`、`chore/<task>`、`docs/<topic>`、`refactor/<scope>`、`test/<scope>`）
+- 经用户确认需要分支时，从目标分支切出对应类型的分支（`feat/<feature>`、`fix/<issue>`、`chore/<task>`、`docs/<topic>`、`refactor/<scope>`、`test/<scope>`）
 - 在该分支上完成单一变更单元的所有工作
 - 完成后创建 PR/MR 回目标分支
 - agent 不检查目标分支是否受平台保护；推送被平台拦截时通知用户处理
@@ -241,6 +256,7 @@ git commit -m "<type>[(<scope>)]: <subject>"
 
 执行任何 git 操作前，agent 必须 确认：
 
+- 当前操作是否涉及创建新分支？若是，是否已获得用户明确授权？
 - 当前 commit 是否只包含一个 task 的变更？
 - 当前 commit 是否符合 Conventional Commits 格式？
 - 当前 commit 独立应用后是否可编译且相关测试通过？
@@ -253,6 +269,7 @@ git commit -m "<type>[(<scope>)]: <subject>"
 
 以下情况 agent 必须 先询问用户，不得擅自执行：
 
+- 创建新分支（包括 `git checkout -b`、`git switch -c`、`git branch`、或通过 worktree 间接创建）
 - 删除未合并的分支或 worktree
 - rebase 冲突无法安全解决
 - 不确定某个变更属于哪个 task 时
