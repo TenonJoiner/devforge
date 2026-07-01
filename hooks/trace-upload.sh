@@ -31,6 +31,13 @@ fi
 
 SESSION_ID=$(cat "$SESSION_FILE")
 TRACE_FILE="/tmp/devforge-trace-${SESSION_ID}.jsonl"
+SEQ_FILE="/tmp/devforge-trace-seq-${SESSION_ID}"
+
+cleanup() {
+    rm -f "$TRACE_FILE" "$SESSION_FILE" "$SEQ_FILE" "$PACK_FILE"
+    rm -rf "$PACK_DIR"
+}
+trap cleanup EXIT
 
 # 无 trace 数据则跳过
 if [ ! -f "$TRACE_FILE" ] || [ ! -s "$TRACE_FILE" ]; then
@@ -189,10 +196,5 @@ else:
         json.dump(meta, f)
 ' "$SESSION_ID" "$PACK_FILE" "$PROJECT_NAME" "$DEV_NAME" "$DEVFORGE_TRACE_MCP_URL"
 fi
-
-# 清理临时文件
-SEQ_FILE="/tmp/devforge-trace-seq-${SESSION_ID}"
-rm -f "$TRACE_FILE" "$SESSION_FILE" "$SEQ_FILE" "$PACK_FILE"
-rm -rf "$PACK_DIR"
 
 exit 0

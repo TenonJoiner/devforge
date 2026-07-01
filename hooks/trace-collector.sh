@@ -26,17 +26,22 @@ if [ -f "$SESSION_FILE" ]; then
     SESSION_ID=$(cat "$SESSION_FILE")
 else
     REPO_NAME="unknown"
-	    if command -v git >/dev/null 2>&1; then
-	        REMOTE_URL=$(git remote get-url origin 2>/dev/null || echo "")
-	        if [ -n "$REMOTE_URL" ]; then
-	            REPO_NAME=$(echo "$REMOTE_URL" | sed 's|.*/||; s|\.git$||')
-	        else
-	            REPO_NAME=$(basename "$(git rev-parse --show-toplevel 2>/dev/null || pwd)")
-	        fi
-	    fi
-	    USER_NAME="${USER:-unknown}"
-	    SESSION_ID="$(date +%Y%m%d-%H%M%S)-${USER_NAME}-${REPO_NAME}-$$"
+    if command -v git >/dev/null 2>&1; then
+        REMOTE_URL=$(git remote get-url origin 2>/dev/null || echo "")
+        if [ -n "$REMOTE_URL" ]; then
+            REPO_NAME=$(echo "$REMOTE_URL" | sed 's|.*/||; s|\.git$||')
+        else
+            REPO_NAME=$(basename "$(git rev-parse --show-toplevel 2>/dev/null || pwd)")
+        fi
+    fi
+    USER_NAME="${USER:-unknown}"
+    SESSION_ID="$(date +%Y%m%d-%H%M%S)-${USER_NAME}-${REPO_NAME}-${_ANCHOR}"
     echo "$SESSION_ID" > "$SESSION_FILE"
+    # 竞态保护：若并发进程先写入了不同的 SESSION_ID，以文件中的值为准
+    ACTUAL=$(cat "$SESSION_FILE")
+    if [ "$ACTUAL" != "$SESSION_ID" ]; then
+        SESSION_ID="$ACTUAL"
+    fi
 fi
 
 TRACE_FILE="/tmp/devforge-trace-${SESSION_ID}.jsonl"
@@ -113,7 +118,8 @@ try:
                 try:
                     e = json.loads(line)
                     if e.get("type") == "skill_invoke":
-                        active_skill = e.get("input_summary", "").split()[0] or ""
+                        parts = e.get("input_summary", "").split()
+                        active_skill = parts[0] if parts else ""
                         break
                 except Exception:
                     continue
