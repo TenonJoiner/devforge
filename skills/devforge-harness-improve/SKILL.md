@@ -50,20 +50,7 @@ echo "工作目录: $WORK_DIR"
 
 后续所有中间文件均写入 `$WORK_DIR/`，不同项目、多次执行互不干扰。
 
-### 第 1 阶段：读取本地 Trace 与上次 Issues
-
-**步骤 0：检查上次 issues.md 的验证状态（闭环）**
-
-若 `$WORK_DIR/issues.md` 已存在（上一次运行产出），主会话读取并展示待验证的 issue 列表：
-
-```
-## 闭环验证：上次 Issues 状态
-| Issue | Proposed Fix | Predicted Effect | 本次验证结果 |
-|-------|-------------|-----------------|-------------|
-| ... | ... | ... | 待确认 / 已改善 / 未改善 |
-```
-
-harness 工程师确认哪些 fix 已生效、哪些需回滚。这实现了 AHE 决策可观测性的核心闭环——每次修改附带预测，下一轮验证预测。
+### 第 1 阶段：读取本地 Trace
 
 **步骤 1：列出 `trace_dir` 下所有 trace 包**
 
@@ -140,28 +127,43 @@ bash skills/devforge-harness-improve/aggregate.sh "$WORK_DIR/reports" > "$WORK_D
 - 执行对齐问题：工具输出未被后续消费的模式频率
 - 纠正热点：≥3 会话中触发用户纠正的 skill
 
-问题可能出在两层：
+资源分三层，不同层级存放不同类型的文件，诊断时按归属层检查：
 
-1. DevForge harness 文件（<devforge_repo_root> 下的 SKILL.md、agents/*.md、hooks/、rules/、templates/）
-2. 项目级上下文文件（<project_dir> 下的 CLAUDE.md、rules/、架构约束文档等）
+**第 1 层 — Plugin 层**（DevForge 安装目录，随 plugin 分发）：
+`agents/`、`skills/`、`commands/`、`hooks/`、`templates/`、`rules/`
+这些是 DevForge 框架基础设施，在所有项目中共享，由 harness 工程师维护。
 
-读取第 1 层和第 2 层的实际源文件，对照 aggregate 中的组件归因和恢复模式信号，诊断具体缺陷。禁止脱离真实文件内容推断——每个项目级 issue 必须引用对应源文件的具体内容作为证据。
+**第 2 层 — 用户层**（`~/.claude/`）：
+`CLAUDE.md`（用户全局偏好）、`settings.json`（用户级 hooks/权限配置）
+影响所有项目的全局行为。
+
+**第 3 层 — 项目层**（`<project_dir>` 及 `<project_dir>/.claude/`）：
+`CLAUDE.md`（项目指令）、`.claude/settings.local.json`（项目级配置）、`.claude/rules/`（项目规则）、`docs/`（架构/需求文档）
+仅影响当前项目，内容因项目而异。
+
+**关键规则**：
+- Plugin 层资源（agents/、skills/、commands/、hooks/、templates/）**不在项目层**，禁止因项目目录中找不到这些文件而报 issue
+- 诊断时：若 aggregate 归因到 `agents/*.md`，应读取 Plugin 层的 `agents/` 目录；若归因到 `SKILL.md`，应读取 Plugin 层的 `skills/` 目录；hooks/ 问题检查 Plugin 层的 `hooks/`
+- 项目层仅检查项目特有的文件：`CLAUDE.md`、`.claude/settings.local.json`、`.claude/rules/`、`docs/`
+- 用户层仅当异常跨多个项目共现时才检查（单项目 issue 优先排查 Plugin 层和项目层）
+
+读取对应层的实际源文件，对照 aggregate 中的组件归因和恢复模式信号，诊断具体缺陷。禁止脱离真实文件内容推断——每个 issue 必须引用对应源文件的具体内容作为证据。
 
 分析要求：
-- 优先关注组件故障热点中 sessions ≥ 2 的条目，逐一读取对应源文件诊断根因
+- 优先关注组件故障热点中 sessions ≥ 2 的条目，逐一读取对应层源文件诊断根因
 - IGNORE 占比 >40% 或 RETRY 占比 >30% 时，必须诊断 skill 中缺失的错误处理/退出条件
-- 按五大类别分类，每个 issue 标注归属层（DevForge / 项目级）
+- 按五大类别分类，每个 issue 标注归属层（Plugin / 用户层 / 项目级）
 - 3+ 开发者共现 → 共性模式（高优先级），1 个开发者 → 个人模式（标记 NEEDS_HUMAN_REVIEW）
-- 每个 issue 必须包含 Change Manifest（遵循 AHE 决策可观测性）：
+- 每个 issue 必须包含 Change Manifest：
 
 ```
 ### Issue: <标题>
 - 严重度: CRITICAL | HIGH | MEDIUM | LOW
 - 类别: 编排缺陷 | Agent 偏差 | Hook 漂移 | 上下文缺失 | 用户摩擦
-- 归属层: DevForge | 项目级
+- 归属层: Plugin | 用户层 | 项目级
 - 涉及: X 个会话, Y 个开发者
 - 证据: <aggregate 中的具体数据和组件归因信号>
-- 目标文件: <harness 源文件路径>
+- 目标文件: <源文件路径，标注所属层>
 
 **Proposed Fix**: <具体修改方案>
 **Predicted Effect**: <预期改善的指标及幅度，如"Skill 错误率从 X% → Y%">
@@ -178,12 +180,15 @@ bash skills/devforge-harness-improve/aggregate.sh "$WORK_DIR/reports" > "$WORK_D
 主会话读取 `$WORK_DIR/issues.md` 并按归属层分组展示给 harness 工程师：
 
 ```
-## DevForge 层
+## Plugin 层
 - Issue 1: ...
 - Issue 2: ...
 
-## 项目级
+## 用户层
 - Issue 3: ...
+
+## 项目级
+- Issue 4: ...
 ```
 
 - 共性模式 = 3+ 开发者共现的 issue，高优先级

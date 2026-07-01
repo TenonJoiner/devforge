@@ -12,11 +12,11 @@ fi
 
 REPORT_DIR="${1:-.}"
 
-python3 -c '
+REPORT_DIR="$REPORT_DIR" python3 <<'PYEOF'
 import sys, os, re
 from collections import defaultdict, Counter
 
-report_dir = sys.argv[1]
+report_dir = os.environ['REPORT_DIR']
 
 # === 读取所有报告 ===
 reports = []
@@ -40,6 +40,7 @@ component_row_re = re.compile(r"^\|\s*(\S+)\s*\|\s*(\d+)\s*\|\s*(.+?)\s*\|")
 tool_row_re = re.compile(r"^\|\s*(\S+)\s*\|\s*(\d+)\s*\|\s*(\d+)\s*\|")
 agent_row_re = re.compile(r"^\|\s*(\S+)\s*\|\s*(\d+)\s*\|")
 anomaly_item_re = re.compile(r"^-\s*\[(\S+)\]\s+(.+)")
+detail_row_re = re.compile(r"^\|\s*(\S+)\s*\|\s*(.+?)\s*\|")
 
 sessions = []
 for r in reports:
@@ -63,6 +64,7 @@ for r in reports:
         "agents": {},
         "anomaly_count": 0,
         "anomaly_items": [],
+        "signal_details": [],
     }
 
     current_section = None
@@ -107,6 +109,10 @@ for r in reports:
             continue
         elif ls.startswith("### L5:"):
             current_section = "L5"
+            in_l1_table = False
+            continue
+        elif ls.startswith("### L5b"):
+            current_section = "L5b"
             in_l1_table = False
             continue
         elif ls.startswith("### 工具使用"):
@@ -184,6 +190,15 @@ for r in reports:
                     "signals": int(m.group(2)),
                     "summary": m.group(3).strip(),
                 }
+
+        # L5b: 信号-事件明细
+        elif current_section == "L5b":
+            m = detail_row_re.match(ls)
+            if m:
+                s["signal_details"].append({
+                    "component": m.group(1).strip(),
+                    "detail": m.group(2).strip(),
+                })
 
         # 工具使用
         elif current_section == "tools":
@@ -300,9 +315,18 @@ print(f"""# Harness 诊断聚合报告
 | 组件 | 信号总数 | 涉及会话 | 典型摘要 |
 |------|---------|---------|---------|""")
 for comp, data in sorted(component_hotspots.items(), key=lambda x: x[1]["sessions"], reverse=True):
-    if data["sessions"] >= 2:
-        top_summary = Counter(data["summaries"]).most_common(1)[0][0][:80] if data["summaries"] else "-"
+    if data["sessions"] >= 2 and data["total_signals"] > 0:
+        top_summary = Counter(data["summaries"]).most_common(1)[0][0][:80] if data["summaries"] else "(摘要缺失—蒸馏阶段未生成具体信号内容)"
         print(f"| {comp} | {data['total_signals']} | {data['sessions']} | {top_summary} |")
+
+if any(s.get("signal_details") for s in sessions):
+    print("""
+## 信号溯源""")
+    for s in sessions:
+        if s.get("signal_details"):
+            print(f"### 会话 {s['session'][:12]}")
+            for sd in s["signal_details"][:5]:
+                print(f"- {sd['component']} — {sd['detail']}")
 
 if skill_agg:
     print("""
@@ -383,4 +407,4 @@ for s in sessions:
     if len(s["skills"]) > 2:
         skills_short += f" +{len(s['skills'])-2}"
     print(f"| {s['session'][:12]} | {s['duration_min']}min | {s['events']} | {s['friction_score']:.2f} | {skills_short} | {s['alignment_count']} | {s['hook_blocks']} | {s['correction_count']} |")
-' "$REPORT_DIR"
+PYEOF

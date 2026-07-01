@@ -13,7 +13,7 @@ fi
 EVENTS_FILE="${1:-/dev/stdin}"
 TRANSCRIPT_FILE="${2:-}"
 
-python3 -c '
+EVENTS_FILE="$EVENTS_FILE" TRANSCRIPT_FILE="${TRANSCRIPT_FILE:-}" python3 <<'PYEOF'
 import json, sys, re, os
 from collections import defaultdict, Counter
 
@@ -36,7 +36,7 @@ def redact(text):
 
 # === 读取事件 ===
 events = []
-events_file = sys.argv[1]
+events_file = os.environ['EVENTS_FILE']
 with open(events_file) as f:
     for line in f:
         line = line.strip()
@@ -249,7 +249,7 @@ max_signals = max(weighted_base, 1)
 friction_score = min(1.0, friction_signals / max_signals)
 
 # === 读取转录 ===
-transcript_file = sys.argv[2] if len(sys.argv) > 2 else ""
+transcript_file = os.environ.get('TRANSCRIPT_FILE', '')
 user_corrections = []
 transcript_missing = False
 if transcript_file and os.path.exists(transcript_file):
@@ -408,6 +408,14 @@ if component_signals:
         summary = sigs[0][:80] if sigs else "-"
         print(f"| {comp} | {sig_count} | {redact(summary)} |")
 
+    print("")
+    print("### L5b: 信号-事件明细")
+    print("| 目标组件 | 详情 |")
+    print("|---|---|")
+    for comp in sorted(component_signals):
+        for sig in component_signals[comp][:20]:
+            print(f"| {comp} | {redact(sig[:120])} |")
+
 # 工具使用摘要
 print("""
 ### 工具使用
@@ -453,4 +461,4 @@ for e in events[:30]:
     print(f"| {seq} | {tool} | {etype} | {askill} | {summary} |")
 if len(events) > 30:
     print(f"| ... | ... | ... | ... | (省略 {len(events)-30} 条) |")
-' "$EVENTS_FILE" "$TRANSCRIPT_FILE"
+PYEOF
