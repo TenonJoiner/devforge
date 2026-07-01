@@ -99,6 +99,8 @@ if command -v git &>/dev/null; then
     REMOTE_URL=$(git remote get-url origin 2>/dev/null || echo "")
     if [ -n "$REMOTE_URL" ]; then
         PROJECT_NAME=$(echo "$REMOTE_URL" | sed 's|.*/||; s|\.git$||')
+    else
+        PROJECT_NAME=$(basename "$(git rev-parse --show-toplevel 2>/dev/null || pwd)")
     fi
 fi
 DEV_NAME="${USER:-unknown}"

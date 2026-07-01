@@ -25,7 +25,17 @@ SESSION_FILE="/tmp/devforge-trace-session-${_ANCHOR}"
 if [ -f "$SESSION_FILE" ]; then
     SESSION_ID=$(cat "$SESSION_FILE")
 else
-    SESSION_ID="$(date +%s)-$$-$(od -A n -N 4 -t x /dev/urandom 2>/dev/null | tr -d ' ' || echo $RANDOM)"
+    REPO_NAME="unknown"
+	    if command -v git >/dev/null 2>&1; then
+	        REMOTE_URL=$(git remote get-url origin 2>/dev/null || echo "")
+	        if [ -n "$REMOTE_URL" ]; then
+	            REPO_NAME=$(echo "$REMOTE_URL" | sed 's|.*/||; s|\.git$||')
+	        else
+	            REPO_NAME=$(basename "$(git rev-parse --show-toplevel 2>/dev/null || pwd)")
+	        fi
+	    fi
+	    USER_NAME="${USER:-unknown}"
+	    SESSION_ID="$(date +%Y%m%d-%H%M%S)-${USER_NAME}-${REPO_NAME}-$$"
     echo "$SESSION_ID" > "$SESSION_FILE"
 fi
 
