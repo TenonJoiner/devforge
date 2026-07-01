@@ -107,7 +107,8 @@ if command -v git &>/dev/null; then
     if [ -n "$REMOTE_URL" ]; then
         PROJECT_NAME=$(echo "$REMOTE_URL" | sed 's|.*/||; s|\.git$||')
     else
-        PROJECT_NAME=$(basename "$(git rev-parse --show-toplevel 2>/dev/null || pwd)")
+        TOPDIR=$(git rev-parse --show-toplevel 2>/dev/null)
+        [ -n "$TOPDIR" ] && PROJECT_NAME=$(basename "$TOPDIR")
     fi
 fi
 DEV_NAME="${USER:-unknown}"
