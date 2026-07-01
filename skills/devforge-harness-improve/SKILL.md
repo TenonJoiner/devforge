@@ -175,7 +175,7 @@ bash skills/devforge-harness-improve/aggregate.sh "$WORK_DIR/reports" > "$WORK_D
 
 ### 第 5 阶段：展示结果
 
-**步骤 5：展示 issues 列表**
+**步骤 5：展示 issues 列表并持久化**
 
 主会话读取 `$WORK_DIR/issues.md` 并按归属层分组展示给 harness 工程师：
 
@@ -194,14 +194,22 @@ bash skills/devforge-harness-improve/aggregate.sh "$WORK_DIR/reports" > "$WORK_D
 - 共性模式 = 3+ 开发者共现的 issue，高优先级
 - 个人模式 = 1 个开发者的 issue，降级为标记 NEEDS_HUMAN_REVIEW
 
+将 issues 文件拷贝到 `trace_dir`，文件名含时间戳避免覆盖：
+
+```bash
+ISSUES_COPY="<trace_dir>/issues-$(date +%Y%m%d-%H%M%S).md"
+cp "$WORK_DIR/issues.md" "$ISSUES_COPY"
+echo ""
+echo "=== Issues 文件: $ISSUES_COPY ==="
+```
+
 harness 工程师根据 issues 人工决定后续处理。
 
 ### 清理
 
-向用户确认后，删除 `trace_dir` 下的原始 trace 包：
+删除 `trace_dir` 下的原始 trace 包：
 
 ```bash
-# 主会话提示用户确认后执行
 rm -f <trace_dir>/*.tar.gz
 ```
 

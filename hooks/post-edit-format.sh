@@ -35,15 +35,16 @@ case "$ext" in
 esac
 
 # 按文件类型调用对应 formatter
-# 失败时静默退出（不阻塞编辑）
+# - 有 config 但工具不可用 → 硬失败（项目已声明要格式化，环境必须满足）
+# - 无 config → 静默跳过（项目未接入格式化）
+# - 工具执行失败 → 静默跳过（可能是 WIP 代码语法不完整）
 case "$ext" in
-    c|h)
+    c|h|cpp|cc|cxx|hpp|hh)
         if [ -f ".clang-format" ] || [ -f "_clang-format" ]; then
-            clang-format -i "$FILE" 2>/dev/null || true
-        fi
-        ;;
-    cpp|cc|cxx|hpp|hh)
-        if [ -f ".clang-format" ] || [ -f "_clang-format" ]; then
+            if ! command -v clang-format >/dev/null 2>&1; then
+                echo "[format] clang-format 未安装，但项目已配置 .clang-format" >&2
+                exit 1
+            fi
             clang-format -i "$FILE" 2>/dev/null || true
         fi
         ;;
@@ -56,22 +57,21 @@ case "$ext" in
     py)
         black "$FILE" 2>/dev/null || true
         ;;
-    js|ts|jsx|tsx)
-        # 探测项目 formatter：Biome 优先（format + lint 二合一）
+    js|ts|jsx|tsx|json|jsonc|md)
         if [ -f "biome.json" ] || [ -f "biome.jsonc" ]; then
+            if ! command -v biome >/dev/null 2>&1 && [ ! -x "node_modules/.bin/biome" ]; then
+                echo "[format] biome 未安装，但项目已配置 biome" >&2
+                exit 1
+            fi
             npx biome check --write "$FILE" 2>/dev/null || true
-        elif [ -f ".prettierrc" ] || [ -f ".prettierrc.json" ] || [ -f ".prettierrc.js" ]; then
-            npx prettier --write "$FILE" 2>/dev/null || true
-        fi
-        ;;
-    json|jsonc)
-        if [ -f "biome.json" ] || [ -f "biome.jsonc" ]; then
-            npx biome check --write "$FILE" 2>/dev/null || true
-        fi
-        ;;
-    md)
-        if [ -f "biome.json" ] || [ -f "biome.jsonc" ]; then
-            npx biome check --write "$FILE" 2>/dev/null || true
+        elif [ "$ext" = "js" ] || [ "$ext" = "ts" ] || [ "$ext" = "jsx" ] || [ "$ext" = "tsx" ]; then
+            if [ -f ".prettierrc" ] || [ -f ".prettierrc.json" ] || [ -f ".prettierrc.js" ]; then
+                if ! command -v prettier >/dev/null 2>&1 && [ ! -x "node_modules/.bin/prettier" ]; then
+                    echo "[format] prettier 未安装，但项目已配置 prettier" >&2
+                    exit 1
+                fi
+                npx prettier --write "$FILE" 2>/dev/null || true
+            fi
         fi
         ;;
 esac
