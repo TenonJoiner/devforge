@@ -30,7 +30,7 @@ ext="${FILE##*.}"
 
 # 只处理支持格式化的文件类型
 case "$ext" in
-    c|h|cpp|cc|cxx|hpp|hh|rs|go|py|js|ts|jsx|tsx|json|jsonc|md) ;;
+    c|h|cpp|cc|cxx|hpp|hh|go|py|js|ts|jsx|tsx|json|jsonc|md) ;;
     *) exit 0 ;;
 esac
 
@@ -47,9 +47,6 @@ case "$ext" in
             fi
             clang-format -i "$FILE" 2>/dev/null || true
         fi
-        ;;
-    rs)
-        rustfmt "$FILE" 2>/dev/null || true
         ;;
     go)
         gofmt -w "$FILE" 2>/dev/null || true

@@ -14,7 +14,7 @@
 1. 激活 `code-reviewer` Agent
 2. **范围确认**：
    - 日常轻量评审：获取当前工作区 `git diff HEAD` + `git diff --cached` 的变更
-   - 批量收尾：获取 `git diff $(git merge-base HEAD main)..HEAD` 的完整变更
+   - 批量收尾：检测 trunk 分支后计算 `git diff $(git merge-base HEAD <trunk>)..HEAD`
 3. **评审**：基于变更规模选择评审深度
    - **轻量评审（< 300 行且模块 ≤ 2）**：`code-reviewer` 单 agent，覆盖 D1 Correctness + D2 Readability，单轮
    - **深度评审（≥ 300 行，或 3+ 模块）**：5 个 subagent 并行（D1-D5 各一个），汇总去重
@@ -39,13 +39,23 @@
 ## 参数
 
 ```
-/df:code-review [autofix] [file-pattern]
+/df:code-review [autofix] [--full] [--diff-range <value>] [file-pattern]
 ```
 
 - `autofix`（可选）：评审后自动修复代码。不带此参数时只评审不修复
+- `--full`（可选）：分支全量评审，范围为完整 proposal 变更，自动检测 trunk 分支。不传时默认评审工作区未提交变更（`git diff HEAD` + `git diff --cached`）
+- `--diff-range`（可选）：显式指定 git diff 范围，如 `"git diff origin/main...HEAD"`。优先级高于 `--full`，由外部调用方（如 pr-review）传入
 - `file-pattern`（可选）：只评审匹配的文件，如 `src/storage/*.c`
 
 ## 使用示例
+
+**全量评审（QA 收尾）**：
+
+```
+/df:code-review autofix --full
+> 评审范围：完整 proposal 变更，12 个文件，+450 -120
+> 启动深度评审（5 维度并行）...
+```
 
 **只评审不修复（默认）**：
 

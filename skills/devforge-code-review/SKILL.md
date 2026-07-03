@@ -7,8 +7,12 @@ parameters:
     description: 评审后自动修复代码（默认只评审不修复）
     required: false
     default: false
+  - name: full
+    description: 分支全量评审，范围为完整 proposal 变更（默认只评审工作区未提交变更）
+    required: false
+    default: false
   - name: diff-range
-    description: 指定 diff 范围命令（由调用方注入）
+    description: 显式指定 git diff 范围，优先级高于 full（由外部调用方如 pr-review 注入）
     required: false
   - name: report-output-path
     description: 评审报告输出路径（由调用方注入）
@@ -35,7 +39,7 @@ parameters:
 - **证据说话**：每个问题必须引用代码行、说明影响、提供改进方案
 - **领域适配**：根据项目文件系统自动推断的主语言，以及代码结构中的领域特征调整评审侧重
 
-**风格问题不进入评审**：命名风格、格式、minor 文档缺失等由 `coding-style` rule + `post-edit-format` hook（对应语言的格式化工具，如 `clang-format`/`gofmt`/`rustfmt`/`black`）在编辑时自动处理。code-reviewer 聚焦于 correctness / security / maintainability，不讨论 tabs vs spaces。
+**风格问题不进入评审**：命名风格、格式、minor 文档缺失等由 `coding-style` rule + `post-edit-format` hook（对应语言的格式化工具，如 `clang-format`/`gofmt`/`black`）在编辑时自动处理。code-reviewer 聚焦于 correctness / security / maintainability，不讨论 tabs vs spaces。
 
 ## 何时使用
 
@@ -51,15 +55,13 @@ parameters:
 |------|---------|---------|
 | 日常轻量评审 | `git diff HEAD` + `git diff --cached`（工作区未提交变更） | `/df:code-review` |
 | task group 完成后 | 当前 task group 对应的 `git diff`（自上次评审以来的变更） | 自动触发 |
-| Q.4 全量收尾 | `git diff $(git merge-base HEAD main)..HEAD`（完整 proposal 变更） | 质量收尾阶段 |
+| Q.4 全量收尾 | `git diff $(git merge-base HEAD <trunk>)..HEAD`（完整 proposal 变更，trunk 动态检测） | 质量收尾阶段 |
 | 指定文件 | `file-pattern` 匹配的文件 | `/df:code-review <pattern>` |
-| 指定 diff 范围 | 由调用方传入的 `diff-range` 命令 | `/df:code-review --diff-range "git diff ..."` |
+**diff 范围确定优先级**：
 
-**`diff-range` 参数处理**：
-
-- 若 `diff-range` 参数存在，直接使用该命令作为本次评审的 diff 范围，不再自动推断。
-- `diff-range` 由调用方负责计算，通常形式为 `git diff origin/<base>...HEAD`。
-- 若 `diff-range` 为空，按上表其他场景自动推断。
+1. **`diff-range` 参数存在**：直接使用（由外部调用方如 `pr-review` 传入），不做任何处理
+2. **`full` 参数存在**：检测 trunk 分支后计算。先通过 `git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null` 或 `git remote show origin 2>/dev/null | grep 'HEAD branch' | cut -d: -f2` 获取远程默认分支，再做 `git diff $(git merge-base HEAD origin/<trunk>)..HEAD`。若检测失败，回退到 `git diff $(git merge-base HEAD main)..HEAD`
+3. **都不传**（默认）：`git diff HEAD` + `git diff --cached`（工作区未提交变更）
 
 **范围铁律**：评审只针对本次变更范围内的代码。发现范围外的问题时，记录为LOW变体分析发现，不阻塞本次合并。
 
@@ -175,8 +177,8 @@ parameters:
 Correctness 和 Security 维度中的部分检查项引用 `coding-style-<lang>.md` 规则文件。主语言由项目文件系统推断，而非外部配置：
 
 1. **推断主语言**：按以下优先级扫描项目文件系统
-   - 源码文件后缀：`.c`/`.h` 最多 → C；`.cpp`/`.cc`/`.hpp` 最多 → C++；`.rs` → Rust；`.go` → Go；`.py` → Python；`.java` → Java；`.js`/`.ts` → JS/TS
-   - 构建文件：存在 `Cargo.toml` → Rust；`go.mod` → Go；`CMakeLists.txt`/`Makefile` + 大量 `.c`/`.h` → C/C++；`pyproject.toml`/`setup.py` → Python；`pom.xml`/`build.gradle` → Java；`package.json` → JS/TS
+   - 源码文件后缀：`.c`/`.h` 最多 → C；`.cpp`/`.cc`/`.hpp` 最多 → C++；`.go` → Go；`.py` → Python；`.java` → Java；`.js`/`.ts` → JS/TS
+   - 构建文件：`go.mod` → Go；`CMakeLists.txt`/`Makefile` + 大量 `.c`/`.h` → C/C++；`pyproject.toml`/`setup.py` → Python；`pom.xml`/`build.gradle` → Java；`package.json` → JS/TS
    - 存在多语言混用时，以变更涉及的主要源文件语言为准
    - 推断结果在评审报告中记录，供人工复核
 2. 加载对应的 `coding-style-<lang>.md`
@@ -213,7 +215,7 @@ Correctness 和 Security 维度中的部分检查项引用 `coding-style-<lang>.
 | 字段 | 说明 | 示例 |
 |------|------|------|
 | `任务模式` | 轻量评审（D1+D2）/ 深度评审（D1-D5）/ 单维度 subagent | `深度评审-D3-Architecture` |
-| `主语言` | skill 从项目文件系统探测后注入 | `C` / `Rust` / `Go` |
+| `主语言` | skill 从项目文件系统探测后注入 | `C` / `Go` |
 | `评审维度` | 本次评审覆盖的维度子集（D1-D5 子集） | `D1, D2` / `D3` 单维度 |
 | `diff_range` | skill 计算后注入的 git diff 命令或范围 | `git diff HEAD` / `git diff $(git merge-base HEAD main)..HEAD` |
 | `领域信号` | 从代码结构/架构文档识别的领域特征 | `存储/WAL` / `高性能服务` |
@@ -245,7 +247,7 @@ Correctness 和 Security 维度中的部分检查项引用 `coding-style-<lang>.
 | 初始化阶段的进程终止 | 启动失败确实无法继续的场景（见对应语言 coding-style 错误处理章节） | 所有 |
 | 强制终止的 benchmark/perf 测试 | 性能测试中的极端操作是故意的（如故意触发竞态测量吞吐量） | 所有 |
 | 调试/日志路径的字符串操作 | 非安全关键路径，且缓冲区/内存大小已知安全 | 所有 |
-| 语言惯用的清理模式 | 如 C 的 `CLEANUP(ptr)` 宏 / `goto cleanup`，Rust 的 `drop` 语义，Go 的 `defer` | 各语言 |
+| 语言惯用的清理模式 | 如 C 的 `CLEANUP(ptr)` 宏 / `goto cleanup`，Go 的 `defer` | 各语言 |
 | 已遵循 coding-style 的豁免场景 | 如状态机函数长度在豁免范围内 | 所有 |
 
 > **为什么用硬规则排除**：假阳性排除避免评审在已知安全的模式上浪费时间。规则由项目经验和语言特性沉淀而来，不依赖评审者的主观判断。

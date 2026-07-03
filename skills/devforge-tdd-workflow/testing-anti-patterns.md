@@ -121,23 +121,6 @@ void teardown(void **state) {
 }
 ```
 
-```rust
-// ❌ 错误：Rust 中的测试专用方法
-pub struct Wal {
-    fd: File,
-    path: PathBuf,
-}
-
-impl Wal {
-    // 只在测试中使用！
-    pub fn destroy_for_test(&mut self) -> io::Result<()> {
-        drop(self.fd);
-        fs::remove_file(&self.path)?;
-        Ok(())
-    }
-}
-```
-
 ### 为什么错误
 
 - 生产类被测试专用代码污染
@@ -166,25 +149,6 @@ void test_cleanup_session(session_t *session) {
 // 在测试中
 void teardown(void **state) {
     test_cleanup_session(*state);
-}
-```
-
-```rust
-// ✅ 正确：测试工具模块
-// tests/test_utils.rs
-pub fn cleanup_wal(wal: Wal) -> io::Result<()> {
-    let path = wal.path.clone();
-    drop(wal);  // 关闭文件
-    fs::remove_file(path)?;
-    Ok(())
-}
-
-// 在测试中
-#[test]
-fn test_wal_append() {
-    let wal = Wal::create("test.wal").unwrap();
-    // ... 测试 ...
-    cleanup_wal(wal).unwrap();
 }
 ```
 

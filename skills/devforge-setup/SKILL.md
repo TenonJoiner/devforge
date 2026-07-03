@@ -8,16 +8,16 @@ allowed-tools: [Read, Bash, AskUserQuestion]
 
 一次性完成 DevForge plugin 运行环境的检测与安装。支持所有主流 Linux 发行版。
 
-## 全部工具清单（42 个，4 组）
+## 全部工具清单（39 个，4 组）
 
 ### 必备基础 (12)
 `python3` `git` `tar` `ps` `sed` `tr` `date` `basename` `grep` `mktemp` `awk` `jq`
 
-### 代码格式化 (5)
-`clang-format` `rustfmt` `gofmt` `black` `npx`
+### 代码格式化 (4)
+`clang-format` `gofmt` `black` `npx`
 
-### 语言工具链 (22)
-`clang-tidy` `cppcheck` `bear` `cmake` `make` `cargo` `clippy` `go` `golangci-lint` `mypy` `pyright` `ruff` `pylint` `tsc` `biome` `eslint` `npm` `pnpm` `bun` `mvn` `gradle` `shellcheck`
+### 语言工具链 (20)
+`clang-tidy` `cppcheck` `bear` `cmake` `make` `go` `golangci-lint` `mypy` `pyright` `ruff` `pylint` `tsc` `biome` `eslint` `npm` `pnpm` `bun` `mvn` `gradle` `shellcheck`
 
 ### 平台集成 (3)
 `gh` `glab` `zentao`
@@ -53,7 +53,7 @@ source /etc/os-release && echo "ID=$ID ID_LIKE=$ID_LIKE"
 
 ### 1.2 检测工具链管理器
 
-检查 `pip` / `pip3`、`npm`、`rustup`、`go` 是否可用（`command -v`）。缺失的工具链管理器本身也需要安装，但先记录状态，安装阶段再处理。
+检查 `pip` / `pip3`、`npm`、`go` 是否可用（`command -v`）。缺失的工具链管理器本身也需要安装，但先记录状态，安装阶段再处理。
 
 ### 1.3 逐个检查全部 42 个工具
 
@@ -62,11 +62,11 @@ source /etc/os-release && echo "ID=$ID ID_LIKE=$ID_LIKE"
 - **已安装列表**（每项 `✅`）
 - **缺失列表**（每项 `❌`，记录工具名和对应的安装方式）
 
-注意：`npx` 通过 `command -v npx` 检测；`gofmt` 通过 `command -v gofmt` 检测；`cargo`/`rustfmt`/`clippy` 通过 `command -v` 各自检测。
+注意：`npx` 通过 `command -v npx` 检测；`gofmt` 通过 `command -v gofmt` 检测。
 
 ---
 
-## 第 2 阶段：生成报告并确认
+## 第 2 阶段：生成报告
 
 按 4 组输出报告，每组列出 `✅` 和 `❌`。末尾统计总数。示例格式：
 
@@ -80,49 +80,52 @@ source /etc/os-release && echo "ID=$ID ID_LIKE=$ID_LIKE"
 ✅ date     ✅ basename  ✅ grep  ✅ mktemp
 ❌ awk      ❌ jq
 
-### 代码格式化 (3/5)
-✅ rustfmt  ✅ gofmt  ✅ black
+### 代码格式化 (3/4)
+✅ gofmt  ✅ black
 ❌ clang-format  ❌ npx
 
 ### 语言工具链 (4/22)
-✅ cargo  ❌ clang-tidy  ❌ cppcheck  ❌ bear  ...（列出所有 ❌）
+✅ go  ❌ clang-tidy  ❌ cppcheck  ❌ bear  ...（列出所有 ❌）
 
 ### 平台集成 (0/3)
 ❌ gh  ❌ glab  ❌ zentao
 
 ---
-共检测 42 个工具，已安装 17 个，缺失 25 个。
+共检测 39 个工具，已安装 17 个，缺失 22 个。
 ```
 
-然后用 **AskUserQuestion** 确认：
+## 第 3 阶段：确认安装
+
+报告输出后，**必须调用 AskUserQuestion 工具**向用户确认。未收到用户选择前，不得进入第 4 阶段。
 
 | 字段 | 值 |
 |------|-----|
 | question | "是否安装全部缺失工具？" |
 | header | "确认安装" |
 | options[0].label | **确认安装** |
-| options[0].description | 安装全部 25 个缺失工具 |
+| options[0].description | 安装全部 N 个缺失工具（N 替换为实际缺失数量） |
 | options[1].label | **跳过安装** |
 | options[1].description | 仅查看报告，不执行安装 |
 
+用户选择"跳过安装"则流程结束。选择"确认安装"则进入第 4 阶段。
+
 ---
 
-## 第 3 阶段：自动安装
+## 第 4 阶段：自动安装
 
 用户选择"确认安装"后执行。
 
-### 3.1 安装顺序
+### 4.1 安装顺序
 
 先装工具链管理器，再装具体工具：
 
 1. 确保 EPEL 可用（dnf/yum 系且非 Fedora）：`sudo dnf install -y epel-release`（或 `yum`）。Fedora 自带足够软件源，跳过此步
 2. 确保 pip 可用：`sudo apt/dnf install -y python3-pip`
 3. 确保 npm 可用：`sudo apt/dnf install -y nodejs npm`
-4. 确保 rustup 可用：`curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y`（如已安装则跳过）
-5. 确保 go 可用：`sudo apt/dnf install -y golang`（如缺失）
-6. 逐个安装其余缺失工具
+4. 确保 go 可用：`sudo apt/dnf install -y golang`（如缺失）
+5. 逐个安装其余缺失工具
 
-### 3.2 包名映射表
+### 4.2 包名映射表
 
 按发行版选择正确的包名/安装命令。每个工具先尝试主方案，失败则按错误类型动态应用恢复策略。
 
@@ -137,7 +140,6 @@ source /etc/os-release && echo "ID=$ID ID_LIKE=$ID_LIKE"
 | `make` | 系统包 | `sudo apt-get/dnf/yum install -y make` |
 | `golang` (go, gofmt) | 系统包 | `sudo apt-get/dnf/yum install -y golang` |
 | `golangci-lint` | 安装脚本 | `curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh \| sh -s -- -b $(go env GOPATH)/bin` |
-| `rustup` (cargo, rustfmt, clippy) | curl 安装 | `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \| sh -s -- -y`；装完后执行 `source "$HOME/.cargo/env" && rustup component add rustfmt clippy` |
 | `black` | 系统包 > pip | 先尝试系统包：apt 系 `sudo apt-get install -y black`，dnf/yum 系 `sudo dnf/yum install -y python3-black`；失败则 `pip install black` |
 | `mypy` | pip | `pip install mypy` |
 | `ruff` | pip | `pip install ruff` |
@@ -156,7 +158,7 @@ source /etc/os-release && echo "ID=$ID ID_LIKE=$ID_LIKE"
 | `shellcheck` | 系统包 | `sudo apt-get/dnf/yum install -y shellcheck` |
 | `zentao` | npm global | `npm install -g @singee/zentao-cli` |
 
-### 3.3 错误分类与恢复策略
+### 4.3 错误分类与恢复策略
 
 安装失败时，根据实际 stderr 匹配对应策略，动态应对。不硬编码 fallback 路径。
 
@@ -165,14 +167,14 @@ source /etc/os-release && echo "ID=$ID ID_LIKE=$ID_LIKE"
 | `Unable to locate package` / `No match for argument` | 包名错误或缓存过期 | Ubuntu: `sudo apt-get update` 后重试；Rocky/CentOS: `sudo dnf makecache` 后重试。仍失败则尝试修正包名 |
 | `Permission denied` / `EACCES` / `read-only` | 权限不足 | 系统包补 `sudo`；pip 加 `--user`；npm 加 `--prefix ~/.local` |
 | `Could not resolve host` / `timeout` / `Connection refused` | 网络不通 | 重试 1 次；仍失败则跳过，记录错误并附手动安装提示 |
-| `command not found: pip` / `npm` / `rustup` / `go` / `curl` | 工具链缺失 | 先安装缺失的工具链管理器，再重试原命令 |
+| `command not found: pip` / `npm` / `go` / `curl` | 工具链缺失 | 先安装缺失的工具链管理器，再重试原命令 |
 | `conflict` / `dependency` / `unmet dependencies` | 版本冲突 | 系统包：尝试 `--fix-broken`；pip：尝试 `--break-system-packages`；npm：尝试 `--force` |
 | `SSL` / `certificate` / `TLS` | 证书或代理问题 | 网络类错误特殊处理：跳过并给排查建议（检查代理、CA 证书） |
 | 其他未知错误 | 无法分类 | 保留完整 stderr（≤5 行），跳过并提示用户手动排查 |
 
 恢复后仍失败 → 记录工具名 + 失败原因，继续下一个。不中断整体流程。
 
-### 3.4 安装结果报告
+### 4.4 安装结果报告
 
 安装完成后，输出每项安装结果：
 

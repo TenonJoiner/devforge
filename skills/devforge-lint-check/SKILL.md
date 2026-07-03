@@ -110,7 +110,7 @@ git diff --name-only HEAD
 1. **获取构建命令**
    - 先查 `CLAUDE.md` 中是否已记录构建命令（搜索 BUILD_COMMAND、编译、构建等关键词）
    - 若无，按以下优先级探测构建系统文件，生成候选命令：
-     `Cargo.toml` → `cargo build` | `go.mod` → `go build`
+     `go.mod` → `go build`
      `build.sh` → `./build.sh` | `CMakeLists.txt` → `cmake --build build`
      `Makefile` → `make` | `pyproject.toml` / `setup.py` → 按需
      `package.json` → `npm run build` / `pnpm build`
@@ -149,7 +149,6 @@ git diff --name-only HEAD
 | 语言 | 探测信号 | 类型检查 | 静态分析 |
 |------|---------|---------|---------|
 | C/C++ | `.clang-tidy` / `compile_commands.json` | 编译器内置（L1） | `clang-tidy` + `cppcheck` |
-| Rust | `Cargo.toml` | 编译器内置（L1） | `clippy` |
 | Go | `go.mod` / `.golangci.yml` | 编译器内置（L1） | `golangci-lint` / `go vet` |
 | Python | `pyproject.toml` / `mypy.ini` | `mypy` / `pyright` | `ruff check` / `pylint` |
 | JS/TS | `package.json` / `tsconfig.json` | `tsc --noEmit` | `biome check` / `eslint` |
@@ -159,7 +158,7 @@ git diff --name-only HEAD
 1. **L2a Type Check**（仅对需要显式类型检查的语言）：
    - Python: `mypy .` 或 `pyright`
    - JS/TS: `tsc --noEmit`（需要 `tsconfig.json`）
-   - C/C++/Rust/Go: 编译器已覆盖，跳过
+   - C/C++/Go: 编译器已覆盖，跳过
 
 2. **L2b Lint / 静态分析**：
    - 按语言调用对应工具（见上表）
