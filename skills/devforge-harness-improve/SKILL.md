@@ -219,6 +219,9 @@ rm -f <trace_dir>/*.tar.gz
 
 - 第 1 阶段数据不足 → 停止，不进入后续阶段
 - 第 3 阶段 `aggregate.md` 平均摩擦评分 < 0.1 且无组件故障热点（sessions ≥ 2）→ 提示「摩擦评分极低，harness 运行良好」，跳过第 4 阶段分析
+- 第 3 阶段 `aggregate.md` 中「数据质量」表存在告警 → 将告警展示给 harness 工程师，但**不阻塞**后续分析（数据质量问题不影响已有数据的诊断价值）
+  - 若 `duration_ms 全为 0` 影响 ≥80% 会话 → 额外提示「建议先修复 trace-collector hook 的耗时采集后再重新收集数据」
+  - 若 `零 Skill/Agent 事件` 影响全部会话 → 提示「会话可能未使用 DevForge skill，或 agent_dispatch 采集存在问题」
 - 第 4 阶段 `$WORK_DIR/issues.md` 为空 → 停止，提示「未发现 harness 问题」
 
 ## 关联

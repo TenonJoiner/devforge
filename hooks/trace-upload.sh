@@ -51,7 +51,7 @@ mkdir -p "$PACK_DIR"
 cp "$TRACE_FILE" "$PACK_DIR/events.jsonl"
 
 # 尝试获取会话转录
-# 优先级: hook context stdin → CLAUDE_TRANSCRIPT_PATH → 已知路径 → 标记缺失
+# 优先级: hook context → env var → PID 精确 → /tmp 通配 → ~/.claude/ → 标记缺失
 TRANSCRIPT_FOUND=false
 
 # 1. 检查 hook context JSON（仅当 stdin 是管道时读取，避免挂起）
@@ -78,9 +78,12 @@ if [ "$TRANSCRIPT_FOUND" = false ] && [ -n "${CLAUDE_TRANSCRIPT_PATH:-}" ] && [ 
     TRANSCRIPT_FOUND=true
 fi
 
-# 3. 扫描已知临时路径
+# 3. 精确匹配：PID 命名的 transcript（Claude Code 常用 ttyd.../claude-<pid>-* 模式）
 if [ "$TRANSCRIPT_FOUND" = false ]; then
     for path in \
+        "/tmp/claude-transcript-${_ANCHOR}.jsonl" \
+        "/tmp/claude-session-${_ANCHOR}.jsonl" \
+        "/tmp/.claude_transcript_${_ANCHOR}.jsonl" \
         "/tmp/claude-session-transcript-${SESSION_ID}.jsonl" \
         "/tmp/claude-transcript-${SESSION_ID}.jsonl"; do
         if [ -f "$path" ]; then
@@ -91,7 +94,120 @@ if [ "$TRANSCRIPT_FOUND" = false ]; then
     done
 fi
 
-# 4. 无 transcript 时写入标记（下游 distill 据此跳过纠正检测）
+# 4. 通配扫描 /tmp：按文件名模式 + 会话时间窗口过滤
+if [ "$TRANSCRIPT_FOUND" = false ]; then
+    python3 -c '
+import os, glob, time, shutil, sys
+
+anchor_pid = sys.argv[1]
+session_ts_str = sys.argv[2]  # SESSION_ID 前缀: YYYYMMDD-HHMMSS
+dest = sys.argv[3]
+
+# 从 SESSION_ID 提取会话起始时间戳（未提取到则不过滤时间）
+session_epoch = 0
+try:
+    from datetime import datetime
+    ts_clean = session_ts_str[:15]  # YYYYMMDD-HHMMSS
+    dt = datetime.strptime(ts_clean, "%Y%m%d-%H%M%S")
+    session_epoch = dt.timestamp()
+except Exception:
+    pass
+
+best_path = ""
+best_score = -1
+
+for pattern in ["/tmp/claude*.jsonl", "/tmp/.claude_*.jsonl"]:
+    for path in sorted(glob.glob(pattern)):
+        if not os.path.isfile(path):
+            continue
+        # 排除我们的 trace 文件和其他非 transcript 文件
+        base = os.path.basename(path)
+        if "devforge-trace" in base or "devforge-trace" in path:
+            continue
+
+        mtime = os.path.getmtime(path)
+        # 文件必须晚于会话开始（允许 60s 误差，兼容时钟偏差）
+        if session_epoch > 0 and mtime < session_epoch - 60:
+            continue
+        # 文件不能太新（晚于当前时间 5 分钟，可能是其他并发会话）
+        if mtime > time.time() + 300:
+            continue
+
+        # 评分：PID 匹配 > "transcript" 关键词 > 最近修改
+        score = 0
+        if anchor_pid in base:
+            score = 1000
+        if "transcript" in base.lower():
+            score += 100
+        if "session" in base.lower():
+            score += 50
+        # 越接近会话开始时间的文件越好
+        if session_epoch > 0:
+            score += max(0, 50 - int(abs(mtime - session_epoch) / 60))
+
+        if score > best_score:
+            best_score = score
+            best_path = path
+
+if best_path:
+    shutil.copy(best_path, dest)
+' "$_ANCHOR" "$SESSION_ID" "$PACK_DIR/transcript.jsonl" 2>/dev/null || true
+
+    if [ -s "$PACK_DIR/transcript.jsonl" ]; then
+        TRANSCRIPT_FOUND=true
+    fi
+fi
+
+# 5. 扫描 ~/.claude/ 目录
+if [ "$TRANSCRIPT_FOUND" = false ] && [ -d "$HOME/.claude" ]; then
+    python3 -c '
+import os, glob, time, shutil, sys
+
+anchor_pid = sys.argv[1]
+session_epoch = float(sys.argv[2]) if sys.argv[2] else 0
+dest = sys.argv[3]
+
+best_path = ""
+best_score = -1
+
+for pattern in ["transcripts/*.jsonl", "sessions/*.jsonl", "*.jsonl"]:
+    for path in sorted(glob.glob(os.path.expanduser(f"~/.claude/{pattern}"))):
+        if not os.path.isfile(path):
+            continue
+        base = os.path.basename(path)
+        if "devforge" in base.lower() or "settings" in base.lower() or "config" in base.lower():
+            continue
+
+        mtime = os.path.getmtime(path)
+        if session_epoch > 0 and mtime < session_epoch - 60:
+            continue
+        if mtime > time.time() + 300:
+            continue
+
+        score = 0
+        if anchor_pid in base:
+            score = 1000
+        if "transcript" in base.lower():
+            score += 100
+        if "session" in base.lower():
+            score += 50
+        if session_epoch > 0:
+            score += max(0, 50 - int(abs(mtime - session_epoch) / 60))
+
+        if score > best_score:
+            best_score = score
+            best_path = path
+
+if best_path:
+    shutil.copy(best_path, dest)
+' "$_ANCHOR" "${SESSION_START_EPOCH:-0}" "$PACK_DIR/transcript.jsonl" 2>/dev/null || true
+
+    if [ -s "$PACK_DIR/transcript.jsonl" ]; then
+        TRANSCRIPT_FOUND=true
+    fi
+fi
+
+# 6. 无 transcript 时写入标记（下游 distill 据此跳过纠正检测）
 if [ "$TRANSCRIPT_FOUND" = false ]; then
     echo '{"transcript_available": false}' > "$PACK_DIR/transcript.jsonl"
 fi

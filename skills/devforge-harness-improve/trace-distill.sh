@@ -80,6 +80,22 @@ for seq, intent in intent_seqs.items():
     if seq not in completed_seqs:
         hook_blocks.append(intent)
 
+# === Hook 阻拦位置分级 ===
+total_event_count = len(events)
+early_blocks = mid_blocks = late_blocks = 0
+for e in hook_blocks:
+    seq = e.get("seq", 0)
+    if total_event_count > 0:
+        ratio = seq / total_event_count
+        if ratio < 0.2:
+            early_blocks += 1
+        elif ratio > 0.8:
+            late_blocks += 1
+        else:
+            mid_blocks += 1
+    else:
+        mid_blocks += 1
+
 # === 成功率 ===
 success_rate = 1.0
 if tool_calls:
@@ -138,7 +154,7 @@ for j, start_idx in enumerate(skill_boundaries):
         if e.get("type") != "tool_call":
             continue
         tool = e.get("tool", "")
-        inp = e.get("input_summary", "")[:60]
+        inp = e.get("input_summary", "")[:80]
         if tool == prev_tool and inp == prev_input:
             consecutive += 1
             if consecutive == 2:
@@ -224,7 +240,7 @@ for i, e in enumerate(error_events):
     next_e = remaining[0]
     # RETRY: 同 tool + 相似 input
     if (next_e.get("tool") == e.get("tool") and
-        next_e.get("input_summary", "")[:40] == e.get("input_summary", "")[:40]):
+        next_e.get("input_summary", "")[:80] == e.get("input_summary", "")[:80]):
         recovery_patterns["RETRY"].append(e.get("seq"))
     # ESCALATE: 派遣 Agent
     elif any(r.get("type") == "agent_dispatch" for r in remaining):
@@ -236,17 +252,32 @@ for i, e in enumerate(error_events):
         recovery_patterns["IGNORE"].append(e.get("seq"))
 
 # === 摩擦评分 (0.0-1.0) ===
-# 分母使用加权基准而非 total_events，避免长会话（事件多）稀释摩擦信号
 # 基准 = 工具调用数 + skill/agent 调度数，反映真正有操作的动作数量
 weighted_base = len(tool_calls) + len(skill_events) + len(agent_events)
+
+# Hook 阻拦按发生位置分级：
+# - 会话初期（前 20%）：冷启动摩擦/探索阶段，权重 1x
+# - 会话末期（后 20%）：清理操作被拦截，权重 1x
+# - 会话中期：真实工作流中断，权重 3x
 friction_signals = 0
 friction_signals += len(error_events) * 2
-friction_signals += len(hook_blocks) * 3
+friction_signals += early_blocks * 1
+friction_signals += mid_blocks * 3
+friction_signals += late_blocks * 1
 friction_signals += len(alignment_issues)
 friction_signals += len(recovery_patterns["IGNORE"]) * 2
 friction_signals += len(recovery_patterns["RETRY"]) * 2
-max_signals = max(weighted_base, 1)
-friction_score = min(1.0, friction_signals / max_signals)
+slow_calls = [e for e in tool_calls if (e.get("duration_ms", 0) or 0) > 30000]
+friction_signals += len(slow_calls) * 2
+
+# 短会话防膨胀：weighted_base < 5 时分母向 5 插值
+# 1 个工具调用 + 1 个 hook → 分母=3 而非 1，避免满分摩擦
+if weighted_base < 5:
+    effective_base = weighted_base + (5 - weighted_base) * 0.5
+else:
+    effective_base = weighted_base
+
+friction_score = min(1.0, friction_signals / max(effective_base, 1))
 
 # === 读取转录 ===
 transcript_file = os.environ.get('TRANSCRIPT_FILE', '')
@@ -275,11 +306,14 @@ if transcript_file and os.path.exists(transcript_file):
                         entry = json.loads(line)
                     except json.JSONDecodeError:
                         continue
-                    text = json.dumps(entry)
-                    if any(kw in text.lower() for kw in [
-                        "不要", "别", "stop", "不对", "错了", "重新",
-                        "不要改", "不是这个", "换一个", "不应该"
-                    ]):
+                    role = (entry.get("role", "") or entry.get("type", "") or "").lower()
+                    if role not in ("user", "human"):
+                        continue
+                    text = entry.get("content", "") or entry.get("text", "") or json.dumps(entry)
+                    text_lower = text.lower()
+                    cn_kw = ["不要", "别", "不对", "错了", "重新", "不要改", "不是这个", "换一个", "不应该"]
+                    en_kw = ["no,", "wrong", "incorrect", "don't", "do not", "stop", "that's not", "that is not", "redo", "start over", "try again", "instead"]
+                    if any(kw in text_lower for kw in cn_kw + en_kw):
                         user_corrections.append({
                             "ts": entry.get("ts", entry.get("timestamp", "")),
                             "snippet": text[:200]
@@ -373,6 +407,12 @@ print(f"""## Session Trace Report
 
 if hook_blocks:
     print("| **Hook 阻拦详情** |", " / ".join(f"{e.get('tool','')}(seq={e.get('seq')})" for e in hook_blocks[:5]), "|")
+    pos_parts = []
+    if early_blocks: pos_parts.append(f"初期{early_blocks}")
+    if mid_blocks: pos_parts.append(f"中期{mid_blocks}")
+    if late_blocks: pos_parts.append(f"末期{late_blocks}")
+    if pos_parts:
+        print("| **Hook 位置分布** |", " / ".join(pos_parts), "（初期=前20% / 末期=后20%）|")
 
 print(f"""
 ### L2: Skill 下钻
@@ -461,4 +501,22 @@ for e in events[:30]:
     print(f"| {seq} | {tool} | {etype} | {askill} | {summary} |")
 if len(events) > 30:
     print(f"| ... | ... | ... | ... | (省略 {len(events)-30} 条) |")
+
+# === 数据质量检查 ===
+dq_warnings = []
+all_dur = [e.get("duration_ms", 0) or 0 for e in tool_calls]
+if all_dur and all(d == 0 for d in all_dur):
+    dq_warnings.append("duration_ms 全为 0：PreToolUse/PostToolUse hook 未正确记录耗时，慢调用检测和 Skill 耗时统计失效")
+if len(skill_events) == 0 and len(agent_events) == 0 and len(tool_calls) > 10:
+    dq_warnings.append("零 Skill/Agent 事件：会话可能未使用 DevForge skill，或 agent_dispatch 采集缺失")
+if alignment_issues:
+    read_only = sum(1 for a in alignment_issues if a["type"] == "read_no_edit")
+    if read_only == len(alignment_issues) and read_only > 3:
+        dq_warnings.append(f"对齐问题 {read_only}/{len(alignment_issues)} 均为 Read-未编辑，可能全部为探索性阅读而非流程缺陷")
+
+if dq_warnings:
+    print("""
+### 数据质量""")
+    for w in dq_warnings:
+        print(f"- ⚠ {w}")
 PYEOF

@@ -65,6 +65,10 @@ for r in reports:
         "anomaly_count": 0,
         "anomaly_items": [],
         "signal_details": [],
+        "dq_warnings": [],
+        "hook_pos_early": 0,
+        "hook_pos_mid": 0,
+        "hook_pos_late": 0,
     }
 
     current_section = None
@@ -129,6 +133,10 @@ for r in reports:
             continue
         elif ls.startswith("### 用户纠正"):
             current_section = "corrections"
+            in_l1_table = False
+            continue
+        elif ls.startswith("### 数据质量"):
+            current_section = "data_quality"
             in_l1_table = False
             continue
         elif ls.startswith("### "):
@@ -228,6 +236,23 @@ for r in reports:
             if m:
                 s["correction_count"] = int(m.group(1))
 
+        # 数据质量
+        elif current_section == "data_quality":
+            if ls.startswith("- "):
+                s["dq_warnings"].append(ls[2:].strip())
+
+        # L1 表格中的 Hook 位置分布
+        if "Hook 位置分布" in ls:
+            hm = re.search(r"初期(\d+)", ls)
+            if hm:
+                s["hook_pos_early"] = int(hm.group(1))
+            hm = re.search(r"中期(\d+)", ls)
+            if hm:
+                s["hook_pos_mid"] = int(hm.group(1))
+            hm = re.search(r"末期(\d+)", ls)
+            if hm:
+                s["hook_pos_late"] = int(hm.group(1))
+
     sessions.append(s)
 
 if not sessions:
@@ -309,14 +334,16 @@ print(f"""# Harness 诊断聚合报告
 - 平均摩擦评分: {avg_friction:.2f}（{'低摩擦' if avg_friction < 0.2 else '中摩擦' if avg_friction < 0.4 else '高摩擦'}）
 - 高摩擦会话: {len(high_friction)}/{total_sessions}（friction >= 0.3）
 - 执行对齐问题: {total_alignment} 次 (涉及 {alignment_sessions} 个会话)
-- Hook 总阻拦: {total_hook_blocks} 次
+- Hook 总阻拦: {total_hook_blocks} 次（初期: {sum(s['hook_pos_early'] for s in sessions)}, 中期: {sum(s['hook_pos_mid'] for s in sessions)}, 末期: {sum(s['hook_pos_late'] for s in sessions)}）
 
+hotspot_entries = [(comp, data) for comp, data in component_hotspots.items() if data["sessions"] >= 2 and data["total_signals"] > 0]
+if hotspot_entries:
+    print("""
 ## 组件故障热点（跨会话共现 ≥2）
 | 组件 | 信号总数 | 涉及会话 | 典型摘要 |
 |------|---------|---------|---------|""")
-for comp, data in sorted(component_hotspots.items(), key=lambda x: x[1]["sessions"], reverse=True):
-    if data["sessions"] >= 2 and data["total_signals"] > 0:
-        top_summary = Counter(data["summaries"]).most_common(1)[0][0][:80] if data["summaries"] else "(摘要缺失—蒸馏阶段未生成具体信号内容)"
+    for comp, data in sorted(hotspot_entries, key=lambda x: x[1]["sessions"], reverse=True):
+        top_summary = Counter(data["summaries"]).most_common(1)[0][0][:80] if data["summaries"] else "(摘要缺失)"
         print(f"| {comp} | {data['total_signals']} | {data['sessions']} | {top_summary} |")
 
 if any(s.get("signal_details") for s in sessions):
@@ -338,21 +365,22 @@ if skill_agg:
         avg_dur = f"{st['dur_s']//st['sessions']}s" if st["sessions"] > 0 else "-"
         print(f"| {sk} | {st['sessions']} | {st['calls']} | {st['errors']} | {avg_dur} | {st['retries']} | {err_rate} |")
 
-print(f"""
+total_recovery = sum(recovery_totals.values())
+if total_recovery > 0:
+    print(f"""
 ## 恢复模式分布
 | 模式 | 总次数 | 占比 |
 |------|--------|------|""")
-total_recovery = sum(recovery_totals.values()) or 1
-for mode in ["RETRY", "ESCALATE", "WORKAROUND", "IGNORE"]:
-    cnt = recovery_totals.get(mode, 0)
-    pct = f"{cnt/total_recovery:.0%}"
-    print(f"| {mode} | {cnt} | {pct} |")
+    for mode in ["RETRY", "ESCALATE", "WORKAROUND", "IGNORE"]:
+        cnt = recovery_totals.get(mode, 0)
+        pct = f"{cnt/total_recovery:.0%}"
+        print(f"| {mode} | {cnt} | {pct} |")
 
-if recovery_totals.get("IGNORE", 0) > total_recovery * 0.4:
-    print("\n**警告**: IGNORE 占比过高（>40%），harness 缺少错误处理指导")
+    if recovery_totals.get("IGNORE", 0) > total_recovery * 0.4:
+        print("\n**警告**: IGNORE 占比过高（>40%），harness 缺少错误处理指导")
 
-if recovery_totals.get("RETRY", 0) > total_recovery * 0.3:
-    print("\n**警告**: RETRY 占比过高（>30%），存在无效重试循环，skill 缺少退出条件")
+    if recovery_totals.get("RETRY", 0) > total_recovery * 0.3:
+        print("\n**警告**: RETRY 占比过高（>30%），存在无效重试循环，skill 缺少退出条件")
 
 if correction_hotspots:
     print("""
@@ -397,6 +425,19 @@ if agent_agg:
 |-------|--------|---------|""")
     for agent, data in sorted(agent_agg.items(), key=lambda x: x[1]["calls"], reverse=True):
         print(f"| {agent} | {data['calls']} | {data['sessions']} |")
+
+# --- 数据质量汇总 ---
+dq_summary = Counter()
+for s in sessions:
+    for w in s["dq_warnings"]:
+        dq_summary[w] += 1
+if dq_summary:
+    print("""
+## 数据质量
+| 告警 | 涉及会话数 |
+|------|-----------|""")
+    for w, cnt in dq_summary.most_common():
+        print(f"| {w[:120]} | {cnt} |")
 
 print("""
 ## 会话列表

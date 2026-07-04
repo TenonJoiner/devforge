@@ -48,7 +48,7 @@ TRACE_FILE="/tmp/devforge-trace-${SESSION_ID}.jsonl"
 SEQ_FILE="/tmp/devforge-trace-seq-${SESSION_ID}"
 
 python3 -c '
-import json, sys, time, os
+import json, sys, time, os, datetime
 
 data = json.loads(sys.stdin.read())
 tool_name = data.get("tool_name", "")
@@ -77,8 +77,10 @@ with open(seq_file, "w") as f:
 input_summary = ""
 if tool_name == "Bash":
     input_summary = (tool_input.get("command", "") or tool_input.get("description", "") or "")[:120]
-elif tool_name == "Agent":
-    input_summary = (tool_input.get("description", "") or tool_input.get("prompt", "") or "")[:120]
+elif tool_name.lower() == "agent" or "subagent_type" in tool_input:
+    agent_desc = tool_input.get("description", "") or tool_input.get("prompt", "") or ""
+    agent_sub = tool_input.get("subagent_type", "")
+    input_summary = (f"[{agent_sub}] {agent_desc}" if agent_sub else agent_desc)[:120]
 elif tool_name == "Skill":
     input_summary = (tool_input.get("skill", "") or tool_input.get("args", "") or "")[:120]
 elif tool_name in ("Read", "Write", "Edit", "MultiEdit", "NotebookEdit"):
@@ -87,7 +89,7 @@ elif tool_name in ("Grep", "Glob"):
     input_summary = (tool_input.get("pattern", "") or "")[:120]
 
 # === PreToolUse: 记录 tool_intent（仅普通工具，不含 Skill/Agent） ===
-if not is_post and tool_name not in ("Skill", "Agent"):
+if not is_post and tool_name.lower() not in ("skill", "agent") and "subagent_type" not in tool_input:
     intent_event = {
         "seq": seq,
         "ts": time.strftime("%Y-%m-%dT%H:%M:%S"),
@@ -95,6 +97,7 @@ if not is_post and tool_name not in ("Skill", "Agent"):
         "type": "tool_intent",
         "tool": tool_name,
         "input_summary": input_summary,
+        "_ts": time.time(),
     }
     line = json.dumps(intent_event, ensure_ascii=False)
     with open(trace_file, "a") as f:
@@ -127,9 +130,9 @@ except Exception:
     pass
 
 # === 事件类型 ===
-if tool_name == "Agent":
+if tool_name.lower() == "agent" or "subagent_type" in tool_input:
     event_type = "agent_dispatch"
-elif tool_name == "Skill":
+elif tool_name.lower() == "skill":
     event_type = "skill_invoke"
 else:
     event_type = "tool_call"
@@ -139,8 +142,10 @@ result = {"status": "success"}
 exit_code = None
 if isinstance(tool_response, dict):
     exit_code = tool_response.get("exit_code")
-    if exit_code is not None and exit_code != 0:
-        result["status"] = "error"
+    if exit_code is not None:
+        result["exit_code"] = exit_code
+        if exit_code != 0:
+            result["status"] = "error"
     # 提取错误/输出提示
     stderr = tool_response.get("stderr", "") or ""
     stdout = tool_response.get("stdout", "") or ""
@@ -152,14 +157,34 @@ if isinstance(tool_response, dict):
     result_text = tool_response.get("content", "") or tool_response.get("text", "") or stdout
     result["size"] = len(result_text)
 
-# 提取耗时
+# 提取耗时：优先 tool_response，否则从最近 intent 事件计算
 duration_ms = 0
 if isinstance(tool_response, dict):
     duration_ms = tool_response.get("duration_ms", 0) or tool_response.get("duration", 0) or 0
+if duration_ms == 0:
+    try:
+        if os.path.exists(trace_file):
+            with open(trace_file) as f:
+                lines = f.readlines()
+                for line in reversed(lines[-100:]):
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        ie = json.loads(line)
+                        if ie.get("type") == "tool_intent" and ie.get("tool") == tool_name:
+                            intent_epoch = ie.get("_ts", 0)
+                            if intent_epoch:
+                                duration_ms = int((time.time() - intent_epoch) * 1000)
+                            break
+                    except Exception:
+                        continue
+    except Exception:
+        pass
 
 # 提取 agent 子类型
 agent_subtype = ""
-if tool_name == "Agent":
+if tool_name.lower() == "agent" or "subagent_type" in tool_input:
     agent_subtype = tool_input.get("subagent_type", "") or ""
 
 event = {
