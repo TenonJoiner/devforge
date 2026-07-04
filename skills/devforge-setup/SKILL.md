@@ -8,16 +8,13 @@ allowed-tools: [Read, Bash, AskUserQuestion]
 
 一次性完成 DevForge plugin 运行环境的检测与安装。支持所有主流 Linux 发行版。
 
-## 全部工具清单（17 个，4 组）
+## 全部工具清单（11 个，3 组）
 
 ### 必备基础 (4)
 `python3` `git` `jq` `docker`
 
 ### 代码格式化 (4)
 `clang-format` `gofmt` `black` `npx`
-
-### 静态检查 (6)
-`shellcheck` `clang-tidy` `bear` `golangci-lint` `ruff` `eslint`
 
 ### 平台集成 (3)
 `gh` `glab` `zentao`
@@ -51,14 +48,14 @@ source /etc/os-release && echo "ID=$ID ID_LIKE=$ID_LIKE"
 
 输出检测结果，例如：`发行版: Ubuntu 22.04 (apt 系)`。
 
-### 1.2 逐个检查全部 17 个工具
+### 1.2 逐个检查全部 11 个工具
 
 用 `command -v <name>` 逐个检查，静默执行，记录两组结果：
 
 - **已安装列表**（每项 `✅`）
 - **缺失列表**（每项 `❌`，记录工具名和对应的安装方式）
 
-注意：`npx` 通过 `command -v npx` 检测；`gofmt` 通过 `command -v gofmt` 检测；`golangci-lint` 通过 `command -v golangci-lint` 检测。
+注意：`npx` 通过 `command -v npx` 检测；`gofmt` 通过 `command -v gofmt` 检测。
 
 ---
 
@@ -79,15 +76,11 @@ source /etc/os-release && echo "ID=$ID ID_LIKE=$ID_LIKE"
 ✅ gofmt  ✅ black
 ❌ clang-format  ❌ npx
 
-### 静态检查 (1/6)
-✅ shellcheck
-❌ clang-tidy  ❌ bear  ❌ golangci-lint  ❌ ruff  ❌ eslint
-
 ### 平台集成 (0/3)
 ❌ gh  ❌ glab  ❌ zentao
 
 ---
-共检测 17 个工具，已安装 5 个，缺失 12 个。
+共检测 11 个工具，已安装 5 个，缺失 6 个。
 ```
 
 ## 第 3 阶段：确认安装
@@ -127,11 +120,10 @@ source /etc/os-release && echo "ID=$ID ID_LIKE=$ID_LIKE"
 
 **执行流程**：
 1. 确保 EPEL 可用（dnf/yum 系且非 Fedora）
-2. **并行**安装所有系统包（`jq`、`clang-format`、`golang`、`black`、`nodejs npm`、`shellcheck`、`clang-tidy`、`bear`、`gh`、`glab`、`docker`）
+2. **并行**安装所有系统包（`jq`、`clang-format`、`golang`、`black`、`nodejs npm`、`gh`、`glab`、`docker`）
 3. 等待步骤 2 完成，刷新 PATH
-4. **并行**安装 npm/pip 工具（`zentao`、`eslint`、`ruff`）
-5. 安装 `golangci-lint`（curl 安装脚本）
-6. 输出结果报告
+4. 安装 npm 工具（`zentao`）
+5. 输出结果报告
 
 ### 4.2 包名映射表
 
@@ -141,15 +133,9 @@ source /etc/os-release && echo "ID=$ID ID_LIKE=$ID_LIKE"
 |------|---------|---------|
 | `jq` | 系统包 | `sudo apt-get/dnf/yum install -y jq` |
 | `clang-format` | 系统包 | apt 系: `sudo apt-get install -y clang-format` / dnf/yum 系: `sudo dnf/yum install -y clang-tools-extra` |
-| `clang-tidy` | 系统包 | apt 系: `sudo apt-get install -y clang-tidy` / dnf/yum 系: `sudo dnf/yum install -y clang-tools-extra`（与 clang-format 同包） |
-| `bear` | 系统包 | `sudo apt-get/dnf/yum install -y bear` |
 | `golang` (go, gofmt) | 系统包 | `sudo apt-get/dnf/yum install -y golang` |
-| `golangci-lint` | 安装脚本 | `curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh \| sh -s -- -b $(go env GOPATH)/bin` |
 | `black` | 系统包 > pip | 先尝试系统包：apt 系 `sudo apt-get install -y black`，dnf/yum 系 `sudo dnf/yum install -y python3-black`；失败则 `pip install black` |
-| `ruff` | pip | `pip install ruff` |
 | `nodejs` + `npm` (npx) | 系统包 | `sudo apt-get/dnf/yum install -y nodejs npm` |
-| `eslint` | npm global | `npm install -g eslint` |
-| `shellcheck` | 系统包 | `sudo apt-get/dnf/yum install -y shellcheck` |
 | `gh` | 系统包 | `sudo apt-get/dnf/yum install -y gh` |
 | `glab` | 系统包 | `sudo apt-get/dnf/yum install -y glab` |
 | `zentao` | npm global | `npm install -g @singee/zentao-cli` |
@@ -182,15 +168,12 @@ source /etc/os-release && echo "ID=$ID ID_LIKE=$ID_LIKE"
 
 ✅ jq                       ✅ docker
 ✅ clang-format             ✅ gofmt
-✅ black                    ✅ shellcheck
-✅ clang-tidy               ✅ bear
-✅ golangci-lint            ✅ ruff
-✅ gh                       ✅ glab
-✅ eslint
+✅ black                    ✅ gh
+✅ glab
 ❌ zentao — npm 全局安装失败，已跳过
    手动安装: npm install -g @singee/zentao-cli
 
-成功 13/14，失败 1/14
+成功 7/8，失败 1/8
 ```
 
 对失败的项，给出手动安装的链接或命令。
