@@ -8,16 +8,13 @@ allowed-tools: [Read, Bash, AskUserQuestion]
 
 一次性完成 DevForge plugin 运行环境的检测与安装。支持所有主流 Linux 发行版。
 
-## 全部工具清单（39 个，4 组）
+## 全部工具清单（10 个，3 组）
 
-### 必备基础 (12)
-`python3` `git` `tar` `ps` `sed` `tr` `date` `basename` `grep` `mktemp` `awk` `jq`
+### 必备基础 (3)
+`python3` `git` `jq`
 
 ### 代码格式化 (4)
 `clang-format` `gofmt` `black` `npx`
-
-### 语言工具链 (20)
-`clang-tidy` `cppcheck` `bear` `cmake` `make` `go` `golangci-lint` `mypy` `pyright` `ruff` `pylint` `tsc` `biome` `eslint` `npm` `pnpm` `bun` `mvn` `gradle` `shellcheck`
 
 ### 平台集成 (3)
 `gh` `glab` `zentao`
@@ -51,11 +48,7 @@ source /etc/os-release && echo "ID=$ID ID_LIKE=$ID_LIKE"
 
 输出检测结果，例如：`发行版: Ubuntu 22.04 (apt 系)`。
 
-### 1.2 检测工具链管理器
-
-检查 `pip` / `pip3`、`npm`、`go` 是否可用（`command -v`）。缺失的工具链管理器本身也需要安装，但先记录状态，安装阶段再处理。
-
-### 1.3 逐个检查全部 42 个工具
+### 1.2 逐个检查全部 10 个工具
 
 用 `command -v <name>` 逐个检查，静默执行，记录两组结果：
 
@@ -68,30 +61,26 @@ source /etc/os-release && echo "ID=$ID ID_LIKE=$ID_LIKE"
 
 ## 第 2 阶段：生成报告
 
-按 4 组输出报告，每组列出 `✅` 和 `❌`。末尾统计总数。示例格式：
+按 3 组输出报告，每组列出 `✅` 和 `❌`。末尾统计总数。示例格式：
 
 ```
 ## DevForge 环境检测报告
 
 发行版: Ubuntu 22.04 (apt 系)
 
-### 必备基础 (10/12)
-✅ python3  ✅ git  ✅ tar  ✅ ps  ✅ sed  ✅ tr
-✅ date     ✅ basename  ✅ grep  ✅ mktemp
-❌ awk      ❌ jq
+### 必备基础 (2/3)
+✅ python3  ✅ git
+❌ jq
 
-### 代码格式化 (3/4)
+### 代码格式化 (2/4)
 ✅ gofmt  ✅ black
 ❌ clang-format  ❌ npx
-
-### 语言工具链 (4/22)
-✅ go  ❌ clang-tidy  ❌ cppcheck  ❌ bear  ...（列出所有 ❌）
 
 ### 平台集成 (0/3)
 ❌ gh  ❌ glab  ❌ zentao
 
 ---
-共检测 39 个工具，已安装 17 个，缺失 22 个。
+共检测 10 个工具，已安装 4 个，缺失 6 个。
 ```
 
 ## 第 3 阶段：确认安装
@@ -115,15 +104,26 @@ source /etc/os-release && echo "ID=$ID ID_LIKE=$ID_LIKE"
 
 用户选择"确认安装"后执行。
 
-### 4.1 安装顺序
+### 4.0 安装原则
 
-先装工具链管理器，再装具体工具：
+执行安装时严格遵循以下原则：
 
-1. 确保 EPEL 可用（dnf/yum 系且非 Fedora）：`sudo dnf install -y epel-release`（或 `yum`）。Fedora 自带足够软件源，跳过此步
-2. 确保 pip 可用：`sudo apt/dnf install -y python3-pip`
-3. 确保 npm 可用：`sudo apt/dnf install -y nodejs npm`
-4. 确保 go 可用：`sudo apt/dnf install -y golang`（如缺失）
-5. 逐个安装其余缺失工具
+**独立安装**：每个工具的安装作为独立单元执行，单个工具安装失败不影响其他工具。系统包管理器每次调用只安装一个包，禁止将多个包合并到一条 `apt-get/dnf install` 命令中。
+
+**PATH 刷新**：npm global 安装后需刷新 PATH：`export PATH="$HOME/.local/bin:$PATH"`。若使用 pip --user 安装（black fallback），同样执行此刷新。
+
+### 4.1 安装顺序与并发策略
+
+所有系统包各自独立，可**并行安装**（用 `&` 后台 + `wait` 汇聚）。同组内仍逐个安装（避免包管理器锁冲突）。
+
+唯一依赖链：`nodejs npm` → `zentao`（zentao 通过 npm global 安装，需等 npm 就绪）。
+
+**执行流程**：
+1. 确保 EPEL 可用（dnf/yum 系且非 Fedora）
+2. **并行**安装所有系统包（`jq`、`clang-format`、`golang`、`black`、`nodejs npm`、`gh`、`glab`）
+3. 等待步骤 2 完成，刷新 PATH
+4. 安装 `zentao`（npm global）
+5. 输出结果报告
 
 ### 4.2 包名映射表
 
@@ -133,29 +133,11 @@ source /etc/os-release && echo "ID=$ID ID_LIKE=$ID_LIKE"
 |------|---------|---------|
 | `jq` | 系统包 | `sudo apt-get/dnf/yum install -y jq` |
 | `clang-format` | 系统包 | apt 系: `sudo apt-get install -y clang-format` / dnf/yum 系: `sudo dnf/yum install -y clang-tools-extra` |
-| `clang-tidy` | 系统包 | apt 系: `sudo apt-get install -y clang-tidy` / dnf/yum 系: `sudo dnf/yum install -y clang-tools-extra`（与 clang-format 同包） |
-| `cppcheck` | 系统包 | `sudo apt-get/dnf/yum install -y cppcheck` |
-| `bear` | 系统包 | `sudo apt-get/dnf/yum install -y bear` |
-| `cmake` | 系统包 | `sudo apt-get/dnf/yum install -y cmake` |
-| `make` | 系统包 | `sudo apt-get/dnf/yum install -y make` |
 | `golang` (go, gofmt) | 系统包 | `sudo apt-get/dnf/yum install -y golang` |
-| `golangci-lint` | 安装脚本 | `curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh \| sh -s -- -b $(go env GOPATH)/bin` |
 | `black` | 系统包 > pip | 先尝试系统包：apt 系 `sudo apt-get install -y black`，dnf/yum 系 `sudo dnf/yum install -y python3-black`；失败则 `pip install black` |
-| `mypy` | pip | `pip install mypy` |
-| `ruff` | pip | `pip install ruff` |
-| `pylint` | pip | `pip install pylint` |
-| `pyright` | pip | `pip install pyright` |
 | `nodejs` + `npm` (npx) | 系统包 | `sudo apt-get/dnf/yum install -y nodejs npm` |
-| `typescript` (tsc) | npm global | `npm install -g typescript` |
-| `biome` | npm global | `npm install -g @biomejs/biome` |
-| `eslint` | npm global | `npm install -g eslint` |
-| `pnpm` | npm global | `npm install -g pnpm` |
-| `bun` | curl 安装 | `curl -fsSL https://bun.sh/install \| bash` |
-| `maven` (mvn) | 系统包 | `sudo apt-get install -y maven` / `sudo dnf/yum install -y maven` |
-| `gradle` | 系统包 | `sudo apt-get/dnf/yum install -y gradle` |
 | `gh` | 系统包 | `sudo apt-get/dnf/yum install -y gh` |
 | `glab` | 系统包 | `sudo apt-get/dnf/yum install -y glab` |
-| `shellcheck` | 系统包 | `sudo apt-get/dnf/yum install -y shellcheck` |
 | `zentao` | npm global | `npm install -g @singee/zentao-cli` |
 
 ### 4.3 错误分类与恢复策略
@@ -164,12 +146,14 @@ source /etc/os-release && echo "ID=$ID ID_LIKE=$ID_LIKE"
 
 | 错误特征 | 诊断 | 恢复策略 |
 |---------|------|---------|
-| `Unable to locate package` / `No match for argument` | 包名错误或缓存过期 | Ubuntu: `sudo apt-get update` 后重试；Rocky/CentOS: `sudo dnf makecache` 后重试。仍失败则尝试修正包名 |
+| `Unable to locate package` / `No match for argument` | 包名错误或缓存过期 | Ubuntu: `sudo apt-get update` 后重试；Rocky/CentOS: `sudo dnf makecache` 后重试。仍失败则尝试修正包名。若为单个包不存在于当前源，跳过并提示添加第三方源或手动下载 |
 | `Permission denied` / `EACCES` / `read-only` | 权限不足 | 系统包补 `sudo`；pip 加 `--user`；npm 加 `--prefix ~/.local` |
-| `Could not resolve host` / `timeout` / `Connection refused` | 网络不通 | 重试 1 次；仍失败则跳过，记录错误并附手动安装提示 |
-| `command not found: pip` / `npm` / `go` / `curl` | 工具链缺失 | 先安装缺失的工具链管理器，再重试原命令 |
-| `conflict` / `dependency` / `unmet dependencies` | 版本冲突 | 系统包：尝试 `--fix-broken`；pip：尝试 `--break-system-packages`；npm：尝试 `--force` |
-| `SSL` / `certificate` / `TLS` | 证书或代理问题 | 网络类错误特殊处理：跳过并给排查建议（检查代理、CA 证书） |
+| `Could not resolve host` / `timeout` / `Connection refused` / `Operation timed out` | 网络不通或下载超时 | 重试 1 次（大文件重试 2 次，每次间隔递增）。仍失败则跳过，记录错误并附手动安装提示和替代下载源 |
+| `command not found: pip` / `npm` | 工具链缺失 | 先安装缺失的工具链管理器，再重试原命令 |
+| `unmet dependencies` / `held broken packages` / `depends on.*but.*not installable` / `nothing provides` | 包存在但依赖不可满足 | 1) `apt-get install -f` 修复依赖；2) 逐层安装缺失的依赖包；3) 若依赖包也不可安装，尝试从官方源下载 .deb/.rpm 手动安装；4) 均失败则跳过，给出编译安装指引 |
+| 多层依赖解析失败 / 循环依赖 / 底层库版本不兼容 | 依赖链断裂，包管理器无法自行修复 | 跳过包管理器，直接从官方 GitHub Releases 下载预编译静态二进制（如 `clang-format` → `https://github.com/llvm/llvm-project/releases`）。下载后校验 sha256，解压/拷贝到 `~/.local/bin/` 并确保在 PATH 中。若静态二进制也不可用，跳过并给出编译安装指引 |
+| `conflict` / `trying to overwrite` | 文件冲突或版本冲突 | 系统包：尝试 `--fix-broken` 或 `--force-overwrite`；pip：尝试 `--break-system-packages` 或 `--ignore-installed`；npm：尝试 `--force` |
+| `SSL` / `certificate` / `TLS` / `peer's certificate` | 证书或代理问题 | 网络类错误特殊处理：跳过并给排查建议（检查代理、CA 证书、系统时间） |
 | 其他未知错误 | 无法分类 | 保留完整 stderr（≤5 行），跳过并提示用户手动排查 |
 
 恢复后仍失败 → 记录工具名 + 失败原因，继续下一个。不中断整体流程。
@@ -182,12 +166,12 @@ source /etc/os-release && echo "ID=$ID ID_LIKE=$ID_LIKE"
 ## 安装结果
 
 ✅ jq                       ✅ clang-format
-✅ cmake                    ✅ black
-❌ gh — 网络错误，已跳过
-   手动安装: https://github.com/cli/cli/releases
-✅ gradle                   ...
+✅ gofmt                    ✅ black
+✅ gh                       ✅ glab
+❌ zentao — npm 全局安装失败，已跳过
+   手动安装: npm install -g @singee/zentao-cli
 
-成功 23/25，失败 2/25
+成功 6/7，失败 1/7
 ```
 
 对失败的项，给出手动安装的链接或命令。
