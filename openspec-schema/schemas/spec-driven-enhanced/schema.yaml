@@ -19,16 +19,27 @@ artifacts:
       思考方向：变更目的是否清晰？影响范围是否明确？是否有未说明的约束或依赖？
       如果用户的需求描述已足够清晰完整，跳过提问直接编写。
 
-      ## 外部上下文（写作前 MUST 执行）
+      ## 下笔前验证点（写第一个字前 MUST 完成填空）
 
-      读取项目申明的产品上下文文档中的"产品能力地图"，识别本次变更映射到哪个用户可见能力。全文以该能力为叙述锚点——Why 从该能力的用户视角阐述动机，What Changes 说明该能力发生什么变化，Capabilities 命名与该能力对齐。
+      读取项目申明的产品上下文文档中的 Actor 列表与产品能力地图，完成以下三个填空：
+
+      - 本 proposal 的 Why 主语（受影响的外部 Actor）：
+      - 本 proposal 涉及的产品能力（至少一个）：
+      - 读者读完 Why 后应该能复述的场景（一句话）：
+
+      如果这三个填空写出来的还是技术术语，说明视角没转过来——回到上下文文档重新理解 Actor 和产品能力。
+
+      ## 输入边界（写作期间 MUST NOT）
+
+      proposal 阶段禁止阅读源码或分析实现细节。源码中的模块名、函数名、数据结构等实现术语会污染上下文，导致 proposal 不自觉地从内部视角叙述。proposal 的唯一合法输入是：用户需求描述 + 产品上下文文档（Actor 列表、产品能力地图）。实现细节属于 design.md。
 
       按模板章节顺序填写：
 
       **Why**：
-      - 1-2 段叙事，说明问题或机会，建立共情
-      - bugfix / 性能优化 / 技术债务清理时：分析根因，量化影响（如性能下降百分比、故障频率）
-      - 新特性 / 能力扩展时：说明业务价值、用户场景、不做的后果
+      - **强制句式**：第一句必须以「下笔前验证点」中填写的 Actor 名称为主语，描述该 Actor 在什么场景下遭遇什么问题
+      - 1-2 段叙事，建立共情——从 Actor 视角说明问题或机会，而非从系统内部视角
+      - bugfix / 性能优化 / 技术债务清理时：分析根因，量化对该 Actor 的影响（如性能下降百分比、故障频率）
+      - 新特性 / 能力扩展时：说明对该 Actor 的业务价值、用户场景、不做的后果
 
       **What Changes**：
       - 变更清单，具体说明新增、修改或移除的能力
@@ -79,9 +90,9 @@ artifacts:
       - 🚩 Capability 描述的是内部实现动作（如"新增 `xx_internal_api()`""修改 `foo.c`"）而非外部可见行为
       - 🚩 bugfix / 重构类变更被命名为 `fix-*` / `refactor-*`，或 spec 只能写出实现步骤而写不出 WHEN/THEN
 
-      ## 外部可理解性验证（写完后 MUST 执行）
+      ## 视角审计（写完后 MUST 执行）
 
-      逐段检查：每一段话是否能被外部 Actor（用户、调用方、运维人员）而非内部子系统理解？如果某段话只能被了解内部实现的开发者理解，重写它以从外部视角表达。
+      用产品上下文文档中的 Actor 列表逐词扫描 proposal 全文。命中 0 个 Actor 名称即判定为未通过——说明全文没有以外部视角叙述，必须重写。
     requires: []
 
   - id: specs
@@ -91,9 +102,18 @@ artifacts:
     instruction: |
       创建规范文件，定义系统应该做什么（WHAT）。
 
-      ## 外部上下文（写作前 MUST 执行）
+      ## 下笔前验证点（写第一个字前 MUST 完成填空）
 
-      确认 proposal 中已识别的产品能力锚点——本 spec 展开的 capability 是哪个用户可见能力的细化。Requirements 和 Scenario 均以该能力的外部 Actor 视角描述，禁止从内部模块视角叙述。
+      读取 proposal 与产品上下文文档中的 Actor 列表，完成以下两个填空：
+
+      - 本 spec 展开的 capability（对应 proposal 中哪个用户可见能力）：
+      - 本 spec 中需求的 Actor（哪些外部角色依赖此 capability）：
+
+      如果填出来的是模块名、组件名或内部子系统名，说明视角没转过来——capability 是用户可见能力，Actor 是外部角色。
+
+      ## 输入边界（写作期间 MUST NOT）
+
+      spec 阶段禁止阅读源码。spec 的唯一合法输入是：proposal + 已有 specs（`openspec/specs/`）+ 产品上下文文档（Actor 列表、产品能力地图）。Scenario 描述的是外部可观察的行为，实现细节属于 design.md。
 
       按 proposal 的 Capabilities 部分，每个 capability 一份 spec 文件：
       - New capabilities：使用 proposal 中的 kebab-case 名称（`specs/<capability>/spec.md`）。
@@ -126,7 +146,7 @@ artifacts:
       格式要求：
       - 每条 Requirement：`### Requirement: <name>` + 描述
       - 使用 SHALL/MUST 表达规范性要求（避免 should/may）
-      - 每条 Scenario：`#### Scenario: <name>` + WHEN/THEN
+      - 每条 Scenario：`#### Scenario: <name>` + WHEN/THEN，WHEN 必须以 Actor 为主语描述外部可观察的动作，禁止以系统/模块/函数为主语
       - **关键**：Scenario 必须使用 4 个 hashtag（`####`），3 个或 bullet 会静默失败
       - 每条 Requirement 至少一个 Scenario
 
@@ -143,9 +163,9 @@ artifacts:
 
       Spec 应该可测试——每条 Scenario 都是潜在的测试用例。
 
-      ## 外部可理解性验证（写完后 MUST 执行）
+      ## 视角审计（写完后 MUST 执行）
 
-      逐段检查：每一段 Requirements 和 Scenario 描述是否能被外部 Actor（用户、调用方、运维人员）而非内部子系统理解？Scenario 的 WHEN/THEN 是否描述了外部可观察的行为而非内部状态变化？如果某段话只能被了解内部实现的开发者理解，重写它以从外部视角表达。
+      用产品上下文文档中的 Actor 列表逐词扫描本 spec 的 Requirements 和 Scenario。命中 0 个 Actor 名称即判定为未通过——说明全文没有以外部视角叙述，必须重写。
     requires:
       - proposal
 
@@ -182,7 +202,7 @@ artifacts:
 
       **篇幅引导**：design.md 建议 200~500 行；复杂设计（涉及多模块协作、重大数据模型变更、升级迁移等）可适当扩展。避免大段复制 spec 内容，将篇幅留给方案与决策本身。
     requires:
-      - proposal
+      - specs
 
   - id: review
     generates: review.md
