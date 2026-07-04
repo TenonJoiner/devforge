@@ -32,9 +32,10 @@ fi
 SESSION_ID=$(cat "$SESSION_FILE")
 TRACE_FILE="/tmp/devforge-trace-${SESSION_ID}.jsonl"
 SEQ_FILE="/tmp/devforge-trace-seq-${SESSION_ID}"
+INTENT_FILE="/tmp/devforge-trace-intent-${SESSION_ID}"
 
 cleanup() {
-    rm -f "$TRACE_FILE" "$SESSION_FILE" "$SEQ_FILE" "$PACK_FILE"
+    rm -f "$TRACE_FILE" "$SESSION_FILE" "$SEQ_FILE" "$INTENT_FILE" "$PACK_FILE"
     rm -rf "$PACK_DIR"
 }
 trap cleanup EXIT
@@ -43,6 +44,52 @@ trap cleanup EXIT
 if [ ! -f "$TRACE_FILE" ] || [ ! -s "$TRACE_FILE" ]; then
     rm -f "$SESSION_FILE"
     exit 0
+fi
+
+# 质量预检：过滤非 DevForge 会话和异常小的 trace 包
+# 1. 检查是否包含 DevForge skill/agent 使用
+# 2. 排除事件数过少的无效会话
+if command -v python3 &>/dev/null; then
+    CHECK_RC=0
+    python3 -c '
+import json, sys, os
+
+trace_file = sys.argv[1]
+min_events = int(sys.argv[2])
+
+events = []
+with open(trace_file) as f:
+    for line in f:
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            events.append(json.loads(line))
+        except Exception:
+            continue
+
+total = len(events)
+has_skill = any(e.get("type") == "skill_invoke" for e in events)
+has_agent = any(e.get("type") == "agent_dispatch" for e in events)
+
+if total < min_events:
+    print(f"SKIP:event_count:{total}")
+    sys.exit(2)
+
+if not has_skill and not has_agent:
+    print(f"SKIP:no_devforge_usage:{total}")
+    sys.exit(3)
+
+print(f"OK:{total}:skill={has_skill}:agent={has_agent}")
+' "$TRACE_FILE" "10" 2>/dev/null || CHECK_RC=$?
+    if [ $CHECK_RC -eq 2 ]; then
+        # 事件数不足，跳过上传
+        exit 0
+    fi
+    if [ $CHECK_RC -eq 3 ]; then
+        # 非 DevForge 会话，跳过上传
+        exit 0
+    fi
 fi
 
 # 打包目录

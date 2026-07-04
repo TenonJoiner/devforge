@@ -46,6 +46,7 @@ fi
 
 TRACE_FILE="/tmp/devforge-trace-${SESSION_ID}.jsonl"
 SEQ_FILE="/tmp/devforge-trace-seq-${SESSION_ID}"
+INTENT_FILE="/tmp/devforge-trace-intent-${SESSION_ID}"
 
 python3 -c '
 import json, sys, time, os, datetime
@@ -56,6 +57,7 @@ tool_input = data.get("tool_input", {}) or {}
 tool_response = data.get("tool_response", {}) or {}
 trace_file = sys.argv[2]
 seq_file = sys.argv[3]
+intent_file = sys.argv[4]
 
 # 判断 hook 阶段：有 tool_response → PostToolUse，否则 → PreToolUse
 is_post = data.get("hook_event") == "PostToolUse" or bool(tool_response)
@@ -88,8 +90,15 @@ elif tool_name in ("Read", "Write", "Edit", "MultiEdit", "NotebookEdit"):
 elif tool_name in ("Grep", "Glob"):
     input_summary = (tool_input.get("pattern", "") or "")[:120]
 
-# === PreToolUse: 记录 tool_intent（仅普通工具，不含 Skill/Agent） ===
-if not is_post and tool_name.lower() not in ("skill", "agent") and "subagent_type" not in tool_input:
+# === PreToolUse: 记录 intent（所有工具类型，供 PostToolUse 计算耗时） ===
+if not is_post:
+    now_ts = time.time()
+    # 写入 intent 状态文件，PostToolUse 据此计算 wall-clock 耗时
+    intent_state = {"seq": seq, "tool": tool_name, "_ts": now_ts}
+    with open(intent_file, "a") as f:
+        f.write(json.dumps(intent_state) + "\n")
+
+    # 写入 tool_intent 事件到 trace（供 hook 阻拦检测和对齐分析）
     intent_event = {
         "seq": seq,
         "ts": time.strftime("%Y-%m-%dT%H:%M:%S"),
@@ -97,7 +106,7 @@ if not is_post and tool_name.lower() not in ("skill", "agent") and "subagent_typ
         "type": "tool_intent",
         "tool": tool_name,
         "input_summary": input_summary,
-        "_ts": time.time(),
+        "_ts": now_ts,
     }
     line = json.dumps(intent_event, ensure_ascii=False)
     with open(trace_file, "a") as f:
@@ -157,28 +166,49 @@ if isinstance(tool_response, dict):
     result_text = tool_response.get("content", "") or tool_response.get("text", "") or stdout
     result["size"] = len(result_text)
 
-# 提取耗时：优先 tool_response，否则从最近 intent 事件计算
+# 提取耗时：优先 tool_response，否则从 intent 状态文件计算 wall-clock 耗时
 duration_ms = 0
 if isinstance(tool_response, dict):
     duration_ms = tool_response.get("duration_ms", 0) or tool_response.get("duration", 0) or 0
 if duration_ms == 0:
     try:
-        if os.path.exists(trace_file):
-            with open(trace_file) as f:
-                lines = f.readlines()
-                for line in reversed(lines[-100:]):
+        if os.path.exists(intent_file):
+            now = time.time()
+            TTL = 600  # 孤立 intent 过期时间（10 分钟）
+            intents = []
+            with open(intent_file) as f:
+                for line in f:
                     line = line.strip()
                     if not line:
                         continue
                     try:
-                        ie = json.loads(line)
-                        if ie.get("type") == "tool_intent" and ie.get("tool") == tool_name:
-                            intent_epoch = ie.get("_ts", 0)
-                            if intent_epoch:
-                                duration_ms = int((time.time() - intent_epoch) * 1000)
-                            break
+                        intents.append(json.loads(line))
                     except Exception:
                         continue
+
+            # FIFO 匹配：找第一个同工具名的未过期 intent
+            matched_ts = None
+            for intent in intents:
+                if now - intent.get("_ts", 0) > TTL:
+                    continue
+                if intent.get("tool") == tool_name:
+                    matched_ts = intent.get("_ts", 0)
+                    break
+
+            if matched_ts:
+                duration_ms = int((now - matched_ts) * 1000)
+
+            # 清理：移除已过期和已匹配的 intent
+            remaining = [
+                i for i in intents
+                if now - i.get("_ts", 0) <= TTL and not (
+                    i.get("tool") == tool_name and
+                    i.get("_ts") == matched_ts
+                )
+            ]
+            with open(intent_file, "w") as f:
+                for i in remaining:
+                    f.write(json.dumps(i) + "\n")
     except Exception:
         pass
 
@@ -206,6 +236,6 @@ if agent_subtype:
 line = json.dumps(event, ensure_ascii=False)
 with open(trace_file, "a") as f:
     f.write(line + "\n")
-' "$SESSION_ID" "$TRACE_FILE" "$SEQ_FILE"
+' "$SESSION_ID" "$TRACE_FILE" "$SEQ_FILE" "$INTENT_FILE"
 
 exit 0

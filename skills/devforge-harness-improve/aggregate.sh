@@ -335,6 +335,7 @@ print(f"""# Harness 诊断聚合报告
 - 高摩擦会话: {len(high_friction)}/{total_sessions}（friction >= 0.3）
 - 执行对齐问题: {total_alignment} 次 (涉及 {alignment_sessions} 个会话)
 - Hook 总阻拦: {total_hook_blocks} 次（初期: {sum(s['hook_pos_early'] for s in sessions)}, 中期: {sum(s['hook_pos_mid'] for s in sessions)}, 末期: {sum(s['hook_pos_late'] for s in sessions)}）
+""")
 
 hotspot_entries = [(comp, data) for comp, data in component_hotspots.items() if data["sessions"] >= 2 and data["total_signals"] > 0]
 if hotspot_entries:

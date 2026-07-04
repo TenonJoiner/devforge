@@ -205,15 +205,28 @@ for i, e in enumerate(events[:-2]):
         })
 
 # 模式 3: Read 后未引用文件路径
+# 排除探索链（Read→Read/Grep/Glob）和参考性阅读（文档/配置文件）
+REFERENCE_EXTS = {".md", ".json", ".yaml", ".yml", ".toml", ".txt", ".lock", ".xml", ".csv"}
 for i, e in enumerate(events[:-1]):
     if e.get("tool") != "Read":
         continue
     file_path = e.get("input_summary", "") or ""
     if not file_path:
         continue
-    # 检查后续 3 步是否编辑/引用该文件
+
+    # 跳过参考性阅读：文档和配置文件通常用于信息获取而非编辑
+    _, ext = os.path.splitext(file_path)
+    if ext.lower() in REFERENCE_EXTS:
+        continue
+
+    # 跳过探索链：Read 后紧跟 Read/Grep/Glob 视为正常的信息收集行为
+    next_e = events[i+1] if i+1 < len(events) else None
+    if next_e and next_e.get("tool") in ("Read", "Grep", "Glob"):
+        continue
+
+    # 检查后续 5 步是否编辑/引用该文件
     referenced = False
-    for j in range(i+1, min(i+4, len(events))):
+    for j in range(i+1, min(i+6, len(events))):
         later = events[j]
         later_input = later.get("input_summary", "") or ""
         if later.get("tool") in ("Edit", "Write", "MultiEdit") and file_path in later_input:
@@ -226,7 +239,7 @@ for i, e in enumerate(events[:-1]):
         alignment_issues.append({
             "type": "read_no_edit",
             "seq": e.get("seq"),
-            "detail": f"seq={e.get('seq')} Read({file_path[:60]}) 后 3 步内未编辑/引用该文件"
+            "detail": f"seq={e.get('seq')} Read({file_path[:60]}) 后 5 步内未编辑/引用该文件"
         })
 
 # === L4: 恢复行为分类 ===
@@ -306,10 +319,11 @@ if transcript_file and os.path.exists(transcript_file):
                         entry = json.loads(line)
                     except json.JSONDecodeError:
                         continue
-                    role = (entry.get("role", "") or entry.get("type", "") or "").lower()
+                    msg = entry.get("message", {}) if isinstance(entry.get("message"), dict) else {}
+                    role = (entry.get("role", "") or entry.get("type", "") or msg.get("role", "") or "").lower()
                     if role not in ("user", "human"):
                         continue
-                    text = entry.get("content", "") or entry.get("text", "") or json.dumps(entry)
+                    text = entry.get("content", "") or entry.get("text", "") or msg.get("content", "") or json.dumps(entry)
                     text_lower = text.lower()
                     cn_kw = ["不要", "别", "不对", "错了", "重新", "不要改", "不是这个", "换一个", "不应该"]
                     en_kw = ["no,", "wrong", "incorrect", "don't", "do not", "stop", "that's not", "that is not", "redo", "start over", "try again", "instead"]
@@ -509,6 +523,8 @@ if all_dur and all(d == 0 for d in all_dur):
     dq_warnings.append("duration_ms 全为 0：PreToolUse/PostToolUse hook 未正确记录耗时，慢调用检测和 Skill 耗时统计失效")
 if len(skill_events) == 0 and len(agent_events) == 0 and len(tool_calls) > 10:
     dq_warnings.append("零 Skill/Agent 事件：会话可能未使用 DevForge skill，或 agent_dispatch 采集缺失")
+if duration_min > 480:
+    dq_warnings.append(f"会话时长 {duration_min}min（{duration_min//60}h）异常长，可能为跨天/跨周末会话，非数据采集错误但摩擦评分等时间敏感指标可能失真")
 if alignment_issues:
     read_only = sum(1 for a in alignment_issues if a["type"] == "read_no_edit")
     if read_only == len(alignment_issues) and read_only > 3:

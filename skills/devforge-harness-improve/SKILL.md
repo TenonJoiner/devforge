@@ -100,7 +100,12 @@ done
 **步骤 3：聚合多份 per-session 报告**
 
 ```bash
-bash skills/devforge-harness-improve/aggregate.sh "$WORK_DIR/reports" > "$WORK_DIR/aggregate.md"
+bash skills/devforge-harness-improve/aggregate.sh "$WORK_DIR/reports" > "$WORK_DIR/aggregate.md" || {
+    echo "错误: aggregate.sh 执行失败（退出码: $?）"
+    echo "可能原因: Python 语法错误、蒸馏报告格式不匹配、或脚本本身存在 bug"
+    echo "检查 aggregate.md 内容，若为空或不完整，需修复 aggregate.sh 后重试"
+    exit 1
+}
 ```
 
 聚合脚本 (`skills/devforge-harness-improve/aggregate.sh`) 产出组件级诊断概览（~5K token），包含：
@@ -218,6 +223,7 @@ rm -f <trace_dir>/*.tar.gz
 ## 质量门禁
 
 - 第 1 阶段数据不足 → 停止，不进入后续阶段
+- 第 3 阶段 `aggregate.sh` 执行失败 → 停止，提示「aggregate.sh 执行失败，检查脚本本身是否存在 bug（如 Python 语法错误、报告格式解析不匹配等），修复后重试」
 - 第 3 阶段 `aggregate.md` 平均摩擦评分 < 0.1 且无组件故障热点（sessions ≥ 2）→ 提示「摩擦评分极低，harness 运行良好」，跳过第 4 阶段分析
 - 第 3 阶段 `aggregate.md` 中「数据质量」表存在告警 → 将告警展示给 harness 工程师，但**不阻塞**后续分析（数据质量问题不影响已有数据的诊断价值）
   - 若 `duration_ms 全为 0` 影响 ≥80% 会话 → 额外提示「建议先修复 trace-collector hook 的耗时采集后再重新收集数据」
