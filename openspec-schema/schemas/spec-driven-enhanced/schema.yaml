@@ -19,6 +19,10 @@ artifacts:
       思考方向：变更目的是否清晰？影响范围是否明确？是否有未说明的约束或依赖？
       如果用户的需求描述已足够清晰完整，跳过提问直接编写。
 
+      ## 外部上下文（写作前 MUST 执行）
+
+      读取项目申明的产品上下文文档中的"产品能力地图"，识别本次变更映射到哪个用户可见能力。全文以该能力为叙述锚点——Why 从该能力的用户视角阐述动机，What Changes 说明该能力发生什么变化，Capabilities 命名与该能力对齐。
+
       按模板章节顺序填写：
 
       **Why**：
@@ -74,6 +78,10 @@ artifacts:
       - 🚩 Capability 描述的是实现方案（如"使用 B+ 树索引"）而非行为（如"支持范围查询"）
       - 🚩 Capability 描述的是内部实现动作（如"新增 `xx_internal_api()`""修改 `foo.c`"）而非外部可见行为
       - 🚩 bugfix / 重构类变更被命名为 `fix-*` / `refactor-*`，或 spec 只能写出实现步骤而写不出 WHEN/THEN
+
+      ## 外部可理解性验证（写完后 MUST 执行）
+
+      逐段检查：每一段话是否能被外部 Actor（用户、调用方、运维人员）而非内部子系统理解？如果某段话只能被了解内部实现的开发者理解，重写它以从外部视角表达。
     requires: []
 
   - id: specs
@@ -82,6 +90,10 @@ artifacts:
     template: spec.md
     instruction: |
       创建规范文件，定义系统应该做什么（WHAT）。
+
+      ## 外部上下文（写作前 MUST 执行）
+
+      确认 proposal 中已识别的产品能力锚点——本 spec 展开的 capability 是哪个用户可见能力的细化。Requirements 和 Scenario 均以该能力的外部 Actor 视角描述，禁止从内部模块视角叙述。
 
       按 proposal 的 Capabilities 部分，每个 capability 一份 spec 文件：
       - New capabilities：使用 proposal 中的 kebab-case 名称（`specs/<capability>/spec.md`）。
@@ -130,6 +142,10 @@ artifacts:
       **细节边界**：Scenario 应包含足够可测试的外部行为细节（输入、输出、状态变化、异常），但禁止描述内部实现方式、数据结构、调用链路或具体函数名。spec 只写 WHAT，不写 HOW。内部重构应表述为"在保持外部行为 X 不变的前提下，指标 Y 达到 Z"，而非实现步骤。
 
       Spec 应该可测试——每条 Scenario 都是潜在的测试用例。
+
+      ## 外部可理解性验证（写完后 MUST 执行）
+
+      逐段检查：每一段 Requirements 和 Scenario 描述是否能被外部 Actor（用户、调用方、运维人员）而非内部子系统理解？Scenario 的 WHEN/THEN 是否描述了外部可观察的行为而非内部状态变化？如果某段话只能被了解内部实现的开发者理解，重写它以从外部视角表达。
     requires:
       - proposal
 
