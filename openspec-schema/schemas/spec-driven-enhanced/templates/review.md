@@ -20,7 +20,10 @@
 
 ## Review Conclusion
 
-<!-- 评审标准参见 schema.yaml 中 review 阶段的「评审标准」定义 -->
+<!--
+  单例章节 — 全文仅此一处，多轮 autofix 时更新（覆盖）本节内容，禁止追加新 Review Conclusion。
+  评审标准参见 schema.yaml 中 review 阶段的「评审标准」定义。
+-->
 
 ### AI 建议（仅供参考）[AI 填写]
 

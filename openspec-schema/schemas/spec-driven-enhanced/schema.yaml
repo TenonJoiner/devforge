@@ -216,6 +216,10 @@ artifacts:
       1. AI 评审报告：按 CRITICAL/HIGH/MEDIUM/LOW 分级的问题清单 + AI 建议决策
       2. Tech Leader 最终决策区：留空，由 Tech Leader 人工填写
 
+      **格式约束**：
+      - `## Review Conclusion` 是单例章节，全文仅出现一次。多轮 autofix 时更新（覆盖）本节内容，禁止每轮追加新的 Review Conclusion。
+      - 每轮评审记录只需追加 `### Round N` 到 `## AI Review Rounds` 下。
+
       **skill 职责边界**：devforge-spec-review 只负责生成评审报告，不执行人工决策门禁。门禁由 OpenSpec 流程控制（见下游 tasks 节点的前置检查）。
 
       生成 review.md 后 STOP，提示检查 AI 建议决策：
