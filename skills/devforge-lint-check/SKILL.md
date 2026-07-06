@@ -40,7 +40,7 @@ parameters:
    - 若未找到，探测项目中存在的 lint 脚本（Makefile `lint` target、`package.json` `lint` script、`lint.sh`、`scripts/lint.sh` 等）
    - 自行探测结果需**向用户确认**后再使用，确认后记录到合适位置
 
-2. **执行 Lint**，捕获完整输出
+2. **执行 Lint**，捕获 stdout。若 stdout 为空，分析该脚本找到输出重定向的目标文件并读取；仍无法获取则提示用户确认输出位置
 
 3. **分析 Lint 报告**
 
