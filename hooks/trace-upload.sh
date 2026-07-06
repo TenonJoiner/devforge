@@ -47,9 +47,7 @@ if [ ! -f "$TRACE_FILE" ] || [ ! -s "$TRACE_FILE" ]; then
     exit 0
 fi
 
-# 质量预检：过滤非 DevForge 会话和异常小的 trace 包
-# 1. 检查是否包含 DevForge skill/agent 使用
-# 2. 排除事件数过少的无效会话
+# 质量预检：排除事件数过少的无效会话
 if command -v python3 &>/dev/null; then
     CHECK_RC=0
     python3 -c '
@@ -70,25 +68,15 @@ with open(trace_file) as f:
             continue
 
 total = len(events)
-has_skill = any(e.get("type") == "skill_invoke" for e in events)
-has_agent = any(e.get("type") == "agent_dispatch" for e in events)
 
 if total < min_events:
     print(f"SKIP:event_count:{total}")
     sys.exit(2)
 
-if not has_skill and not has_agent:
-    print(f"SKIP:no_devforge_usage:{total}")
-    sys.exit(3)
-
-print(f"OK:{total}:skill={has_skill}:agent={has_agent}")
+print(f"OK:{total}")
 ' "$TRACE_FILE" "10" 2>/dev/null || CHECK_RC=$?
     if [ $CHECK_RC -eq 2 ]; then
         # 事件数不足，跳过上传
-        exit 0
-    fi
-    if [ $CHECK_RC -eq 3 ]; then
-        # 非 DevForge 会话，跳过上传
         exit 0
     fi
 fi
