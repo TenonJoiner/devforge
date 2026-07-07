@@ -29,14 +29,10 @@ parameters:
 
 1. **获取构建命令**
    - 在当前会话上下文中查找已知的构建方法（CLAUDE.md、README、项目 rules、先前对话等），如找到则直接使用
-   - 若未找到，探测项目中存在的构建系统文件（Makefile、`build.sh`、`CMakeLists.txt`、`go.mod`、`package.json` 等），确定构建系统类型
-   - 自行探测结果需**向用户确认**后再使用。确认后将命令写入 `.claude/domain-config.yaml`：
-     ```yaml
-     build:
-       command: "<用户确认的命令>"
-     ```
+   - 若未找到，探测项目中存在的构建系统文件（Makefile、`build.sh`、`CMakeLists.txt`、`go.mod`、`package.json` 等）。项目可能包含多语言/多模块，逐一列出所有探测到的构建命令
+   - 自行探测结果需**向用户确认**后再使用。确认后将命令写入项目级 rules 文件
 
-2. **执行构建**，捕获完整输出
+2. **逐一执行所有构建命令**，分别捕获完整输出
 
 3. **处理结果**
 
@@ -49,20 +45,16 @@ parameters:
 
 1. **获取 Lint 命令**
    - 在当前会话上下文中查找已知的 lint 方法（CLAUDE.md、README、项目 rules、先前对话等），如找到则直接使用
-   - 若未找到，探测项目中存在的 lint 脚本（Makefile `lint` target、`package.json` `lint` script、`lint.sh`、`scripts/lint.sh` 等）
-   - 自行探测结果需**向用户确认**后再使用。确认后将命令写入 `.claude/domain-config.yaml`：
-     ```yaml
-     lint:
-       command: "<用户确认的命令>"
-     ```
+   - 若未找到，探测项目中存在的 lint 脚本（Makefile `lint` target、`package.json` `lint` script、`lint.sh`、`scripts/lint.sh` 等）。项目可能包含多语言/多模块，逐一列出所有探测到的 lint 命令
+   - 自行探测结果需**向用户确认**后再使用。确认后将命令写入项目级 rules 文件
 
-2. **执行 Lint**，捕获 stdout。若 stdout 为空，分析该脚本找到输出重定向的目标文件并读取；仍无法获取则提示用户确认输出位置
+2. **逐一执行所有 Lint 命令**，分别捕获 stdout。若某个命令 stdout 为空，分析对应脚本找到输出重定向的目标文件并读取；仍无法获取则提示用户确认输出位置
 
-   **若 lint 输出零告警（零 warning、零 error），输出通过信息后结束，不进入步骤 3。**
+   **所有 lint 命令均零告警时，输出通过信息后结束，不进入步骤 3。**
 
-3. **分析 Lint 报告**（仅 lint 存在告警时执行）
+3. **分析 Lint 报告**（仅部分 lint 命令存在告警时执行）
 
-   将 lint 输出按文件分组，派遣多个 developer 并行分析。禁止派遣 code-reviewer 或其他 agent 类型替代 developer。每个 developer 读取对应源码，结合上下文判断每条告警的归属：
+   对每个存在告警的 lint 命令，将其输出按文件分组，派遣多个 developer 并行分析。禁止派遣 code-reviewer 或其他 agent 类型替代 developer。每个 developer 读取对应源码，结合上下文判断每条告警的归属：
 
    | 分类 | 判定 | 处理 |
    |------|------|------|
@@ -86,17 +78,20 @@ L1 + L2 均通过（零告警）时：
 
 ```
 L1 编译检查
-  ✓ <构建命令>: PASSED
+  ✓ <命令1>: PASSED
+  ✓ <命令2>: PASSED
 
 L2 Lint 分析
-  ✓ <lint命令>: 零告警通过
+  ✓ <命令1>: 零告警通过
+  ✓ <命令2>: 零告警通过
 ```
 
 L2 存在告警时：
 
 ```
 L1 编译检查
-  ✓ <构建命令>: PASSED
+  ✓ <命令1>: PASSED
+  ✓ <命令2>: PASSED
 
 Lint 分析报告
   需修复 M 条：
@@ -111,7 +106,8 @@ L1 失败时（直接退出，不进入 L2）：
 
 ```
 L1 编译检查
-  ✗ <构建命令>: FAILED
+  ✓ <命令1>: PASSED
+  ✗ <命令2>: FAILED
     error: [文件:行号] <错误信息>
     warning: [文件:行号] <警告信息>
 ```
