@@ -98,10 +98,14 @@ def distill(events_file, transcript_file=""):
     events.sort(key=lambda e: e.get("seq", 0))
 
     # Duration fallback: 当 duration_ms=0 时，用 tool_intent._ts 计算
-    _intent_index = {}
+    # 优先使用 cid 精确匹配，回退到 tool name + seq 匹配
+    _intent_by_cid = {}
+    _intent_by_seq = {}
     for e in events:
         if e.get("type") == "tool_intent" and "_ts" in e:
-            _intent_index[e["seq"]] = e
+            _intent_by_seq[e["seq"]] = e
+            if e.get("cid"):
+                _intent_by_cid[e["cid"]] = e
 
     for e in events:
         if e.get("type") != "tool_call":
@@ -109,23 +113,34 @@ def distill(events_file, transcript_file=""):
         if (e.get("duration_ms", 0) or 0) > 0:
             continue
         _tool = e.get("tool", "")
-        for _iseq in sorted(_intent_index.keys(), reverse=True):
-            if _iseq >= e["seq"]:
-                continue
-            _intent = _intent_index[_iseq]
-            if _intent.get("tool") != _tool:
-                continue
-            _its = _intent.get("_ts", 0)
-            if not _its:
-                continue
-            try:
-                _cdt = datetime.strptime(e.get("ts", ""), "%Y-%m-%dT%H:%M:%S")
-                _wall_ms = int((_cdt.timestamp() - _its) * 1000)
-                if 0 < _wall_ms < 600000:
-                    e["duration_ms"] = _wall_ms
-            except Exception:
-                pass
-            break
+        _matched_intent = None
+
+        # 优先 cid 精确匹配
+        if e.get("cid") and e["cid"] in _intent_by_cid:
+            _matched_intent = _intent_by_cid[e["cid"]]
+
+        # 回退到 tool name + seq 匹配
+        if _matched_intent is None:
+            for _iseq in sorted(_intent_by_seq.keys(), reverse=True):
+                if _iseq >= e["seq"]:
+                    continue
+                _intent = _intent_by_seq[_iseq]
+                if _intent.get("tool") != _tool:
+                    continue
+                if _intent.get("_ts", 0):
+                    _matched_intent = _intent
+                    break
+
+        if _matched_intent:
+            _its = _matched_intent.get("_ts", 0)
+            if _its:
+                try:
+                    _cdt = datetime.strptime(e.get("ts", ""), "%Y-%m-%dT%H:%M:%S")
+                    _wall_ms = int((_cdt.timestamp() - _its) * 1000)
+                    if 0 < _wall_ms < 600000:
+                        e["duration_ms"] = _wall_ms
+                except Exception:
+                    pass
 
     # === 基本信息 ===
     session_id = events[0].get("session", "unknown")
@@ -140,19 +155,32 @@ def distill(events_file, transcript_file=""):
     agent_events = [e for e in events if e.get("type") == "agent_dispatch"]
     error_events = [e for e in tool_calls if e.get("result", {}).get("status") == "error"]
 
-    # === Hook 阻拦检测：FIFO 精确匹配 intent → call ===
-    intents_fifo = [(e["seq"], e["tool"]) for e in sorted(tool_intents, key=lambda x: x["seq"])]
-    calls_fifo = [(e["seq"], e["tool"]) for e in sorted(tool_calls, key=lambda x: x["seq"])]
+    # === Hook 阻拦检测：优先 cid 精确匹配，回退到 FIFO tool name 匹配 ===
     completed_intent_seqs = set()
-    call_used = [False] * len(calls_fifo)
-    for intent_seq, intent_tool in intents_fifo:
-        for i, (call_seq, call_tool) in enumerate(calls_fifo):
-            if call_used[i]:
-                continue
-            if call_seq > intent_seq and call_tool == intent_tool:
-                completed_intent_seqs.add(intent_seq)
-                call_used[i] = True
-                break
+    call_by_cid = {e["cid"]: e for e in tool_calls if e.get("cid")}
+    intents_sorted = sorted(tool_intents, key=lambda x: x["seq"])
+    calls_sorted = sorted(tool_calls, key=lambda x: x["seq"])
+    call_used = [False] * len(calls_sorted)
+
+    for intent in intents_sorted:
+        intent_seq, intent_tool, intent_cid = intent["seq"], intent["tool"], intent.get("cid")
+        matched = False
+
+        # 优先 cid 精确匹配
+        if intent_cid and intent_cid in call_by_cid:
+            completed_intent_seqs.add(intent_seq)
+            matched = True
+
+        # 回退到 FIFO tool name 匹配
+        if not matched:
+            for i, call in enumerate(calls_sorted):
+                if call_used[i]:
+                    continue
+                call_seq, call_tool = call["seq"], call["tool"]
+                if call_seq > intent_seq and call_tool == intent_tool:
+                    completed_intent_seqs.add(intent_seq)
+                    call_used[i] = True
+                    break
     hook_blocks = [e for e in tool_intents if e["seq"] not in completed_intent_seqs]
 
     # === Hook 阻拦位置分级 ===
@@ -580,6 +608,73 @@ def distill(events_file, transcript_file=""):
 
     # === 数据质量检查 ===
     dq_warnings = []
+
+    # -- 结构级检查：_ts 缺失率 --
+    non_intent_events = [e for e in events if e.get("type") != "tool_intent"]
+    if non_intent_events:
+        ts_missing = sum(1 for e in non_intent_events if "_ts" not in e or e.get("_ts") is None)
+        ts_missing_rate = ts_missing / len(non_intent_events)
+        if ts_missing_rate > 0.5:
+            dq_warnings.append(f"_ts 缺失率 {ts_missing_rate:.0%}（{ts_missing}/{len(non_intent_events)} 个 tool_call/agent/skill 事件无 _ts），无法重建真实时间线")
+
+    # -- 结构级检查：correlation_id 覆盖率 --
+    all_intents_dq = [e for e in events if e.get("type") == "tool_intent"]
+    all_calls_dq = [e for e in events if e.get("type") in ("tool_call", "agent_dispatch", "skill_invoke")]
+    if all_intents_dq:
+        call_with_cid = sum(1 for e in all_calls_dq if e.get("cid"))
+        if call_with_cid == 0 and len(all_calls_dq) > 0:
+            dq_warnings.append("correlation_id 全缺失：intent/call 事件均无 cid，并发场景下配对不可靠（trace-collector hook 版本过旧）")
+
+    # -- 结构级检查：intent/call 配对率 --
+    if all_intents_dq and all_calls_dq:
+        call_cids = {e.get("cid") for e in all_calls_dq if e.get("cid")}
+        intent_cids = {e.get("cid") for e in all_intents_dq if e.get("cid")}
+        if call_cids and intent_cids:
+            paired = len(call_cids & intent_cids)
+            unpaired = len(intent_cids - call_cids)
+            pairing_rate = paired / max(len(intent_cids), 1)
+        else:
+            # 回退到 tool name + seq 匹配
+            paired = 0
+            _intents = sorted(all_intents_dq, key=lambda x: x["seq"])
+            _calls = sorted(all_calls_dq, key=lambda x: x["seq"])
+            _used = [False] * len(_calls)
+            for ie in _intents:
+                for j, ce in enumerate(_calls):
+                    if _used[j]:
+                        continue
+                    if ce["seq"] > ie["seq"] and ce.get("tool") == ie.get("tool"):
+                        paired += 1
+                        _used[j] = True
+                        break
+            unpaired = len(all_intents_dq) - paired
+            pairing_rate = paired / max(len(all_intents_dq), 1)
+        if pairing_rate < 0.9:
+            dq_warnings.append(f"intent/call 配对率 {pairing_rate:.0%}（{paired}/{len(all_intents_dq)}，{unpaired} 个孤立 intent），Hook 阻拦检测和耗时计算可能失真")
+
+    # -- 结构级检查：事件顺序异常（并发调度证据） --
+    etypes = [e.get("type", "") for e in events]
+    max_consec = consec = 0
+    for t in etypes:
+        if t == "tool_intent":
+            consec += 1
+            max_consec = max(max_consec, consec)
+        else:
+            consec = 0
+    if max_consec >= 4:
+        dq_warnings.append(f"连续 {max_consec} 个 tool_intent 成批写入（并发调度证据），若无 cid 则 seq 相邻配对假设失效")
+
+    max_consec_c = consec_c = 0
+    for t in etypes:
+        if t in ("tool_call", "agent_dispatch"):
+            consec_c += 1
+            max_consec_c = max(max_consec_c, consec_c)
+        else:
+            consec_c = 0
+    if max_consec_c >= 4:
+        dq_warnings.append(f"连续 {max_consec_c} 个 tool_call 成批返回，seq 相邻假设不再可靠，duration 配对可能错位")
+
+    # -- 表层检查 --
     all_dur = [e.get("duration_ms", 0) or 0 for e in tool_calls]
     if all_dur and all(d == 0 for d in all_dur):
         dq_warnings.append("duration_ms 全为 0：PreToolUse/PostToolUse hook 未正确记录耗时，慢调用检测和 Skill 耗时统计失效")

@@ -49,7 +49,7 @@ SEQ_FILE="/tmp/devforge-trace-seq-${SESSION_ID}"
 INTENT_FILE="/tmp/devforge-trace-intent-${SESSION_ID}"
 
 python3 -c '
-import json, sys, time, os, datetime
+import json, sys, time, os, datetime, uuid
 
 data = json.loads(sys.stdin.read())
 tool_name = data.get("tool_name", "")
@@ -93,8 +93,9 @@ elif tool_name in ("Grep", "Glob"):
 # === PreToolUse: 记录 intent（所有工具类型，供 PostToolUse 计算耗时） ===
 if not is_post:
     now_ts = time.time()
+    cid = str(uuid.uuid4())[:8]
     # 写入 intent 状态文件，PostToolUse 据此计算 wall-clock 耗时
-    intent_state = {"seq": seq, "tool": tool_name, "_ts": now_ts}
+    intent_state = {"seq": seq, "tool": tool_name, "_ts": now_ts, "cid": cid}
     with open(intent_file, "a") as f:
         f.write(json.dumps(intent_state) + "\n")
 
@@ -107,6 +108,7 @@ if not is_post:
         "tool": tool_name,
         "input_summary": input_summary,
         "_ts": now_ts,
+        "cid": cid,
     }
     line = json.dumps(intent_event, ensure_ascii=False)
     with open(trace_file, "a") as f:
@@ -168,6 +170,7 @@ if isinstance(tool_response, dict):
 
 # 提取耗时：优先 tool_response，否则从 intent 状态文件计算 wall-clock 耗时
 duration_ms = 0
+matched_cid = None
 if isinstance(tool_response, dict):
     duration_ms = tool_response.get("duration_ms", 0) or tool_response.get("duration", 0) or 0
 if duration_ms == 0:
@@ -186,13 +189,15 @@ if duration_ms == 0:
                     except Exception:
                         continue
 
-            # FIFO 匹配：找第一个同工具名的未过期 intent
+            # FIFO 匹配：找第一个同工具名的未过期 intent，同时提取 correlation_id
             matched_ts = None
+            matched_cid = None
             for intent in intents:
                 if now - intent.get("_ts", 0) > TTL:
                     continue
                 if intent.get("tool") == tool_name:
                     matched_ts = intent.get("_ts", 0)
+                    matched_cid = intent.get("cid")
                     break
 
             if matched_ts:
@@ -220,6 +225,7 @@ if tool_name.lower() == "agent" or "subagent_type" in tool_input:
 event = {
     "seq": seq,
     "ts": time.strftime("%Y-%m-%dT%H:%M:%S"),
+    "_ts": time.time(),
     "session": sys.argv[1],
     "type": event_type,
     "tool": tool_name,
@@ -228,6 +234,8 @@ event = {
     "duration_ms": duration_ms,
     "result": result,
 }
+if matched_cid:
+    event["cid"] = matched_cid
 if exit_code is not None:
     event["exit_code"] = exit_code
 if agent_subtype:
