@@ -97,8 +97,29 @@ def distill(events_file, transcript_file=""):
 
     events.sort(key=lambda e: e.get("seq", 0))
 
+    # 早期批写入检测：用于 duration fallback 的可信度判断
+    _etypes = [e.get("type", "") for e in events]
+    _batch_intent = _batch_call = False
+    _consec = 0
+    for t in _etypes:
+        if t == "tool_intent":
+            _consec += 1
+            if _consec >= 4:
+                _batch_intent = True
+        else:
+            _consec = 0
+    _consec = 0
+    for t in _etypes:
+        if t in ("tool_call", "agent_dispatch"):
+            _consec += 1
+            if _consec >= 4:
+                _batch_call = True
+        else:
+            _consec = 0
+
     # Duration fallback: 当 duration_ms=0 时，用 tool_intent._ts 计算
     # 优先使用 cid 精确匹配，回退到 tool name + seq 匹配
+    # 当检测到批写入时，seq 回退的配对不可靠，仅标记不清除
     _intent_by_cid = {}
     _intent_by_seq = {}
     for e in events:
@@ -107,6 +128,7 @@ def distill(events_file, transcript_file=""):
             if e.get("cid"):
                 _intent_by_cid[e["cid"]] = e
 
+    _seq_fallback_count = 0
     for e in events:
         if e.get("type") != "tool_call":
             continue
@@ -114,6 +136,7 @@ def distill(events_file, transcript_file=""):
             continue
         _tool = e.get("tool", "")
         _matched_intent = None
+        _used_fallback = False
 
         # 优先 cid 精确匹配
         if e.get("cid") and e["cid"] in _intent_by_cid:
@@ -129,6 +152,7 @@ def distill(events_file, transcript_file=""):
                     continue
                 if _intent.get("_ts", 0):
                     _matched_intent = _intent
+                    _used_fallback = True
                     break
 
         if _matched_intent:
@@ -139,6 +163,8 @@ def distill(events_file, transcript_file=""):
                     _wall_ms = int((_cdt.timestamp() - _its) * 1000)
                     if 0 < _wall_ms < 600000:
                         e["duration_ms"] = _wall_ms
+                        if _used_fallback and (_batch_intent or _batch_call):
+                            _seq_fallback_count += 1
                 except Exception:
                     pass
 
@@ -288,18 +314,29 @@ def distill(events_file, transcript_file=""):
         if e.get("type") != "agent_dispatch":
             continue
         agent_type = e.get("agent_subtype", "general")
+        if agent_type == "general":
+            continue
         referenced = False
-        for j in range(i+1, min(i+4, len(events))):
+        for j in range(i+1, min(i+11, len(events))):
             later = events[j]
             later_input = later.get("input_summary", "") or ""
-            if agent_type != "general" and agent_type in later_input:
+            # 检查后续事件是否引用了 agent 类型名
+            if agent_type in later_input:
                 referenced = True
                 break
-        if not referenced and agent_type != "general":
+            # agent 输出通常写入文件后由主会话 Read 消费
+            if later.get("tool") == "Read":
+                referenced = True
+                break
+            # Write/Edit 可能是对 agent 输出的后续处理
+            if later.get("tool") in ("Write", "Edit", "MultiEdit"):
+                referenced = True
+                break
+        if not referenced:
             alignment_issues.append({
                 "type": "agent_result_ignored",
                 "seq": e.get("seq"),
-                "detail": f"seq={e.get('seq')} Agent({agent_type}) 结果未被后续 3 步引用"
+                "detail": f"seq={e.get('seq')} Agent({agent_type}) 结果未被后续 10 步引用"
             })
 
     REFERENCE_EXTS = {".md", ".json", ".yaml", ".yml", ".toml", ".txt", ".lock", ".xml", ".csv"}
@@ -330,6 +367,7 @@ def distill(events_file, transcript_file=""):
                 "type": "read_no_edit",
                 "seq": e.get("seq"),
                 "file_path": file_path,
+                "active_skill": e.get("active_skill", ""),
                 "detail": f"seq={e.get('seq')} Read({file_path[:60]}) 后 5 步内未编辑/引用该文件"
             })
 
@@ -358,7 +396,12 @@ def distill(events_file, transcript_file=""):
     friction_signals += early_blocks * 1
     friction_signals += mid_blocks * 3
     friction_signals += late_blocks * 1
-    friction_signals += len(alignment_issues)
+    # 非 skill 会话的 Read 未编辑属于正常探索行为，不计入摩擦评分
+    _friction_alignment = [
+        a for a in alignment_issues
+        if not (a["type"] == "read_no_edit" and not a.get("active_skill", ""))
+    ]
+    friction_signals += len(_friction_alignment)
     friction_signals += len(recovery_patterns["IGNORE"]) * 2
     friction_signals += len(recovery_patterns["RETRY"]) * 2
     slow_calls = [e for e in tool_calls if (e.get("duration_ms", 0) or 0) > 30000]
@@ -436,11 +479,19 @@ def distill(events_file, transcript_file=""):
         block_tools = Counter(e.get("tool","") for e in hook_blocks)
         for tool, cnt in block_tools.most_common():
             if cnt >= 3:
-                anomalies.append({
-                    "type": "hook_friction",
-                    "component": "hooks/",
-                    "detail": f"Hook 反复阻拦 {tool}: {cnt} 次（可能规则过严）"
-                })
+                # Agent/Skill 被阻拦通常是 allowed-tools 配置缺失，非 hook 脚本问题
+                if tool in ("Agent", "Skill"):
+                    anomalies.append({
+                        "type": "hook_friction",
+                        "component": "SKILL.md",
+                        "detail": f"allowed-tools 可能缺少 {tool}: {cnt} 次被框架拒绝（非 hook 脚本阻拦）"
+                    })
+                else:
+                    anomalies.append({
+                        "type": "hook_friction",
+                        "component": "hooks/",
+                        "detail": f"Hook 反复阻拦 {tool}: {cnt} 次（可能规则过严）"
+                    })
 
     # === 组件归因 ===
     component_signals = defaultdict(list)
@@ -450,7 +501,7 @@ def distill(events_file, transcript_file=""):
         atype = a.get("type", "")
         conf = SIGNAL_CONFIDENCE.get(f"anomaly_{atype}", 0.5)
         component_signals[comp].append((a["detail"], conf, f"anomaly_{atype}"))
-        if atype == "hook_friction":
+        if atype == "hook_friction" and comp == "hooks/":
             component_signals["rules/"].append((
                 f"Hook 阻拦反映的规则问题: {a['detail']}", conf, f"anomaly_{atype}"))
 
@@ -463,6 +514,9 @@ def distill(events_file, transcript_file=""):
             file_path = ai.get("file_path", "")
             comp, conf_type = classify_read_file(file_path) if file_path else (None, "alignment_read_no_edit_config")
             conf = SIGNAL_CONFIDENCE.get(conf_type, 0.3)
+            # 非 skill 会话（active_skill 为空）的 Read 未编辑属于探索性阅读，降低置信度
+            if not ai.get("active_skill", ""):
+                conf *= 0.3
             if comp:
                 component_signals[comp].append((ai["detail"], conf, atype))
             else:
@@ -673,6 +727,8 @@ def distill(events_file, transcript_file=""):
             consec_c = 0
     if max_consec_c >= 4:
         dq_warnings.append(f"连续 {max_consec_c} 个 tool_call 成批返回，seq 相邻假设不再可靠，duration 配对可能错位")
+    if _seq_fallback_count > 0:
+        dq_warnings.append(f"{_seq_fallback_count} 个 tool_call 的 duration 通过 seq 回退计算（批写入场景），配对不可靠，下游分析应降权")
 
     # -- 表层检查 --
     all_dur = [e.get("duration_ms", 0) or 0 for e in tool_calls]

@@ -171,6 +171,7 @@ if isinstance(tool_response, dict):
 # 提取耗时：优先 tool_response，否则从 intent 状态文件计算 wall-clock 耗时
 duration_ms = 0
 matched_cid = None
+unreliable_pairing = False
 if isinstance(tool_response, dict):
     duration_ms = tool_response.get("duration_ms", 0) or tool_response.get("duration", 0) or 0
 if duration_ms == 0:
@@ -190,15 +191,15 @@ if duration_ms == 0:
                         continue
 
             # FIFO 匹配：找第一个同工具名的未过期 intent，同时提取 correlation_id
+            # 若存在多个同工具名 intent，FIFO 可能因并发乱序而错配，标记 unreliable
             matched_ts = None
             matched_cid = None
-            for intent in intents:
-                if now - intent.get("_ts", 0) > TTL:
-                    continue
-                if intent.get("tool") == tool_name:
-                    matched_ts = intent.get("_ts", 0)
-                    matched_cid = intent.get("cid")
-                    break
+            same_tool_intents = [i for i in intents if i.get("tool") == tool_name and now - i.get("_ts", 0) <= TTL]
+            for intent in same_tool_intents:
+                matched_ts = intent.get("_ts", 0)
+                matched_cid = intent.get("cid")
+                break
+            unreliable_pairing = len(same_tool_intents) > 1
 
             if matched_ts:
                 duration_ms = int((now - matched_ts) * 1000)
@@ -240,6 +241,8 @@ if exit_code is not None:
     event["exit_code"] = exit_code
 if agent_subtype:
     event["agent_subtype"] = agent_subtype
+if unreliable_pairing:
+    event["_unreliable_pairing"] = True
 
 line = json.dumps(event, ensure_ascii=False)
 with open(trace_file, "a") as f:

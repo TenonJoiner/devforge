@@ -121,7 +121,9 @@ bash skills/devforge-harness-improve/aggregate.sh "$WORK_DIR/reports" > "$WORK_D
 
 **步骤 4：派遣 harness-engineer agent 分析聚合报告**
 
-主会话派遣 harness-engineer agent（分析模式），注入以下 prompt：
+主会话派遣 harness-engineer agent（分析模式），注入以下 prompt。
+
+**注意**：主会话需先计算 plugin 根目录（当前 skill 文件路径向上三级，即 `skills/devforge-harness-improve/SKILL.md` → plugin 根），将以下 prompt 中的 `{plugin_dir}` 替换为实际绝对路径后再发送给 agent。同时将 `{project_dir}` 替换为实际项目路径（即 `$project_dir` 参数值）。
 
 ```
 读取 $WORK_DIR/aggregate.md，分析跨开发者 trace 中暴露的问题。aggregate.md 包含五类诊断信号：
@@ -132,24 +134,24 @@ bash skills/devforge-harness-improve/aggregate.sh "$WORK_DIR/reports" > "$WORK_D
 - 执行对齐问题：工具输出未被后续消费的模式频率
 - 纠正热点：≥3 会话中触发用户纠正的 skill
 
-资源分三层，不同层级存放不同类型的文件，诊断时按归属层检查：
+资源分三层，不同层级存放不同类型的文件，诊断时按归属层检查。各层实际路径如下：
 
-**第 1 层 — Plugin 层**（DevForge 安装目录，随 plugin 分发）：
-`agents/`、`skills/`、`commands/`、`hooks/`、`templates/`、`rules/`
+**第 1 层 — Plugin 层**（DevForge 安装目录，随 plugin 分发，根路径：`{plugin_dir}/`）：
+- `{plugin_dir}/agents/`、`{plugin_dir}/skills/`、`{plugin_dir}/commands/`、`{plugin_dir}/hooks/`、`{plugin_dir}/templates/`、`{plugin_dir}/rules/`
 这些是 DevForge 框架基础设施，在所有项目中共享，由 harness 工程师维护。
 
 **第 2 层 — 用户层**（`~/.claude/`）：
-`CLAUDE.md`（用户全局偏好）、`settings.json`（用户级 hooks/权限配置）
+- `~/.claude/CLAUDE.md`（用户全局偏好）、`~/.claude/settings.json`（用户级 hooks/权限配置）
 影响所有项目的全局行为。
 
-**第 3 层 — 项目层**（`<project_dir>` 及 `<project_dir>/.claude/`）：
-`CLAUDE.md`（项目指令）、`.claude/settings.local.json`（项目级配置）、`.claude/rules/`（项目规则）、`docs/`（架构/需求文档）
+**第 3 层 — 项目层**（`{project_dir}/` 及 `{project_dir}/.claude/`）：
+- `{project_dir}/CLAUDE.md`（项目指令）、`{project_dir}/.claude/settings.local.json`（项目级配置）、`{project_dir}/.claude/rules/`（项目规则）、`{project_dir}/docs/`（架构/需求文档）
 仅影响当前项目，内容因项目而异。
 
 **关键规则**：
-- Plugin 层资源（agents/、skills/、commands/、hooks/、templates/）**不在项目层**，禁止因项目目录中找不到这些文件而报 issue
-- 诊断时：若 aggregate 归因到 `agents/*.md`，应读取 Plugin 层的 `agents/` 目录；若归因到 `SKILL.md`，应读取 Plugin 层的 `skills/` 目录；hooks/ 问题检查 Plugin 层的 `hooks/`
-- 项目层仅检查项目特有的文件：`CLAUDE.md`、`.claude/settings.local.json`、`.claude/rules/`、`docs/`
+- Plugin 层资源在 `{plugin_dir}/` 下，**不在项目层**，禁止因项目目录中找不到这些文件而报 issue
+- 诊断时：若 aggregate 归因到 `agents/*.md`，应读取 `{plugin_dir}/agents/` 目录；若归因到 `SKILL.md`，应读取 `{plugin_dir}/skills/` 目录；hooks/ 问题检查 `{plugin_dir}/hooks/`
+- 项目层仅检查项目特有的文件：`{project_dir}/CLAUDE.md`、`{project_dir}/.claude/settings.local.json`、`{project_dir}/.claude/rules/`、`{project_dir}/docs/`
 - 用户层仅当异常跨多个项目共现时才检查（单项目 issue 优先排查 Plugin 层和项目层）
 
 读取对应层的实际源文件，对照 aggregate 中的组件归因和恢复模式信号，诊断具体缺陷。禁止脱离真实文件内容推断——每个 issue 必须引用对应源文件的具体内容作为证据。
