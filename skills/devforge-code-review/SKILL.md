@@ -34,7 +34,7 @@ parameters:
 **评审哲学**：像导师一样评审，不是像看门人一样。每个发现都 teach something —— 解释为什么有问题，而不只是指出问题。评审是为了提升代码质量和开发者能力，不只是找出错误。
 
 **核心原则**：
-- **审修可控**：默认只评审不修复（`autofix` 未设置时），输出评审报告后结束；带 `autofix` 参数时 `code-reviewer` 评审 → `developer` 修复 → `code-reviewer` 验证修复，skill 内完整闭环。角色分离由 agent 分离保证（`code-reviewer` 不写代码，`developer` 按报告修复），不是靠拆成两次调用
+- **审修可控**：默认只评审不修复（`autofix` 未设置时），输出评审报告后结束；带 `autofix` 参数时 `code-reviewer` 初评 → `code-reviewer` 误报审核 → `developer` 修复 → `code-reviewer` 验证修复，skill 内完整闭环。角色分离由 agent 分离保证（`code-reviewer` 不写代码，`developer` 按报告修复），不是靠拆成两次调用
 - **分级明确**：CRITICAL 必须修，HIGH 强烈建议修，MEDIUM 优化建议，LOW 轻微问题可延期。风格问题不进入评审管线（由 `post-edit-format` hook 自动处理）
 - **证据说话**：每个问题必须引用代码行、说明影响、提供改进方案
 - **领域适配**：根据项目文件系统自动推断的主语言，以及代码结构中的领域特征调整评审侧重
@@ -198,6 +198,7 @@ Correctness 和 Security 维度中的部分检查项引用 `coding-style-<lang>.
 |--|---------|---------|
 | **覆盖维度** | D1 Correctness + D2 Readability | D1-D5 全维度 |
 | **执行方式** | `code-reviewer` 单 agent | 5 个 subagent 并行（D1-D5 各一个），汇总去重 |
+| **误报审核** | 执行（初评草稿 → 复核 → 终稿） | 执行（汇总去重 → 复核 → 终稿） |
 | **变体分析** | 不执行 | CRITICAL/HIGH 安全发现时触发 |
 | **收敛轮数** | 单轮 | 多轮，直到无新增 CRITICAL/HIGH |
 
@@ -214,28 +215,41 @@ Correctness 和 Security 维度中的部分检查项引用 `coding-style-<lang>.
 
 | 字段 | 说明 | 示例 |
 |------|------|------|
-| `任务模式` | 轻量评审（D1+D2）/ 深度评审（D1-D5）/ 单维度 subagent | `深度评审-D3-Architecture` |
+| `任务模式` | 轻量评审（D1+D2）/ 深度评审（D1-D5）/ 单维度 subagent / 误报审核 | `深度评审-D3-Architecture` / `误报审核` |
 | `主语言` | skill 从项目文件系统探测后注入 | `C` / `Go` |
 | `评审维度` | 本次评审覆盖的维度子集（D1-D5 子集） | `D1, D2` / `D3` 单维度 |
 | `diff_range` | skill 计算后注入的 git diff 命令或范围 | `git diff HEAD` / `git diff $(git merge-base HEAD main)..HEAD` |
 | `领域信号` | 从代码结构/架构文档识别的领域特征 | `存储/WAL` / `高性能服务` |
 | `report_output_path` | 评审报告写入路径 | `/tmp/code-review-report-<ts>.md` |
 | `subagent_dimension` | 深度评审多实例时，每个 subagent 负责的单一维度 | `D4-Security` |
+| `draft_report_path` | 误报审核模式下，待复核的初评草稿路径 | `/tmp/code-review-<ts>-draft.md` |
 
 ## 评审执行与报告汇总
 
-### 轻量评审
+> 两种深度均分两步：**初评产出草稿 → 误报审核产出终稿**。初评草稿写入中间文件（`/tmp/code-review-<ts>-draft.md`），不直接作为最终报告；最终报告由误报审核环节写入 `report_output_path`。
 
-- 派遣单个 `code-reviewer` agent。
-- `code-reviewer` 直接读取 diff、执行评审，并将完整报告写入 `report_output_path`。
+### 轻量评审（初评）
 
-### 深度评审
+- 派遣单个 `code-reviewer` agent（`任务模式=轻量评审`），读取 diff、执行 D1+D2 评审，将**初评草稿**写入 `/tmp/code-review-<ts>-draft.md`（不直接写 `report_output_path`）。
+
+### 深度评审（初评）
 
 1. 并行派遣 5 个 `code-reviewer` subagent，每个负责一个维度（D1-D5）。
 2. 每个 subagent 的临时报告写入独立中间文件，例如 `/tmp/code-review-<ts>-d1.md` 至 `/tmp/code-review-<ts>-d5.md`，避免相互覆盖。
-3. 所有 subagent 完成后，主会话读取这 5 份中间报告，按 CRITICAL/HIGH/MEDIUM/LOW 汇总、去重、重新编号，生成一份统一报告。
-4. **最终统一报告必须写入调用方指定的 `report_output_path`**。
-5. `/tmp` 中的维度中间文件仅供汇总使用，不对外暴露；调用方只读取最终 `report_output_path`。
+3. 所有 subagent 完成后，主会话读取这 5 份中间报告，按 CRITICAL/HIGH/MEDIUM/LOW 汇总、去重、重新编号，生成**初评草稿**写入 `/tmp/code-review-<ts>-draft.md`。
+4. `/tmp` 中的维度中间文件仅供汇总使用，不对外暴露。
+
+### 误报审核（两种深度均执行）
+
+初评草稿产出后，派遣一个**全新的 `code-reviewer` 实例**（`任务模式=误报审核`），对草稿逐条复核后产出最终报告。这是「假阳性排除规则（硬规则）」之上的**语义判断层**：硬规则拦已知模式，本环节拦硬规则覆盖不到的新型误报。**仅作用于初评（Round 1）；autofix 的验证轮（Round 2+）不再复核。**
+
+1. **注入字段**：`draft_report_path`（初评草稿路径）、`diff_range`、`主语言`、`report_output_path`。
+2. **逐条复核**：对草稿中每条 CRITICAL/HIGH/MEDIUM 发现，结合源码判定 KEEP / 排除：
+   - **排除**：仅当能用源码证据**正面证伪**——发现基于误读代码、前置条件在上游已满足、路径实际不可达，或属「假阳性排除规则」已覆盖的场景；或问题确属无关紧要且不影响正确性/安全性。
+   - **KEEP（默认）**：证据不足以证伪时一律保留。**存疑保留，宁可误报不可漏报**——漏掉真问题比多报一条噪声代价更高。
+   - LOW 与变体发现不参与复核（本就不阻塞合并）。
+3. **产出终稿**：审核者将保留的发现按原分级重编号写入 `report_output_path`；被排除的发现移入「已排除（疑似误报）」附录，每条附**证伪理由 + 源码依据**，不静默丢弃——保留可审计痕迹，供人工抽查审核判断。
+4. **主会话只读摘要**：审核者返回数字摘要（保留 N 条 / 排除 M 条），主会话据此推进，不读终稿全文。
 
 ## 假阳性排除规则（硬规则）
 
@@ -279,6 +293,7 @@ Correctness 和 Security 维度中的部分检查项引用 `coding-style-<lang>.
 | HIGH | N | [N 个待确认] |
 | MEDIUM | N | [可选修复] |
 | LOW | N | [变体分析等] |
+| 已排除 | M | [疑似误报，见附录] |
 
 ### CRITICAL（阻塞合并）
 
@@ -298,6 +313,16 @@ Correctness 和 Security 维度中的部分检查项引用 `coding-style-<lang>.
 
 ### LOW（变体分析、范围外发现）
 ...
+
+### 已排除（疑似误报，不计入结论）
+
+> 误报审核环节从初评草稿中剔除的发现，附证伪理由，供人工抽查。不阻塞合并、不计入 PASS/NEEDS_FIX 判定。
+
+#### Excluded 1: [原发现标题] — `[文件:行号]`（纯文本，禁止超链接 / permalink）
+
+- **原分级:** [CRITICAL | HIGH | MEDIUM]
+- **排除理由:** [为何判定为误报或无关紧要]
+- **源码依据:** [支持排除的代码事实，如"前置检查已在 caller foo():L120 完成"]
 ```
 
 ### Round 1.5：修复确认（仅 `autofix` 模式）
@@ -361,6 +386,7 @@ Developer 按报告逐项修复后输出：
 |------|------|
 | 评审轮数 | N |
 | 总发现数 | N（初始 + 修复引入） |
+| 已排除误报 | N |
 | 已修复 | N |
 | 已接受风险 | N |
 | 未处理（达上限时） | N |
@@ -370,14 +396,16 @@ Developer 按报告逐项修复后输出：
 
 ### `autofix` 未设置（默认）— 只评审
 
-1. **评审**：`code-reviewer` 输出结构化评审报告
-2. **结束**：输出评审报告和最终结论，不执行修复
+1. **初评**：`code-reviewer` 输出初评草稿（轻量单 agent / 深度 5 维汇总）
+2. **误报审核**：全新 `code-reviewer`（`任务模式=误报审核`）逐条复核，剔除可证伪的误报，生成最终报告
+3. **结束**：输出最终报告和最终结论，不执行修复
 
 ### `autofix` 已设置 — 评审 + 自动修复
 
-1. **评审**：`code-reviewer` 输出结构化评审报告
-2. **修复**：`developer` 按报告逐项修复（CRITICAL → HIGH → MEDIUM）
-3. **验证轮**（仅深度评审）：修复完成后再执行一轮评审。最多 3 轮：
+1. **初评**：`code-reviewer` 输出初评草稿
+2. **误报审核**：全新 `code-reviewer`（`任务模式=误报审核`）逐条复核，剔除可证伪的误报，生成最终报告——developer 只修复审核后保留的发现，避免在误报上浪费修复动作
+3. **修复**：`developer` 按最终报告逐项修复（CRITICAL → HIGH → MEDIUM）
+4. **验证轮**（仅深度评审）：修复完成后再执行一轮评审。最多 3 轮：
    - 若有新增 CRITICAL/HIGH → 继续修复并进入下一轮验证
    - 无新增 CRITICAL/HIGH → 收敛，结束
    - 达到 3 轮上限仍有未处理的 CRITICAL/HIGH → 停止评审，报告中标注"达到评审轮数上限，建议重新评估实现方案"

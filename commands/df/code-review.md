@@ -15,16 +15,17 @@
 2. **范围确认**：
    - 日常轻量评审：获取当前工作区 `git diff HEAD` + `git diff --cached` 的变更
    - 批量收尾：检测 trunk 分支后计算 `git diff $(git merge-base HEAD <trunk>)..HEAD`
-3. **评审**：基于变更规模选择评审深度
+3. **初评**：基于变更规模选择评审深度
    - **轻量评审（< 300 行且模块 ≤ 2）**：`code-reviewer` 单 agent，覆盖 D1 Correctness + D2 Readability，单轮
    - **深度评审（≥ 300 行，或 3+ 模块）**：5 个 subagent 并行（D1-D5 各一个），汇总去重
-4. 输出结构化评审报告，按 CRITICAL → HIGH → MEDIUM 分级
+4. **误报审核**：全新 `code-reviewer` 实例逐条复核初评发现，结合源码剔除可证伪的误报，存疑保留；被排除项记入「已排除（疑似误报）」附录
+5. 输出结构化评审报告，按 CRITICAL → HIGH → MEDIUM 分级
 
 **`autofix` 未设置（默认）**：输出评审报告后结束，不执行修复。
 
 **`autofix` 已设置**：继续以下步骤——
-5. **修复**：`developer` 按报告逐项修复（CRITICAL → HIGH → MEDIUM）
-6. **验证轮**（仅深度评审）：修复完成后再执行一轮评审。若有新增 CRITICAL/HIGH，继续修复并再次评审，直到无新增 CRITICAL/HIGH 时收敛
+6. **修复**：`developer` 按报告逐项修复（CRITICAL → HIGH → MEDIUM）
+7. **验证轮**（仅深度评审）：修复完成后再执行一轮评审。若有新增 CRITICAL/HIGH，继续修复并再次评审，直到无新增 CRITICAL/HIGH 时收敛
 
 ## 结束条件
 
