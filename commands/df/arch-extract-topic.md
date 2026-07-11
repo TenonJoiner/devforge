@@ -10,25 +10,27 @@
 ## 使用场景
 
 - 深入理解某个跨目录的技术主题的架构设计
-- 配合社区文档 `--doc` 发现设计意图与代码实现的差异
+- 配合社区文档 `--ref-doc` 发现设计意图与代码实现的差异
 - 首次使用 DevForge 架构文档体系时，推荐顺序：topic → subsystem → system
 
 ## 输出物
 
-- `docs/architecture/<subsystem>/<topic>.md` — 技术主题深度设计文档（14-17 页，≤500 行）
+- `<output-docs>/architecture/<subsystem>/<topic>.md` — 技术主题深度设计文档（14-17 页，≤500 行）
 
 ## 调用方式
 
 ```
-/df:arch-extract-topic --target=<主题名> [--doc=<社区文档目录>]
+/df:arch-extract-topic --target=<主题名> [--src=<源码目录>] [--ref-doc=<社区文档目录>] [--output-docs=<输出目录>]
 ```
 
 **参数**：
 - `--target`（必选）：技术主题名，如 "协程调度模型""本地存储引擎""Raft 共识"
-- `--doc`（可选）：社区文档目录（上游开源项目的文档），用于提供设计背景和概念框架
+- `--src`（可选，默认：当前工作目录）：源码目录路径
+- `--ref-doc`（可选）：社区文档目录（上游开源项目的文档），用于提供设计背景和概念框架
+- `--output-docs`（可选，默认：`docs`）：输出文档根目录
 
 **示例**：
 ```
 /df:arch-extract-topic --target=协程调度
-/df:arch-extract-topic --target=本地存储引擎 --doc=docs/community/
+/df:arch-extract-topic --target=本地存储引擎 --ref-doc=reference/project/docs/
 ```
