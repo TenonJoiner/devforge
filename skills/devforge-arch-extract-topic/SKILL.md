@@ -331,6 +331,7 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent, AskUserQuestion]
 
 **共享写作约束**（三个 agent 均须遵守）：
 - 写作前 MUST 先读取模板：`skills/devforge-arch-extract-topic/templates/arch-reverse-topic.md`
+- 写作前在 `<output-docs>/` 下搜索词汇表文件（glossary.md、GLOSSARY.md、terminology.md 等），找到则读取并在写作中统一使用其中术语
 - 合并后文档 ≤500 行。核心设计和关键设计是重点章节，篇幅自然倾斜；已知问题等非重点章节从简
 - 安全/性能/错误语义融入关键设计描述，不独立成章
 - 禁止"因为模板要求所以要有"的占位填充
