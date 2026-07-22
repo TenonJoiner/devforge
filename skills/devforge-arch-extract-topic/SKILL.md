@@ -32,18 +32,36 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent, AskUserQuestion]
 
 **输出路径确定**：
 - `<subsystem>` 由阶段 3 范围确认时与用户商定
-- `<topic>` 文件名由主会话根据主题名生成（小写、连字符分隔，如 `coroutine-scheduler`）
+- `<topic>` 文件名由主会话根据规范名称生成（小写、连字符分隔，如 `coroutine-scheduler`）。若启用了 catalog，使用 catalog 中的规范名称
 
 ## 启动检测
 
 ### 步骤 1：解析参数
 
-- `--target=<主题名>`（必选）：要分析的技术主题，如"协程调度模型""本地存储引擎"
+- `--target=<主题名>`（必选）：要分析的技术主题，如"协程调度模型""本地存储引擎"。若同时指定了 `--topic-catalog`，则 `--target` 作为 catalog 中的查找键，匹配成功后后续阶段使用 catalog 中的规范名称和详细描述，不再使用原始 `--target` 字符串
+- `--topic-catalog=<path>`（可选）：子系统 topic 清单文件路径，包含该子系统所有 topic 的名称、概要描述和范围定义。传入后，`--target` 变为 catalog 查找键，skill 利用 catalog 中的丰富描述指导定位和分析，利用相邻 topic 边界约束本 topic 范围
 - `--src=<dir>`（可选，默认：当前工作目录）：源码目录路径
 - `--ref-doc=<dir>`（可选，默认：空）：社区文档目录路径，不传则不启用社区文档
 - `--output-docs=<dir>`（可选，默认：`docs`）：输出文档根目录，实际输出路径为 `<output-docs>/architecture/<subsystem>/<topic>.md`
 
 若无 `--target` 参数，报错提示用法。
+
+### 步骤 2：catalog 解析（条件触发）
+
+**前置条件**：`--topic-catalog=<path>` 已提供。未提供则跳过本步骤。
+
+主会话读取 catalog 文件，按 `--target` 匹配条目：
+
+**匹配规则**：主会话读取 catalog 后按 `--target` 查找对应条目。匹配不限于精确字符串——允许部分名称匹配、关键词匹配等。若匹配结果不唯一或不确定，列出候选条目供用户选择确认
+
+**匹配成功后提取**：
+- **规范名称**：catalog 中记录的标准名称（替代 `--target` 字符串，后续所有阶段使用）
+- **概要描述**：topic 的技术关注点、核心概念、设计边界
+- **相邻 topic 边界**：同子系统其他 topic 的清单（名称 + 简要范围），用于阶段 1 排除非本 topic 文件、阶段 3 边界确认
+
+**输出**（主会话记录，不写文件）：
+- 匹配条目：规范名称 + 概要描述（≤5 行摘要）
+- 排除清单：相邻 topic 名称及其范围简述（供阶段 1 和阶段 3 使用）
 
 ---
 
@@ -51,20 +69,22 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent, AskUserQuestion]
 
 ### 第 1 阶段：主题定位
 
-**职责**：根据主题名在代码库中跨目录定位相关文件、识别入口点
+**职责**：根据主题名在代码库中跨目录定位相关文件、识别入口点。若有 catalog 描述和排除清单，则以其为指导约束探索范围。
 
 派遣 1 个 Explore agent（`subagent_type: "Explore"`）：
 
 ```
 **任务模式**：代码库主题定位
-**任务**：根据主题名 "<target>" 在 <src> 中定位所有相关源文件
+**任务**：根据主题描述在 <src> 中定位所有相关源文件
 
 **输入**：
-- 主题名：<target>
+- 主题名：<target 或 catalog 规范名称>
 - 代码库根目录：<src>
+- <若启用了 catalog> 概要描述：<catalog 中的概要描述>——指导关键词匹配和关注点聚焦
+- <若启用了 catalog> 排除清单：<相邻 topic 清单>——这些 topic 的范围不属于本主题，避免将明确属于其他 topic 的文件纳入
 
 **分析内容**：
-1. 扫描目录结构，匹配主题关键词（含同义词、英文对应词）
+1. 扫描目录结构，匹配主题关键词（含同义词、英文对应词）。若有 catalog 描述，从描述中提取核心概念和关键组件名作为搜索线索
 2. 识别核心入口文件（头文件、主模块文件）
 3. 识别相关实现文件（跨目录追踪依赖）
 4. 识别相关测试文件（了解使用方式）
@@ -76,7 +96,7 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent, AskUserQuestion]
 - 入口点：3-5 个核心入口文件/函数
 - 依赖关系：文件间的 include/import 关系概览
 - 规模估算：总行数、文件数
-- 边界建议：主题的合理范围建议（哪些文件属于本主题、哪些属于边界外）
+- 边界建议：主题的合理范围建议（哪些文件属于本主题、哪些属于边界外）。若有排除清单，明确标注与相邻 topic 的边界划分依据
 ```
 
 **质量门禁**：
@@ -90,15 +110,16 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent, AskUserQuestion]
 派遣 1 个 general-purpose agent：
 
 ```
-**任务**：在 <ref-doc> 下搜索与主题 "<target>" 相关的文档，从中提取设计层面的声明
+**任务**：在 <ref-doc> 下搜索与主题相关的文档，从中提取设计层面的声明
 
 **输入**：
 - 文档目录：<ref-doc>
-- 主题名：<target>
+- 主题名：<target 或 catalog 规范名称>
+- <若启用了 catalog> 概要描述：<catalog 中的概要描述>——指导文档搜索的关键词选择
 
 **步骤 1 — 文档发现与筛选**：
 - 搜索目录索引文件（SUMMARY.md、INDEX.md、README.md、toc.md 等），从中按主题逐层导航定位相关文档
-- 按 target 关键词（及其同义词/英文对应词）全文搜索所有文档内容，作为补充
+- 按主题关键词（及其同义词/英文对应词）全文搜索所有文档内容，作为补充。若有 catalog 描述，以描述中的核心概念和技术关键词为主
 - 合并去重，筛选最相关的 1-5 篇
 
 **步骤 2 — 设计声明提取**（从步骤 1 匹配到的文档中提取）：
@@ -121,7 +142,7 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent, AskUserQuestion]
 
 ### 第 3 阶段：范围确认
 
-**职责**：向用户展示定位结果 + 匹配到的文档列表 + 文档声明清单，确认主题边界
+**职责**：向用户展示定位结果 + 匹配到的文档列表 + 文档声明清单 + catalog 相邻 topic 边界（若有），确认主题边界
 
 主会话读取阶段 1 和阶段 2 的产出摘要（≤5 行），展示给用户：
 
@@ -129,6 +150,7 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent, AskUserQuestion]
 2. **入口点**：3-5 个核心入口
 3. **文档匹配**（若启用）：匹配到 K 篇文档，提取 L 条设计声明
 4. **边界建议**：建议的主题范围
+5. **相邻 topic 边界**（若启用了 catalog）：列出相邻 topic 及其范围，标注哪些文件/目录可能与本 topic 重叠但属于相邻 topic
 
 使用 AskUserQuestion 确认：
 - 主题边界是否合适 → 不合适时提供调整选项：
@@ -142,6 +164,11 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent, AskUserQuestion]
 - **已存在** → 进入补全模式（用模板自检清单扫描缺失项，跑阶段 4-9 补全）
   - 若非补全而是修订已有内容，不适用本 skill，主人直接用 `/df:design` 或手动编辑
 
+**质量门禁**：
+- 本阶段不可跳过，必须使用 AskUserQuestion 与用户交互
+- 用户给出反馈（缩小/扩大/重新定位）后，必须再次展示调整结果并重新确认，直到用户明确确认边界和输出路径
+- 用户确认后主会话在回复中复述确认结论（边界 + 输出路径），再推进到后续阶段
+
 ### 第 4 阶段：代码分析
 
 **职责**：深度分析源码，从五个维度并行切入
@@ -149,6 +176,7 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent, AskUserQuestion]
 **上下文注入**（主会话准备，注入各 agent prompt）：
 - 阶段 1 定位结果中的文件清单和入口点
 - 若启用了 `--ref-doc`：阶段 2 的设计声明清单（`/tmp/arch-extract-topic-claims-<ts>.md`），agent 分析时对照声明逐条验证代码是否支持（"设计动机/背景"类声明无需验证，留作阶段 7 写作参考）
+- 若启用了 `--topic-catalog`：catalog 中的概要描述，agent 分析时据此聚焦关注点，避免分析方向偏离
 - 若 `<output-docs>/architecture/<subsystem>/` 下已有 subsystem/topic 文档：留作阶段 7 写作参考（避免重复已有上下文），不注入阶段 4
 
 派遣 5 个 architect agent 并行：
@@ -160,7 +188,8 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent, AskUserQuestion]
 
 **输入**：
 - 文件清单与入口点：阶段 1 产出（入口点是控制流追踪的起点）
-- 主题名：<target>
+- 主题名：<target 或 catalog 规范名称>
+- <若启用了 catalog> 概要描述：<catalog 中的概要描述>
 - <若启用了 ref-doc> 设计声明清单（架构部分）：/tmp/arch-extract-topic-claims-<ts>.md，逐条与代码对照
 
 **分析要求**：
@@ -180,7 +209,8 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent, AskUserQuestion]
 
 **输入**：
 - 文件清单与入口点：阶段 1 产出
-- 主题名：<target>
+- 主题名：<target 或 catalog 规范名称>
+- <若启用了 catalog> 概要描述：<catalog 中的概要描述>
 - <若启用了 ref-doc> 设计声明清单（关键机制部分）：/tmp/arch-extract-topic-claims-<ts>.md，逐条与代码对照
 
 **分析要求**：
@@ -200,7 +230,8 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent, AskUserQuestion]
 
 **输入**：
 - 文件清单与入口点：阶段 1 产出（优先分析入口函数直接操作的数据结构）
-- 主题名：<target>
+- 主题名：<target 或 catalog 规范名称>
+- <若启用了 catalog> 概要描述：<catalog 中的概要描述>
 - <若启用了 ref-doc> 设计声明清单（数据模型部分）：/tmp/arch-extract-topic-claims-<ts>.md>
 
 **分析要求**：
@@ -225,7 +256,8 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent, AskUserQuestion]
 
 **输入**：
 - 文件清单与入口点：阶段 1 产出（入口函数直接创建/操作的对象即为关键对象）
-- 主题名：<target>
+- 主题名：<target 或 catalog 规范名称>
+- <若启用了 catalog> 概要描述：<catalog 中的概要描述>
 - <若启用了 ref-doc> 设计声明清单（并发/一致性部分）：/tmp/arch-extract-topic-claims-<ts>.md
 
 **分析要求**：
@@ -250,7 +282,8 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent, AskUserQuestion]
 
 **输入**：
 - 文件清单与入口点：阶段 1 产出（入口点列表即关键接口列表）
-- 主题名：<target>
+- 主题名：<target 或 catalog 规范名称>
+- <若启用了 catalog> 概要描述：<catalog 中的概要描述>
 - <若启用了 ref-doc> 设计声明清单（接口/契约部分）：/tmp/arch-extract-topic-claims-<ts>.md
 
 **分析要求**：
@@ -314,14 +347,13 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent, AskUserQuestion]
 2. **文档-代码差异**（若有）：列出一致/矛盾/未验证条目
 3. **待确认的问题**：需要用户判断的设计意图（如有）
 
-使用 AskUserQuestion 确认关键判断。矛盾处以用户判断为准。
+使用 AskUserQuestion 确认关键判断。矛盾处以用户判断为准。本阶段 AskUserQuestion 必然触发，无论是否存在文档-代码差异或待确认问题。
 
 **质量门禁**：
-- 用户明确确认了主题边界和输出路径 → 推进到第 7 阶段
+- 用户明确确认 → 推进到第 7 阶段
 - 用户要求调整范围 → 若缩小（剔除文件），直接重跑阶段 4-5；若扩大或重新定位，回退到阶段 1 重跑定位，再重跑阶段 4-5。阶段 2（文档发现）不重跑
 - 用户对分析结果有疑问但能给出明确指示 → 记录指示，推进到第 7 阶段（writer 以用户指示为准覆盖分析结论）
 - 用户无法判断 → 标记为"待确认"，推进到第 7 阶段（writer 在已知问题中记录差异，标注"需人工核实"）
-- 若无文档-代码差异且无待确认问题 → 跳过 AskUserQuestion，自动推进到第 7 阶段（避免无意义的用户打断）
 
 ### 第 7 阶段：文档生成
 
@@ -353,6 +385,7 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent, AskUserQuestion]
 - 阶段 4 全部分析（A1/A2/B/C/D）——细节支撑
 - 阶段 4 验证结果（若有）——社区文档中可能有设计背景的引用线索
 - 阶段 6 用户确认的设计意图
+- <若启用了 catalog> 概要描述：<catalog 中的概要描述>
 
 **写作指引**：
 - 核心技术矛盾直接采用阶段 5 的推断，若用户有补充说明则整合
@@ -429,7 +462,7 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent, AskUserQuestion]
 
 ### 第 8 阶段：评审
 
-**职责**：独立评审 + 修正循环（最多 3 轮）
+**职责**：独立评审 + 修正循环（最多 5 轮）
 
 派遣 3 个 architect-reviewer agent 并行（按视角切分）。所有 reviewer 必须能读取阶段 4 代码分析产出和阶段 5 架构推断，用于交叉验证。
 
@@ -494,7 +527,7 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent, AskUserQuestion]
 2. 存在任何 CRITICAL 问题 → **直接判定不通过**（CRITICAL 一票否决，不受缺陷密度阈值豁免）
 3. 无 CRITICAL 且缺陷密度 ≤ 2.0 → 通过，进入第 9 阶段
 4. 否则 → 主会话汇总三份评审报告，合并为修正清单（每条问题附所属评审报告路径），注入 1 个 architect agent 的派遣 prompt。agent 按清单逐项修正后，回到本阶段重新评审
-5. 最多 3 轮。3 轮后仍未通过 → 标注残留问题，进入第 9 阶段
+5. 最多 5 轮。3 轮后仍未通过 → 标注残留问题，进入第 9 阶段
 
 **问题分值**：CRITICAL=10, HIGH=3, MEDIUM=1, LOW=0.1
 **缺陷密度** = 问题分数之和 / 章节数（5）
