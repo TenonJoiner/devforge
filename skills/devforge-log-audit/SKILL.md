@@ -87,7 +87,7 @@ parameters:
 1. **级别合理性（始终执行，纯静态）**：逐条核对范围内日志语句级别，对照 `log-auditor` 内建级别滥用反模式标出滥用（高级别滥用、log-and-throw、裸 printf/printStackTrace 等）
 2. **打印频率（仅当 `--log-dir` 提供）**：运行 `scripts/analyze_logs.py` 解析真实日志，用各级别计数 / 高频重复消息 Top-N / 打印速率量化洪泛，把确证的高频对回源码打印点并分级。**未提供 `--log-dir` 时本维度不执行**，报告标注"频率维度未审：未提供 --log-dir"，不做静态臆测
 
-`log-auditor` 按 `skills/devforge-log-audit/log-audit-report.md` 生成报告，写入 `report_output_path`，返回数字摘要。
+`log-auditor` 按 `skills/devforge-log-audit/log-audit-report.md` 生成**草稿**报告，写入 `report_output_path`，返回数字摘要。
 
 ### `log-auditor` 派遣字段（必填，由 skill 注入）
 
@@ -102,6 +102,39 @@ parameters:
 | `analyze_script` | 运行时分析脚本路径 | `scripts/analyze_logs.py` |
 | `template_path` | 报告格式契约文件 | `skills/devforge-log-audit/log-audit-report.md` |
 | `report_output_path` | 报告写入路径 | `/tmp/log-audit-<ts>.md` |
+
+### 第 3 阶段：独立审核（派遣审核 subagent）
+
+`log-auditor` 产出的草稿报告可能存在误报或级别误判。派遣**独立审核 subagent**（使用 general-purpose agent，不与 `log-auditor` 共享上下文），以独立视角对草稿问题清单逐条做实质性复核后输出最终报告。
+
+**审核流程**：
+
+1. 读取草稿报告（`report_output_path`）与 `log-auditor` agent 内建的级别语义 + 反模式基线（`agents/log-auditor.md`），结合第 1 阶段探测的项目级别定义
+2. 逐条复核（重心在实质性判断，而非机械验证）：
+   - **判断是否真的是问题**：对照级别语义与反模式基线，独立判断该日志语句是否构成问题——草稿的判定是否成立？是否存在过度敏感（如将合理的 ERROR 误判为滥用、将必要的 INFO 误判为刷屏）？是否忽略了上下文（如本层确实无法恢复、该路径确为关键状态变更）？判定不成立 → 移除
+   - **判断是否需要修改**：即便存在轻微不合规范之处，评估实际影响——不影响排障、不会导致洪泛、不会触发误告警的，可判定为无需修改 → 移除
+   - **核实问题存在**（基础检查）：读取 `path:line` 源码，确认日志语句确实存在、描述与实际代码一致
+   - **核实级别判定**：级别偏高 → 降级；级别偏低 → 升级
+3. 复核完成后直接刷新报告——移除不成立的问题条目、调整误判的级别、更新数字摘要，写回 `report_output_path`（覆盖草稿）。**不**在报告中附加独立的"审核结果"章节，审核是报告的清理过程，不是报告的附加内容
+
+**审核约束**：
+
+- 对每条问题给出判断：✅ 保留 / ⬇️ 降级为 X / ⬆️ 升级为 X / ❌ 移除（附一句话理由，说明为什么不构成问题或不需要修改）
+- 只做减法或调整，**不做加法**——不新增 `log-auditor` 未发现的问题
+- 独立判断，不盲从草稿——即便 `log-auditor` 判定为 HIGH，复核认为实际影响微小、无需修改，直接移除
+- 级别调整直接生效，无需人工确认——审核 subagent 的判断即为最终级别
+- 审核 subagent 直接编辑报告（移除/调整问题条目、刷新数字摘要），返回最终数字摘要供主会话输出对话结论
+
+**审核 subagent 派遣字段**：
+
+| 字段 | 说明 |
+|------|------|
+| `draft_report_path` | 草稿报告路径（同 `report_output_path`） |
+| `template_path` | 报告格式契约文件 `skills/devforge-log-audit/log-audit-report.md` |
+| `auditor_baseline` | `log-auditor` 级别语义 + 反模式基线文件 `agents/log-auditor.md` |
+| `级别定义` | 第 1 阶段探测结果（同 `log-auditor` 注入） |
+| `scope` | 审计范围 |
+| `report_output_path` | 最终报告写入路径（覆盖草稿） |
 
 ## 运行时日志分析脚本
 
@@ -130,8 +163,9 @@ python3 scripts/analyze_logs.py --log-dir <dir> \
 - [ ] 第 1 阶段级别定义已探测（探测不到已显式标注回退基线）
 - [ ] 级别合理性已审计（始终执行）
 - [ ] 打印频率：提供 `--log-dir` 时已量化产出；未提供时报告已标注"频率维度未审：未提供 --log-dir"
+- [ ] 第 3 阶段独立审核已完成：草稿问题清单逐条验证（存在性 + 级别合理性），误报已移除，级别已校准
 - [ ] 报告按 CRITICAL/HIGH/MEDIUM/LOW 分级，结论标注 PASS / NEEDS-FIX
-- [ ] **报告格式校验**：主会话对 `log-auditor` 产出做轻量校验——必填章节全部存在（审计元数据 / 级别使用分析 / 频率分析 / 问题清单 / 审计结论）+ 数字摘要与问题清单各级别条目数一致。不通过则要求 `log-auditor` 补全修正（不改审计判断，只补格式）
+- [ ] **报告格式校验**：主会话对最终报告做轻量校验——必填章节全部存在（审计元数据 / 级别使用分析 / 频率分析 / 问题清单 / 审计结论）+ 四级问题格式统一（全部独立条目、带编号前缀、无表格/段落混用、无同级别合并描述）+ 每条含编号/标题/维度/说明/修复建议 + 数字摘要与问题清单各级别条目数一致。不通过则要求对应 agent 补全修正（不改审计判断，只补格式）
 
 ## 红旗清单
 
