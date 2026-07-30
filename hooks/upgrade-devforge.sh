@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
-# 每周检查并升级 devforge plugin
+# 每日检查并升级 devforge plugin
 set -euo pipefail
 
 STAMP_FILE="$HOME/.local/share/devforge/last-upgrade-check"
 NOW=$(date +%s)
-WEEK_SECONDS=604800
+DAY_SECONDS=86400
 
 if [ -f "$STAMP_FILE" ]; then
   LAST=$(cat "$STAMP_FILE")
   ELAPSED=$((NOW - LAST))
-  if [ "$ELAPSED" -lt "$WEEK_SECONDS" ]; then
+  if [ "$ELAPSED" -lt "$DAY_SECONDS" ]; then
     exit 0
   fi
 fi
