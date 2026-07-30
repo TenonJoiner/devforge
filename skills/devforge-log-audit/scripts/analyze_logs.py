@@ -49,7 +49,7 @@ PREFIX_RE = re.compile(
 # ---------------------------------------------------------------------------
 # Level detection (driven by externally injected project level definitions)
 # ---------------------------------------------------------------------------
-DEFAULT_LEVELS = "DEBUG,INFO,NOTE,WARN|WARNING,ERROR|ERR,CRITICAL,FATAL,EMIT"
+DEFAULT_LEVELS = "DEBUG,INFO,NOTE,WARN|WARNING,ERROR|ERR,CRITICAL,ALERT,FATAL,EMIT"
 
 
 def parse_levels(raw):

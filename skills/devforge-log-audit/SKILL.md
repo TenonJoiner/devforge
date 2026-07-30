@@ -22,15 +22,14 @@ parameters:
 
 ## 概述
 
-两个审计维度：**级别合理性**（有无滥用高级别）与 **打印频率**（是否过于频繁）。**级别合理性为纯静态审计，始终执行**；**打印频率为运行时维度**——频率本质取决于运行时调用量，静态无法确认，故**仅在提供 `--log-dir` 时**用真实日志量化，不提供则跳过该维度并在报告标注。
+两个审计维度：**级别合理性**（有无滥用高级别）与 **打印频率**（是否过于频繁），两者互斥——**提供 `--log-dir` 时只做频率分析**（运行时维度，需真实日志量化），**不提供时只做级别合理性审计**（纯静态）。
 
 审计知识基线（级别语义 + 反模式 + 判定阈值）内建于 `log-auditor` agent；**项目特定级别定义由第 1 阶段探测后注入 `log-auditor`**。默认只审计不修复。
 
 ### 职责边界
 
 - ✅ 探测范围内各语言的日志级别定义（配置/文档/源码反推）与日志框架
-- ✅ 派遣 `log-auditor` 执行两维度审计，汇总分级报告
-- ✅ 提供 `--log-dir` 时驱动运行时日志量化分析
+- ✅ 派遣 `log-auditor` 执行当前维度的审计（`--log-dir` 决定哪个维度），汇总分级报告
 - ❌ 不修改日志、不改代码（本 skill 只评审）
 - ❌ 不评日志文案措辞、标点、大小写等风格偏好 → 超出两维度范围（完全无动态变量的静态消息除外——属结构性缺陷，非措辞问题）
 - ❌ 主会话不做深度审计判断（由 `log-auditor` 完成），不读 agent 完整产出（只读 ≤5 行数字摘要）
@@ -50,9 +49,11 @@ parameters:
 2. `full` 参数存在：全仓批量整改（Grep 全仓日志语句，不做 diff）
 3. 都不传（默认）：MR 门禁范围——先检测 trunk（`git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null` 或 `git remote show origin 2>/dev/null | grep 'HEAD branch' | cut -d: -f2`），再 `git diff $(git merge-base HEAD origin/<trunk>)..HEAD`；**检测失败不猜测**，提示用户通过 `--diff-range` 显式指定
 
-**范围铁律**：审计只针对范围内的日志语句。范围外发现降为 LOW，不阻塞本次合并。
+**范围铁律**：
+- 审计只针对范围内的日志语句。范围外发现降为 LOW，不阻塞本次合并
+- 测试代码（`test/`、`tests/`、`*_test.*`、`*Test.*`、`*Spec.*` 等目录与文件）**不纳入审计范围**——测试日志为测试目的编写，不影响生产排障质量
 
-> **运行时频率与场景**：`--log-dir` 是频率维度的**唯一开关**。全仓批量整改常能拿到真实日志，建议带 `--log-dir` 量化洪泛；MR 门禁在 CI 中通常无生产日志，此时**只审级别合理性**，频率维度不执行、报告标注未审。
+> **两者互斥**：一次调用只执行一个维度——有 `--log-dir` 只做频率分析，没有只做级别审计。如需两者都做，调用两次。
 
 ## 审计流程
 
@@ -78,14 +79,18 @@ parameters:
 
 派遣 `log-auditor`（多语言时按语言切分，范围大时还可按目录/模块切分多实例并行，合并规则见下）：
 
-**多实例并行合并规则**：多实例时，各 agent 产出独立报告片段（仅「问题清单」节，按 CRITICAL→LOW 排列），主会话负责汇合：
-1. 将各片段的问题清单拼接后按级别分组、按 path:line 排序
+**多实例并行合并规则**：多实例时，主会话负责汇合为**单一报告**（非多份独立报告）——无论多少种语言、多少个模块，最终只输出一个 `report_output_path` 文件。汇合方法：
+1. 各 agent 产出独立报告片段（完整报告，含元数据/分析/问题清单），主会话合并为一份：
+   - 审计元数据：语言字段列出全部语言，数字摘要为各片段之和，其余字段合并
+   - 级别使用分析/频率分析：取各片段的发现要点合并描述
+   - 问题清单：拼接后按级别分组、按 path:line 排序
 2. 同一 path:line + 同一问题维度的重复条目只保留一条（取更详细者）
-3. 数字摘要为各片段之和，审计范围为各子范围拼接
-4. 审计元数据取第一份报告的元数据，频率分析取各片段汇总
+3. 合并后写入 `report_output_path`（作为第 3 阶段审核的草稿）
 
-1. **级别合理性（始终执行，纯静态）**：逐条核对范围内日志语句级别，对照 `log-auditor` 内建级别滥用反模式标出滥用（高级别滥用、log-and-throw、裸 printf/printStackTrace 等）
-2. **打印频率（仅当 `--log-dir` 提供）**：运行 `scripts/analyze_logs.py` 解析真实日志，用各级别计数 / 高频重复消息 Top-N / 打印速率量化洪泛，把确证的高频对回源码打印点并分级。**未提供 `--log-dir` 时本维度不执行**，报告标注"频率维度未审：未提供 --log-dir"，不做静态臆测
+根据 `--log-dir` 决定执行哪个维度（两者互斥）：
+
+- **未提供 `--log-dir`** → 执行**级别合理性审计**（纯静态）：逐条核对范围内日志语句级别，对照 `log-auditor` 内建级别滥用反模式标出滥用（高级别滥用、log-and-throw、裸 printf/printStackTrace 等）。报告标注"频率维度未审：未提供 --log-dir"
+- **提供 `--log-dir`** → 执行**打印频率分析**（运行时维度）：运行 `scripts/analyze_logs.py` 解析真实日志，用各级别计数 / 高频重复消息 Top-N / 打印速率量化洪泛，把确证的高频对回源码打印点并分级。报告标注"级别合理性未审：已指定 --log-dir，仅执行频率分析"
 
 `log-auditor` 按 `skills/devforge-log-audit/log-audit-report.md` 生成**草稿**报告，写入 `report_output_path`，返回数字摘要。
 
@@ -97,7 +102,7 @@ parameters:
 | `日志框架` | 第 1 阶段探测 | `zap` / `spdlog` / `自定义宏 LOG_*` |
 | `级别定义` | 可用级别集合 + 生产默认级别（探测所得，含"未探测到"标注） | `TRACE<DEBUG<INFO<WARN<ERROR，生产默认 INFO` |
 | `scope` | skill 计算后的审计范围（全仓 / MR diff 命令） | `全仓` / `git diff $(git merge-base HEAD origin/main)..HEAD` |
-| `project_levels` | 第 1 阶段探测的级别定义（规范名+别名），注入脚本 `--levels` | `DEBUG,INFO,NOTE,WARN|WARNING,ERROR|ERR,CRITICAL,FATAL,EMIT` |
+| `project_levels` | 第 1 阶段探测的级别定义（规范名+别名），注入脚本 `--levels` | `DEBUG,INFO,NOTE,WARN|WARNING,ERROR|ERR,CRITICAL,ALERT,FATAL,EMIT` |
 | `log_dir` | 运行时日志目录，未提供则注入"无" | `/var/log/myapp/` / `无` |
 | `analyze_script` | 运行时分析脚本路径 | `scripts/analyze_logs.py` |
 | `template_path` | 报告格式契约文件 | `skills/devforge-log-audit/log-audit-report.md` |
@@ -142,7 +147,7 @@ parameters:
 
 ```
 python3 scripts/analyze_logs.py --log-dir <dir> \
-    --levels "DEBUG,INFO,NOTE,WARN|WARNING,ERROR|ERR,CRITICAL,FATAL,EMIT" \
+    --levels "DEBUG,INFO,NOTE,WARN|WARNING,ERROR|ERR,CRITICAL,ALERT,FATAL,EMIT" \
     [--log-format auto|text|json] \
     [--glob '*.log'] [--top 15] [--json]
 ```
@@ -161,8 +166,8 @@ python3 scripts/analyze_logs.py --log-dir <dir> \
 ## 出口标准
 
 - [ ] 第 1 阶段级别定义已探测（探测不到已显式标注回退基线）
-- [ ] 级别合理性已审计（始终执行）
-- [ ] 打印频率：提供 `--log-dir` 时已量化产出；未提供时报告已标注"频率维度未审：未提供 --log-dir"
+- [ ] 级别合理性已审计（无 `--log-dir` 时），或频率分析已执行（有 `--log-dir` 时），两者互斥
+- [ ] 报告已标注未执行的维度（"频率维度未审" 或 "级别合理性未审"）
 - [ ] 第 3 阶段独立审核已完成：草稿问题清单逐条验证（存在性 + 级别合理性），误报已移除，级别已校准
 - [ ] 报告按 CRITICAL/HIGH/MEDIUM/LOW 分级，结论标注 PASS / NEEDS-FIX
 - [ ] **报告格式校验**：主会话对最终报告做轻量校验——必填章节全部存在（审计元数据 / 级别使用分析 / 频率分析 / 问题清单 / 审计结论）+ 四级问题格式统一（全部独立条目、带编号前缀、无表格/段落混用、无同级别合并描述）+ 每条含编号/标题/维度/说明/修复建议 + 数字摘要与问题清单各级别条目数一致。不通过则要求对应 agent 补全修正（不改审计判断，只补格式）
