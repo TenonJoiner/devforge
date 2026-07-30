@@ -251,9 +251,18 @@ artifacts:
 
       ## 前置检查（MUST）
 
+      ### 步骤 1：检查 Tech Leader 决策
+
       创建 tasks 前 MUST 读取 review.md，检查「Tech Leader 最终决策」区域：
-      - 决策为 PASS 或 PASS WITH CONDITIONS → 允许继续创建 tasks
+      - 决策为 PASS 或 PASS WITH CONDITIONS → 继续步骤 2
       - 决策为 REJECT 或决策区域为空/未填写 → **禁止创建 tasks**，提示：「review.md 中 Tech Leader 最终决策未填写或为 REJECT，请先完成交叉评审并由 Tech Leader 确认后再继续」
+
+      ### 步骤 2：基线化归档
+
+      Tech Leader 决策通过后，MUST 调用 `/df:baseline` skill 对本次 change 的交付件文档（proposal.md、design.md、specs/）进行基线化归档。
+      - `/df:baseline` 内部已处理重复归档检测（目标目录已存在时自动提示并停止），无需主会话预先判断是否已归档
+      - 归档成功 → 继续创建 tasks
+      - 归档失败 → 报告错误但**不阻塞**，继续创建 tasks（归档失败不应阻断开发流程）
 
       ## 任务推导
 
