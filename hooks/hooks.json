@@ -13,6 +13,11 @@
             "type": "command",
             "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/sync-openspec-schemas.sh\"",
             "timeout": 30
+          },
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/upgrade-devforge.sh\"",
+            "timeout": 60
           }
         ]
       }
