@@ -102,9 +102,9 @@ parameters:
 |------|------|------|
 | `语言` | 第 1 阶段探测（本 agent 实例负责的语言） | `C` / `Go` |
 | `日志框架` | 第 1 阶段探测 | `zap` / `spdlog` / `自定义宏 LOG_*` |
-| `级别定义` | 可用级别集合 + 生产默认级别（探测所得，含"未探测到"标注） | `TRACE<DEBUG<INFO<WARN<ERROR，生产默认 INFO` |
+| `级别定义` | 可用级别集合 + 生产默认级别（探测所得，含"未探测到"标注） | `Debug<Informational<Notice<Warning<Error，生产默认 Informational` |
 | `scope` | skill 计算后的审计范围（全仓 / MR diff 命令） | `全仓` / `git diff $(git merge-base HEAD origin/main)..HEAD` |
-| `project_levels` | 第 1 阶段探测的级别定义（规范名+别名），注入脚本 `--levels` | `DEBUG,INFO,NOTE,WARN|WARNING,ERROR|ERR,CRITICAL,ALERT,FATAL,EMIT` |
+| `project_levels` | 第 1 阶段探测的级别定义（RFC 5424 规范名+别名），注入脚本 `--levels` | `Debug\|DBG,Informational\|INFO,Notice\|NOTE,Warning\|WARN,Error\|ERR,Critical\|CRIT,Alert,Emergency\|FATAL\|PANIC,EMIT` |
 | `log_dir` | 运行时日志目录，未提供则注入"无" | `/var/log/myapp/` / `无` |
 | `analyze_script` | 运行时分析脚本路径 | `scripts/analyze_logs.py` |
 | `template_path` | 报告格式契约文件 | `skills/devforge-log-audit/log-audit-report.md` |
@@ -118,7 +118,7 @@ parameters:
 
 1. 读取草稿报告（`report_output_path`）与 `log-auditor` agent 内建的级别语义 + 反模式基线（`agents/log-auditor.md`），结合第 1 阶段探测的项目级别定义
 2. 逐条复核（重心在实质性判断，而非机械验证）：
-   - **判断是否真的是问题**：对照级别语义与反模式基线，独立判断该日志语句是否构成问题——草稿的判定是否成立？是否存在过度敏感（如将合理的 ERROR 误判为滥用、将必要的 INFO 误判为刷屏）？是否忽略了上下文（如本层确实无法恢复、该路径确为关键状态变更）？判定不成立 → 移除
+   - **判断是否真的是问题**：对照级别语义与反模式基线，独立判断该日志语句是否构成问题——草稿的判定是否成立？是否存在过度敏感（如将合理的 Error 误判为滥用、将必要的 Informational 误判为刷屏）？是否忽略了上下文（如本层确实无法恢复、该路径确为关键状态变更）？判定不成立 → 移除
    - **判断是否需要修改**：即便存在轻微不合规范之处，评估实际影响——不影响排障、不会导致洪泛、不会触发误告警的，可判定为无需修改 → 移除
    - **核实问题存在**（基础检查）：读取 `path:line` 源码，确认日志语句确实存在、描述与实际代码一致
    - **核实级别判定**：级别偏高 → 降级；级别偏低 → 升级
@@ -149,12 +149,12 @@ parameters:
 
 ```
 python3 scripts/analyze_logs.py --log-dir <dir> \
-    --levels "DEBUG,INFO,NOTE,WARN|WARNING,ERROR|ERR,CRITICAL,ALERT,FATAL,EMIT" \
+    --levels "Debug|DBG,Informational|INFO,Notice|NOTE,Warning|WARN,Error|ERR,Critical|CRIT,Alert,Emergency|FATAL|PANIC,EMIT" \
     [--log-format auto|text|json] \
     [--glob '*.log'] [--top 15] [--json]
 ```
 
-- `--levels`：第 1 阶段探测结果，逗号分隔，低→高。管道符指定别名：`WARN|WARNING` 表示规范名 WARN，别名 WARNING
+- `--levels`：第 1 阶段探测结果，逗号分隔，低→高。管道符指定别名：`Warning|WARN` 表示规范名 Warning，别名 WARN
 - `--log-format`：`auto`（默认，自动探测）、`text`（纯文本正则匹配）、`json`（结构化解析，自动提取 level/msg/ts 字段）
 
 输出各级别计数、总行数、打印速率（时间戳可解析时给稳态/峰值 行/秒）、高频重复消息 Top-N（消息经归一化后聚合：剥离时间戳/数字/十六进制/UUID/引号内容）。`log-auditor` 读取其 `--json` 输出，转化为分级发现，判定阈值见 `log-auditor` 内建频率基线。
@@ -188,7 +188,7 @@ python3 scripts/analyze_logs.py --log-dir <dir> \
 本 skill 只审计不修复。报告产出后，主会话输出数字摘要与结论；用户决定处置策略：
 
 - **接受修复**：对 HIGH/CRITICAL 项逐条确认后，用 `/df:tdd` 逐项整改
-- **接受风险**：显式记录某条不修复的原因（如"本 ERROR 确为不可恢复场景，级别正确"），由 `log-auditor` 误报则反馈改进基线
+- **接受风险**：显式记录某条不修复的原因（如"本 Error 确为不可恢复场景，级别正确"），由 `log-auditor` 误报则反馈改进基线
 - **批量整改**：全仓场景产出整改清单后，按模块分批用 `/df:tdd` 修复
 
 MR 门禁阻断时，建议在 MR 评论中引用报告路径与数字摘要，便于 reviewer 对照决策。

@@ -25,7 +25,7 @@
 
 ```
 /df:log-audit
-> 探测：语言 Go，框架 zap，生产默认 INFO
+> 探测：语言 Go，框架 zap，生产默认 Informational
 > 审计本 MR 变更（相对 origin/main）｜频率维度未审（未提供 --log-dir）
 > CRITICAL 0 | HIGH 1 | MEDIUM 1 | LOW 1
 > 结论: NEEDS-FIX（存在 HIGH，阻断合并）

@@ -9,7 +9,7 @@ Stdlib only. Best-effort across unknown formats — never assume a schema.
 
 Usage:
     python3 analyze_logs.py --log-dir /var/log/app [--glob '*.log*'] [--top 15] [--json]
-    python3 analyze_logs.py --log-dir /var/log/app --levels "DEBUG,INFO,NOTE,WARN|WARNING,ERROR|ERR,CRITICAL,FATAL,EMIT" --log-format json
+    python3 analyze_logs.py --log-dir /var/log/app --levels "Debug|DBG,Informational|INFO,Notice|NOTE,Warning|WARN,Error|ERR,Critical|CRIT,Alert,Emergency|FATAL|PANIC,EMIT" --log-format json
 """
 import argparse
 import glob
@@ -49,13 +49,13 @@ PREFIX_RE = re.compile(
 # ---------------------------------------------------------------------------
 # Level detection (driven by externally injected project level definitions)
 # ---------------------------------------------------------------------------
-DEFAULT_LEVELS = "DEBUG,INFO,NOTE,WARN|WARNING,ERROR|ERR,CRITICAL,ALERT,FATAL,EMIT"
+DEFAULT_LEVELS = "Debug|DBG,Informational|INFO,Notice|NOTE,Warning|WARN,Error|ERR,Critical|CRIT,Alert,Emergency|FATAL|PANIC,EMIT"
 
 
 def parse_levels(raw):
     """Parse --levels into canonical names and alias groups.
 
-    ``--levels "DEBUG,INFO,NOTE,WARN|WARNING,ERROR|ERR,CRITICAL,FATAL,EMIT"``
+    ``--levels "Debug|DBG,Informational|INFO,Notice|NOTE,Warning|WARN,Error|ERR,Critical|CRIT,Alert,Emergency|FATAL|PANIC,EMIT"``
     Each comma-separated group is ``CANONICAL|ALIAS1|ALIAS2``; the first token
     is the canonical name used in output.
     """
@@ -73,7 +73,7 @@ def build_level_patterns(groups):
     """Build detection patterns from level groups.
 
     Returns list of (canonical_name, compiled_regex), highest severity first,
-    so e.g. FATAL matches before ERROR on a line containing both.
+    so e.g. Emergency matches before Error on a line containing both.
     """
     patterns = []
     for tokens in reversed(groups):  # highest severity first
@@ -251,7 +251,7 @@ def main():
         "--levels",
         default=DEFAULT_LEVELS,
         help="comma-separated level names, low→high severity. "
-        "Use pipe for aliases: WARN|WARNING,ERROR|ERR. "
+        "Use pipe for aliases: Warning|WARN,Error|ERR. "
         "First token in each group is the canonical name used in output.",
     )
     ap.add_argument(
