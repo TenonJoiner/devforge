@@ -259,7 +259,9 @@ artifacts:
 
       ### 步骤 2：基线化归档
 
-      Tech Leader 决策通过后，MUST 调用 `/df:baseline` skill 对本次 change 的交付件文档（proposal.md、design.md、specs/）进行基线化归档。
+      Tech Leader 决策通过后，MUST 调用 `/df:baseline --change <change-name>` skill 对本次 change 的交付件文档（proposal.md、design.md、specs/）进行基线化归档。
+      - `--change` 取当前 change 目录名
+      - `--version` 和 `--repo-url` 可省略：首次运行时 skill 会交互询问并持久化到 `~/.local/share/devforge/baseline-config.yaml`，后续自动读取
       - `/df:baseline` 内部已处理重复归档检测（目标目录已存在时自动提示并停止），无需主会话预先判断是否已归档
       - 归档成功 → 继续创建 tasks
       - 归档失败 → 报告错误但**不阻塞**，继续创建 tasks（归档失败不应阻断开发流程）
