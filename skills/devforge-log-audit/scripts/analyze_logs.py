@@ -287,6 +287,7 @@ def main():
     ts_count = 0
     ts_min = ts_max = None
     last_ts = None
+    continuation_skipped = 0
 
     for path in files:
         with open(path, "r", errors="replace") as fh:
@@ -295,6 +296,16 @@ def main():
                 if not line.strip():
                     continue
                 total += 1
+
+                # Skip multi-line continuations (stack traces etc.):
+                # lines indented with no timestamp and no level keyword.
+                stripped = line.lstrip()
+                if line[0] in (' ', '\t') and len(stripped) < len(line):
+                    has_ts = any(p[0].search(line) for p in TS_PATTERNS) or EPOCH_RE.match(line)
+                    has_level = detect_level_text(line, level_patterns) != "OTHER"
+                    if not has_ts and not has_level:
+                        continuation_skipped += 1
+                        continue
 
                 if log_format == "json":
                     parsed = parse_json_log(line)
@@ -340,6 +351,7 @@ def main():
     result = {
         "files": len(files),
         "total_lines": total,
+        "continuation_skipped": continuation_skipped,
         "log_format": log_format,
         "levels": levels_order[:-1],  # exclude "OTHER"
         "level_counts": {lv: level_counts.get(lv, 0) for lv in levels_order},
@@ -356,7 +368,8 @@ def main():
         print(json.dumps(result, indent=2, ensure_ascii=False))
         return
 
-    print(f"files: {result['files']}   total lines: {total}   format: {log_format}")
+    print(f"files: {result['files']}   total lines: {total}   format: {log_format}"
+          + (f"   continuation skipped: {continuation_skipped}" if continuation_skipped else ""))
     print("levels: " + "  ".join(f"{lv}={level_counts.get(lv, 0)}" for lv in levels_order))
     if steady is not None:
         print(f"rate: steady {steady}/s   peak {peak}/s   span {span:.0f}s   (based on {result['rate']['timestamped_lines']} timestamped lines)")
