@@ -22,7 +22,7 @@ parameters:
 
 ## 概述
 
-两个审计维度：**级别合理性**（有无滥用高级别）与 **打印频率**（是否过于频繁）。无 `--log-dir` 时仅做纯静态级别审计；提供 `--log-dir` 时两个维度都执行——频率量化 + 运行时增强的级别审计（脚本输出的级别分布 / 高频模板 / 打印速率作为实证，结合源码判定级别是否滥用）。
+两个审计维度：**级别合理性**（级别偏高/偏低，各级别生产可用性以语义表「生产默认」列为准）与 **打印频率**（是否过于频繁）。无 `--log-dir` 时仅做纯静态级别审计；提供 `--log-dir` 时两个维度都执行——频率量化 + 运行时增强的级别审计（脚本输出的级别分布 / 高频模板 / 打印速率作为实证，结合源码判定级别是否滥用）。
 
 审计知识基线（级别语义 + 反模式 + 判定阈值）内建于 `log-auditor` agent；**项目特定级别定义由第 1 阶段探测后注入 `log-auditor`**。默认只审计不修复。
 
@@ -73,6 +73,13 @@ parameters:
 
 **步骤 3：记录探测结果**——各语言、对应日志框架、可用级别集合（含自定义级别）、生产默认级别（未探测到则显式标注）。探测结果按语言分别注入对应 `log-auditor`，并在报告元数据中记录供人工复核。
 
+**步骤 4：RFC 5424 合规校验**——将探测到的级别体系与 RFC 5424 规范对照：
+
+- 级别**排序**必须与 RFC 5424 一致（Emergency > Alert > Critical > Error > Warning > Notice > Informational > Debug）。项目可裁减子集、使用别名，但不可乱序
+- 级别**语义**必须与 RFC 5424 一致——同一级别名称在不同语言/框架中的语义不可漂移（如 Notice 在 RFC 5424 中严格介于 Warning 和 Informational 之间，不可变为 Debug 级别语义）
+- 常见违规：自定义级别的数值排序与 RFC 5424 严重程度不匹配（如中间级别的数值落在不正确的区间、位掩码体系中数值大小与严重性倒置）
+- 违规项作为独立问题记录，注入 `log-auditor` 纳入报告问题清单（级别合理性维度，定为 HIGH 或 CRITICAL）。合规则标注"级别体系与 RFC 5424 一致"
+
 > 探测不到明确级别定义时，回退 `log-auditor` 内建通用基线，并在报告中标注"级别定义来源：源码反推/通用基线"。
 
 ### 第 2 阶段：日志审计（派遣 `log-auditor`）
@@ -89,12 +96,12 @@ parameters:
 
 根据是否提供 `--log-dir` 决定审计策略：
 
-- **未提供 `--log-dir`** → 执行**纯静态级别合理性审计**：逐条核对范围内日志语句级别，对照 `log-auditor` 内建级别滥用反模式标出滥用（高级别滥用、log-and-throw、裸 printf/printStackTrace 等）。报告标注"频率维度未审：未提供 --log-dir"
+- **未提供 `--log-dir`** → 执行**纯静态级别合理性审计**：逐条核对范围内日志语句级别，对照 `log-auditor` 内建级别滥用反模式标出滥用（级别偏高、级别偏低、log-and-throw、裸 printf/printStackTrace 等）。报告标注"频率维度未审：未提供 --log-dir"
 - **提供 `--log-dir`** → 执行**双维度审计**：先运行 `scripts/analyze_logs.py` 解析真实日志，获取级别分布 / 高频模板 Top-N / 打印速率；再派遣 agent 同时做：
   1. **频率审计**——用量化数据定位洪泛源、高频模板、打印速率异常，把高频消息对回源码打印点并分级
   2. **运行时增强的级别审计**——以脚本输出的级别分布 / 高频模板为实证线索，对回源码逐条验证级别是否滥用（如某级别占比极端偏高 → 对回源码找代表性打印点验证）。仅凭源码静态推断的局限性被运行时数据弥补
 
-`log-auditor` 按 `skills/devforge-log-audit/log-audit-report.md` 生成**草稿**报告，写入 `report_output_path`，返回数字摘要。
+`log-auditor` 按 `skills/devforge-log-audit/log-audit-report.md` 生成**草稿**报告，写入 `report_output_path`，返回数字摘要。**严禁**自创文件名（如 `log-audit-draft.md`）——草稿和终稿共用同一个 `report_output_path`，由第 3 阶段审核覆盖。
 
 ### `log-auditor` 派遣字段（必填，由 skill 注入）
 
@@ -103,6 +110,7 @@ parameters:
 | `语言` | 第 1 阶段探测（本 agent 实例负责的语言） | `C` / `Go` |
 | `日志框架` | 第 1 阶段探测 | `zap` / `spdlog` / `自定义宏 LOG_*` |
 | `级别定义` | 可用级别集合 + 生产默认级别（探测所得，含"未探测到"标注） | `Debug<Informational<Notice<Warning<Error，生产默认 Informational` |
+| `级别语义映射` | 非标准级别与 RFC 5424 的语义对应关系，含排序说明与合规标注。合规则注"与 RFC 5424 一致" | `自定义 Notice 级别 → 排序位于 Warn 之后（RFC 5424 违规：Notice 应介于 Warning 和 Info 之间）`；`自定义位掩码级别 → 数值区间与严重性不匹配（RFC 5424 违规：位掩码数值排序与 RFC 5424 严重程度不一致）` |
 | `scope` | skill 计算后的审计范围（全仓 / MR diff 命令） | `全仓` / `git diff $(git merge-base HEAD origin/main)..HEAD` |
 | `project_levels` | 第 1 阶段探测的级别定义（RFC 5424 规范名+别名），注入脚本 `--levels` | `Debug\|DBG,Informational\|INFO,Notice\|NOTE,Warning\|WARN,Error\|ERR,Critical\|CRIT,Alert,Emergency\|FATAL\|PANIC,EMIT` |
 | `log_dir` | 运行时日志目录，未提供则注入"无" | `/var/log/myapp/` / `无` |
@@ -123,11 +131,12 @@ parameters:
    - **核实问题存在**（基础检查）：读取 `path:line` 源码，确认日志语句确实存在、描述与实际代码一致
    - **核实级别判定**：级别偏高 → 降级；级别偏低 → 升级
 3. 复核完成后直接刷新报告——移除不成立的问题条目、调整误判的级别、更新数字摘要，写回 `report_output_path`（覆盖草稿）。**不**在报告中附加独立的"审核结果"章节，审核是报告的清理过程，不是报告的附加内容
+4. **对称审查**：以"级别偏低"视角快速扫描草稿，标注可能存在但未在报告中的偏低方向。不要求穷举，至少覆盖——有没有关键状态变更只打了 Debug/Info？有没有错误返回前无 Error 级别日志？发现后在报告的「级别使用分析」节末尾追加一段「⚠️ 潜在遗漏方向」提示（仅标注方向，不新增问题条目，不改变问题清单条目数）
 
 **审核约束**：
 
 - 对每条问题给出判断：✅ 保留 / ⬇️ 降级为 X / ⬆️ 升级为 X / ❌ 移除（附一句话理由，说明为什么不构成问题或不需要修改）
-- 只做减法或调整，**不做加法**——不新增 `log-auditor` 未发现的问题
+- 只做减法或调整，**不做加法**——不新增 `log-auditor` 未发现的问题（对称审查的「潜在遗漏方向」为轻量标注，不改变问题清单条目数，不算新增问题）
 - 独立判断，不盲从草稿——即便 `log-auditor` 判定为 HIGH，复核认为实际影响微小、无需修改，直接移除
 - 级别调整直接生效，无需人工确认——审核 subagent 的判断即为最终级别
 - 审核 subagent 直接编辑报告（移除/调整问题条目、刷新数字摘要），返回最终数字摘要供主会话输出对话结论
@@ -162,7 +171,8 @@ python3 scripts/analyze_logs.py --log-dir <dir> \
 ## 报告输出
 
 - `report-output-path` 存在则写入该路径；为空则用默认 `/tmp/log-audit-<ts>.md`
-- 报告路径通过 `report_output_path` 字段注入 `log-auditor`
+- 报告路径通过 `report_output_path` 字段注入 `log-auditor` 和审核 subagent
+- **整个审计流程只产生一个文件**：草稿写入 `report_output_path`，审核后覆盖同一路径。禁止 agent 使用其他文件名（如含 `draft` 后缀的变体）
 - 主会话只读 `log-auditor` 返回的数字摘要（`{critical, high, medium, low, sites}`），据此输出对话摘要与结论，不读报告全文
 
 ## 出口标准
