@@ -1,17 +1,27 @@
 # /df:lint
 
-编译检查与静态分析——零 warning 验证。
+编译检查与静态分析——零 warning 验证。支持本地开发和 CI 两种模式。
 
 ## 用法
 
 ```
-/df:lint [autofix]
+/df:lint [autofix] [--diff-range <range>]
 ```
 
 | 参数 | 说明 |
 |------|------|
-| （无） | 只检测不修复，输出检查报告 |
-| `autofix` | 检测后自动修复问题并回归检查 |
+| （无） | **本地开发模式**：本地分支相对主干的差异代码 lint，只检测不修复 |
+| `autofix` | 检测后自动修复问题并回归检查（可与模式参数叠加） |
+| `--diff-range <range>` | **CI 模式**：显式指定 git diff 范围（由 CI/pr-review 注入） |
+
+## 模式
+
+| 模式 | 触发 | 命令选择偏好 |
+|------|------|-------------|
+| 本地开发 | `/df:lint` | 优先增量检查命令（如 `make lint-changed`） |
+| CI | `/df:lint --diff-range ...` | 优先 CI 脚本（如 `ci/lint.sh`） |
+
+具体命令从项目上下文（CLAUDE.md/README/rules）中发现，参数不绑死。未找到时探测项目脚本并向用户确认。
 
 ## 产出物
 
@@ -22,27 +32,26 @@
 
 ## 示例
 
-**只检测不修复（默认）**：
+**本地开发（默认）**：
 
 ```
 /df:lint
+> 模式: 本地开发
 > L1 编译检查
->   ✗ make: FAILED
->     error: handler.c:89: implicit declaration of function 'write_record'
->     warning: handler.c:45: unused variable 'rc'
-> (L1 未通过，结束)
+>   ✓ make build-debug: PASSED
+> L2 Lint 分析
+>   ✓ make lint-changed: 零告警通过
 ```
 
-**检测并自动修复**：
+**CI 模式**：
 
 ```
-/df:lint autofix
+/df:lint --diff-range "origin/main..HEAD"
+> 模式: CI
 > L1 编译检查
->   ✓ make: PASSED
-> Lint 分析报告
->   需修复 1 条：
->     1. handler.c:89 空指针解引用 — 未检查 malloc 返回值 — 添加 NULL 检查
->   排除 3 条：误报 1 / 有意为之 1 / 非本次变更引入 1
+>   ✓ ci/build.sh: PASSED
+> L2 Lint 分析
+>   ✓ ci/lint.sh: 零告警通过
 ```
 
 执行细节进入 `devforge-lint-check` Skill。
