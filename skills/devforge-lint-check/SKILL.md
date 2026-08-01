@@ -30,8 +30,8 @@ parameters:
 
 | 模式 | 触发 | 场景 | 命令查找方式 |
 |------|------|------|-------------|
-| `branch`（默认） | `/df:lint` | 开发期间，对本地分支相对主干的差异代码做 lint | 从 `.claude/rules/linting.md` 中读取已确认的 `branch` 模式命令；若无则按 L2 步骤 1 从上下文/CLAUDE.md/README 中查找，再找不到则探测项目脚本后向用户确认 |
-| `mr` | `/df:lint --mode mr` | 提交 MR 后 CI 流水线，对比 MR 源分支与目标分支的差异做 lint | 从 `.claude/rules/linting.md` 中读取已确认的 `mr` 模式命令；若无则按 L2 步骤 1 从上下文/CLAUDE.md/README 中查找，再找不到则探测项目脚本后向用户确认 |
+| `branch`（默认） | `/df:lint` | 开发期间，对本地分支相对主干的差异代码做 lint | 从项目上下文（CLAUDE.md 等）中查找该模式对应的 lint 命令；未找到则探测项目脚本后向用户确认 |
+| `mr` | `/df:lint --mode mr` | 提交 MR 后 CI 流水线，对比 MR 源分支与目标分支的差异做 lint | 从项目上下文（CLAUDE.md 等）中查找该模式对应的 lint 命令；未找到则探测项目脚本后向用户确认 |
 
 **diff 范围**：`branch` 模式自动检测 trunk 后计算 `git diff $(git merge-base HEAD <trunk>)..HEAD`；`mr` 模式由 CI 环境变量（如 `GITLAB_MERGE_REQUEST_DIFF`）或项目脚本自行决定范围。skill 本身不计算 MR diff——具体范围由项目脚本负责。
 
@@ -51,7 +51,7 @@ parameters:
 1. **获取构建命令**
    - 在当前会话上下文中查找已知的构建方法（CLAUDE.md、README、项目 rules、先前对话等），如找到则直接使用
    - 若未找到，探测项目中存在的构建系统文件（Makefile、`build.sh`、`CMakeLists.txt`、`go.mod`、`package.json` 等）。项目可能包含多语言/多模块，逐一列出所有探测到的构建命令
-   - 自行探测结果需**向用户确认**后再使用。确认后将命令写入 `.claude/rules/building.md`（不存在则创建），后续直接从该文件读取
+   - 自行探测结果需**向用户确认**后再使用。确认后将命令记录到项目上下文中（如 CLAUDE.md 或项目 rules 文件），后续直接读取
        - **阻断规则**：若构建命令来自自行探测且未经用户确认，禁止进入步骤 2。必须使用 `AskUserQuestion` 向用户确认后方可继续
        - 禁止根据变更文件（`git diff`、`git log` 输出）自行推断或拼凑构建命令
 
@@ -75,7 +75,7 @@ parameters:
      - **`branch` 模式**：优先查找增量 lint 命令（如 `make lint-changed`、pre-commit hook 脚本、`golangci-lint run --new-from-rev=...` 对应的项目封装脚本），若无则回退到全量 lint
      - **`mr` 模式**：优先查找 CI lint 脚本（如 `ci/lint.sh`、`make lint-ci`），若无则回退到全量 lint
    - 若未找到，探测项目中存在的可执行 lint 脚本。项目可能包含多语言/多模块，逐一列出所有探测到的 lint 命令
-   - 自行探测结果需**向用户确认**后再使用。确认后将命令写入 `.claude/rules/linting.md`（不存在则创建），需同时记录模式映射。后续直接从该文件读取
+   - 自行探测结果需**向用户确认**后再使用。确认后将命令与模式映射记录到项目上下文中（如 CLAUDE.md 或项目 rules 文件），后续直接读取
        - **阻断规则**：若 lint 命令来自自行探测且未经用户确认，禁止进入步骤 2。必须使用 `AskUserQuestion` 向用户确认后方可继续
        - 禁止根据变更文件（`git diff`、`git log` 输出）自行推断或拼凑 lint 命令
 
