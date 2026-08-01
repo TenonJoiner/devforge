@@ -28,10 +28,10 @@ parameters:
 
 两种模式仅作用于 **L2 Lint 检查**的命令选择。L1 编译步骤不受模式影响，始终使用全量构建命令。
 
-| 模式 | 触发 | 场景 | 命令发现偏好 |
+| 模式 | 触发 | 场景 | 命令查找方式 |
 |------|------|------|-------------|
-| `branch`（默认） | `/df:lint` | 开发期间，对本地分支相对主干的差异代码做 lint | 优先查找增量检查命令（如 `make lint-changed`、pre-commit hook）；若无则回退到全量命令 |
-| `mr` | `/df:lint --mode mr` | 提交 MR 后 CI 流水线，对比 MR 源分支与目标分支的差异做 lint | 优先查找 CI lint 脚本（如 `ci/lint.sh`、`make lint-ci`）；若无则回退到全量命令 |
+| `branch`（默认） | `/df:lint` | 开发期间，对本地分支相对主干的差异代码做 lint | 从 `.claude/rules/linting.md` 中读取已确认的 `branch` 模式命令；若无则按 L2 步骤 1 从上下文/CLAUDE.md/README 中查找，再找不到则探测项目脚本后向用户确认 |
+| `mr` | `/df:lint --mode mr` | 提交 MR 后 CI 流水线，对比 MR 源分支与目标分支的差异做 lint | 从 `.claude/rules/linting.md` 中读取已确认的 `mr` 模式命令；若无则按 L2 步骤 1 从上下文/CLAUDE.md/README 中查找，再找不到则探测项目脚本后向用户确认 |
 
 **diff 范围**：`branch` 模式自动检测 trunk 后计算 `git diff $(git merge-base HEAD <trunk>)..HEAD`；`mr` 模式由 CI 环境变量（如 `GITLAB_MERGE_REQUEST_DIFF`）或项目脚本自行决定范围。skill 本身不计算 MR diff——具体范围由项目脚本负责。
 
