@@ -1,15 +1,17 @@
 ---
 name: devforge-lint-check
-description: 编译检查与 Lint 分析——零 warning 验证，支持本地开发和 CI 两种模式
+description: 编译检查与 Lint 分析——零 warning 验证，支持 branch 和 mr 两种模式
 allowed-tools: [Read, Bash, Grep, Glob, Edit]
 parameters:
   - name: autofix
     description: 检测后自动修复问题（默认只检测不修复）
     required: false
     default: false
-  - name: diff-range
-    description: 显式指定 git diff 范围（CI 模式由外部调用方注入），优先级高于本地开发模式
+  - name: mode
+    description: 执行模式——branch 对本地分支做 lint（开发场景），mr 对指定 MR 做 lint（CI 场景）
     required: false
+    default: branch
+    enum: [branch, mr]
 ---
 
 # devforge-lint-check — 编译检查与 Lint 分析
@@ -26,14 +28,12 @@ parameters:
 
 两种模式决定 L1/L2 命令的选择偏好。具体命令始终从项目上下文中发现，**参数不绑死**。
 
-| 模式 | 触发 | 语义 | 命令发现偏好 |
+| 模式 | 触发 | 场景 | 命令发现偏好 |
 |------|------|------|-------------|
-| 本地开发（默认） | `/df:lint` | 本地分支相对主干的差异代码 | 优先查找增量检查命令（如 `make lint-changed`、pre-commit hook 脚本）；若无则回退到全量命令 |
-| CI | `/df:lint --diff-range <range>` | CI 流水线对比 MR 两个分支差异 | 优先查找 CI 脚本（如 `ci/lint.sh`、`make lint-ci`）；若无则回退到全量命令 |
+| `branch`（默认） | `/df:lint` | 开发期间，对本地分支相对主干的差异代码做 lint | 优先查找增量检查命令（如 `make lint-changed`、pre-commit hook）；若无则回退到全量命令 |
+| `mr` | `/df:lint --mode mr` | 提交 MR 后 CI 流水线，对比 MR 源分支与目标分支的差异做 lint | 优先查找 CI lint 脚本（如 `ci/lint.sh`、`make lint-ci`）；若无则回退到全量命令 |
 
-**diff-range 优先级**：
-1. `diff-range` 参数存在（CI 模式）：直接使用，透传给项目脚本
-2. 都不传（默认，本地开发）：自动检测 trunk 后计算 `git diff $(git merge-base HEAD <trunk>)..HEAD`。trunk 检测失败时提示用户显式指定 `--diff-range`
+**diff 范围**：`branch` 模式自动检测 trunk 后计算 `git diff $(git merge-base HEAD <trunk>)..HEAD`；`mr` 模式由 CI 环境变量（如 `GITLAB_MERGE_REQUEST_DIFF`）或项目脚本自行决定范围。skill 本身不计算 MR diff——具体范围由项目脚本负责。
 
 ## 职责边界
 
@@ -51,8 +51,8 @@ parameters:
 1. **获取构建命令**（模式感知）
    - 在当前会话上下文中查找已知的构建方法（CLAUDE.md、README、项目 rules、先前对话等）
    - 根据当前模式选择偏好：
-     - **本地开发模式**：优先查找增量构建命令（如 `make build-changed`、`make build-debug`），若无则回退到全量构建
-     - **CI 模式**：优先查找 CI 构建脚本（如 `ci/build.sh`、`make build-ci`），若无则回退到全量构建
+     - **`branch` 模式**：优先查找增量构建命令（如 `make build-changed`、`make build-debug`），若无则回退到全量构建
+     - **`mr` 模式**：优先查找 CI 构建脚本（如 `ci/build.sh`、`make build-ci`），若无则回退到全量构建
    - 若未找到，探测项目中存在的构建系统文件（Makefile、`build.sh`、`CMakeLists.txt`、`go.mod`、`package.json` 等）。项目可能包含多语言/多模块，逐一列出所有探测到的构建命令
    - 自行探测结果需**向用户确认**后再使用。确认后将命令写入 `.claude/rules/building.md`（不存在则创建），需同时记录模式映射。后续直接从该文件读取
        - **阻断规则**：若构建命令来自自行探测且未经用户确认，禁止进入步骤 2。必须使用 `AskUserQuestion` 向用户确认后方可继续
@@ -75,8 +75,8 @@ parameters:
 1. **获取 Lint 命令**（模式感知）
    - 在当前会话上下文中查找已知的 lint 方法（CLAUDE.md、README、项目 rules、先前对话等）
    - 根据当前模式选择偏好：
-     - **本地开发模式**：优先查找增量 lint 命令（如 `make lint-changed`、pre-commit hook 脚本、`golangci-lint run --new-from-rev=...` 对应的项目封装脚本），若无则回退到全量 lint
-     - **CI 模式**：优先查找 CI lint 脚本（如 `ci/lint.sh`、`make lint-ci`），若无则回退到全量 lint
+     - **`branch` 模式**：优先查找增量 lint 命令（如 `make lint-changed`、pre-commit hook 脚本、`golangci-lint run --new-from-rev=...` 对应的项目封装脚本），若无则回退到全量 lint
+     - **`mr` 模式**：优先查找 CI lint 脚本（如 `ci/lint.sh`、`make lint-ci`），若无则回退到全量 lint
    - 若未找到，探测项目中存在的可执行 lint 脚本。项目可能包含多语言/多模块，逐一列出所有探测到的 lint 命令
    - 自行探测结果需**向用户确认**后再使用。确认后将命令写入 `.claude/rules/linting.md`（不存在则创建），需同时记录模式映射。后续直接从该文件读取
        - **阻断规则**：若 lint 命令来自自行探测且未经用户确认，禁止进入步骤 2。必须使用 `AskUserQuestion` 向用户确认后方可继续
@@ -142,7 +142,7 @@ parameters:
 L1 + L2 均通过（零告警）时：
 
 ```
-模式: <本地开发 / CI>
+模式: <branch / mr>
 L1 编译检查
   ✓ <命令1>: PASSED
   ✓ <命令2>: PASSED
@@ -155,7 +155,7 @@ L2 Lint 分析
 L2 存在告警时：
 
 ```
-模式: <本地开发 / CI>
+模式: <branch / mr>
 L1 编译检查
   ✓ <命令1>: PASSED
   ✓ <命令2>: PASSED
@@ -172,7 +172,7 @@ Lint 分析报告
 L1 失败时（直接退出，不进入 L2）：
 
 ```
-模式: <本地开发 / CI>
+模式: <branch / mr>
 L1 编译检查
   ✓ <命令1>: PASSED
   ✗ <命令2>: FAILED
