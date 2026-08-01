@@ -17,7 +17,7 @@
 
 ## 产出物
 
-结构化日志审计报告（默认 `/tmp/log-audit-<ts>.md`），按 CRITICAL / HIGH / MEDIUM / LOW 分级。无 `--log-dir` 时仅做级别合理性审计；提供 `--log-dir` 时两维度均执行（频率量化 + 运行时增强的级别审计）。只评审不修复。
+结构化日志审计报告（默认 `/tmp/log-audit-<ts>-<pid>.md`），按 CRITICAL / HIGH / MEDIUM / LOW 分级。无 `--log-dir` 时仅做级别合理性审计；提供 `--log-dir` 时两维度均执行（频率量化 + 运行时增强的级别审计）。只评审不修复。
 
 ## 示例
 

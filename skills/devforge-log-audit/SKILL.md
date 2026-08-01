@@ -116,7 +116,7 @@ parameters:
 | `log_dir` | 运行时日志目录，未提供则注入"无" | `/var/log/myapp/` / `无` |
 | `analyze_script` | 运行时分析脚本路径 | `scripts/analyze_logs.py` |
 | `template_path` | 报告格式契约文件 | `skills/devforge-log-audit/log-audit-report.md` |
-| `report_output_path` | 报告写入路径 | `/tmp/log-audit-<ts>.md` |
+| `report_output_path` | 报告写入路径 | `/tmp/log-audit-<ts>-<pid>.md` |
 
 ### 第 3 阶段：独立审核（派遣审核 subagent）
 
@@ -171,7 +171,7 @@ python3 scripts/analyze_logs.py --log-dir <dir> \
 
 ## 报告输出
 
-- `report-output-path` 存在则写入该路径；为空则用默认 `/tmp/log-audit-<ts>.md`
+- `report-output-path` 存在则写入该路径；为空则用默认 `/tmp/log-audit-<ts>-<pid>.md`
 - 报告路径通过 `report_output_path` 字段注入 `log-auditor` 和审核 subagent
 - **整个审计流程只产生一个文件**：草稿写入 `report_output_path`，审核后覆盖同一路径。禁止 agent 使用其他文件名（如含 `draft` 后缀的变体）
 - 主会话只读 `log-auditor` 返回的数字摘要（`{critical, high, medium, low, sites}`），据此输出对话摘要与结论，不读报告全文
