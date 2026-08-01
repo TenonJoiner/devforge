@@ -31,8 +31,6 @@ parameters:
 | `branch`（默认） | `/df:lint` | 开发期间，对本地分支相对主干的差异代码做 lint | 从项目上下文（CLAUDE.md 等）中查找对应 lint 命令；未找到则探测项目脚本后向用户确认 |
 | `mr` | `/df:lint --mr <url>` | 提交 MR 后 CI 流水线，对比 MR 源分支与目标分支的差异做 lint | 从项目上下文（CLAUDE.md 等）中查找对应 lint 命令；未找到则探测项目脚本后向用户确认 |
 
-**diff 范围**：`branch` 模式自动检测 trunk 后计算 `git diff $(git merge-base HEAD <trunk>)..HEAD`；`mr` 模式下 MR URL 透传给项目 lint 脚本，由脚本自行解析和计算 diff 范围，skill 不做解析。
-
 ## 职责边界
 
 - ✅ Lint 工具执行 + 告警分类（误报/有意为之/历史遗留/需修复）
