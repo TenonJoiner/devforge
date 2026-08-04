@@ -10,6 +10,9 @@ parameters:
     description: CI 模式，非交互运行并自动发帖
     required: false
     default: false
+  - name: only
+    description: 仅运行指定下游检查，逗号分隔（code-review / lint / log-audit），用于调试 pr-review 或下游 skill 时加速。默认空表示全部运行
+    required: false
 ---
 
 # devforge-pr-review — PR/MR 代码评审
@@ -22,6 +25,8 @@ parameters:
 - **Lint 检查入口**：调用 `devforge-lint-check` 完成编译检查与 lint 分析
 - **日志审计入口**：调用 `devforge-log-audit` 完成 diff 级日志审计（级别合理性 + 打印频率）
 - **MR 级结论合成**：结合元数据、代码评审、lint 检查和日志审计结果，输出最终结论
+
+**快速调试**：`--only` 参数可指定仅运行 code-review / lint / log-audit 之一或组合（逗号分隔），跳过其余下游检查以加速调试。默认空表示全部运行。
 
 **两种运行模式**：
 - **手动模式**：评审人员指定 PR/MR 链接，或自动检测当前 git 分支对应的 PR/MR，AI 输出结构化评审报告。
@@ -137,7 +142,9 @@ git worktree add --detach "$WORKTREE_PATH" "origin/<head_branch>"
 
 #### 分支 A：代码/脚本/配置文件评审
 
-**步骤 5a：调用 `devforge-code-review` skill**
+**`--only` 门控**：若 `--only` 已提供，仅执行其指定的下游 skill，其余跳过。例如 `--only lint` 仅执行步骤 5b，跳过 5a 和 5c。`--only` 未提供时三步全部执行。
+
+**步骤 5a：调用 `devforge-code-review` skill**（`--only` 未提供或包含 `code-review` 时执行）
 
 使用已计算的 diff 范围调用 `devforge-code-review`，将中间评审报告写到 MR 专属路径：
 
@@ -147,7 +154,7 @@ git worktree add --detach "$WORKTREE_PATH" "origin/<head_branch>"
 
 主会话通过 Skill 工具加载 `devforge-code-review`，传入 `diff-range`、`report-output-path` 和 `worktree-path`（worktree 未创建时 `$WORKTREE_PATH` 为空字符串）参数。代码评审由 `devforge-code-review` 独立完成，pr-review 不干预其内部 agent 调度。
 
-**步骤 5b：调用 `devforge-lint-check` skill（与 5a 并行）**
+**步骤 5b：调用 `devforge-lint-check` skill（与 5a 并行）**（`--only` 未提供或包含 `lint` 时执行）
 
 对本次 MR 执行编译检查与 lint 分析。将已计算的 diff 范围传递给 `devforge-lint-check`，报告写入独立路径：
 
@@ -157,7 +164,7 @@ git worktree add --detach "$WORKTREE_PATH" "origin/<head_branch>"
 
 主会话通过 Skill 工具加载 `devforge-lint-check`，传入 `diff-range`、`report-output-path` 和 `worktree-path`（worktree 未创建时 `$WORKTREE_PATH` 为空字符串）参数。**不传 `autofix`**（默认 false），PR review 场景仅检测不修复。lint 检查由 `devforge-lint-check` 独立完成，pr-review 不干预其内部 agent 调度。
 
-**步骤 5c：调用 `devforge-log-audit` skill（与 5a、5b 并行）**
+**步骤 5c：调用 `devforge-log-audit` skill（与 5a、5b 并行）**（`--only` 未提供或包含 `log-audit` 时执行）
 
 对本次 diff 范围内的日志语句执行两维度审计。使用已计算的 diff 范围调用 `devforge-log-audit`，将审计报告写入独立路径：
 
@@ -325,7 +332,7 @@ git worktree remove "$WORKTREE_PATH"
 - **单条总结评论**：外层摘要包含 MR 标题、变更分类统计表格、评审结论与各级别计数；中间报告的完整内容在 `<details>` 折叠块内，禁止露到外层。
 - **自检闸门**：评论正文写入文件后，必须执行 `templates/pr-review-comment.md` 末尾的自检清单，全部通过才能进入步骤 8b。
 - **每次发新评论**：每次 CI 运行都发一条新评论，不更新已有评论。
-- 分支 A：`/tmp/code-review-report-<mr_number>.md`、`/tmp/lint-report-<mr_number>.md`、`/tmp/log-audit-<mr_number>.md` 作为 CI artifact 保存。
+- 分支 A：`/tmp/code-review-report-<mr_number>.md`、`/tmp/lint-report-<mr_number>.md`、`/tmp/log-audit-<mr_number>.md` 作为 CI artifact 保存。使用 `--only` 时仅保存被选中 skill 对应的报告。
 - 分支 B：`/tmp/doc-review-report-<mr_number>.md` 作为 CI artifact 保存。
 
 ### CLI 白名单

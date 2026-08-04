@@ -10,11 +10,12 @@
 ## 参数
 
 ```
-/df:pr-review [pr-link] [--ci]
+/df:pr-review [pr-link] [--ci] [--only <check>]
 ```
 
 - `pr-link`（可选）：PR/MR 链接。省略时自动检测当前 git 分支对应的 PR/MR。
 - `--ci`（可选）：CI 模式。非交互运行，自动发帖，输出 JSON 结果供 CI 判断是否阻塞合并。
+- `--only`（可选）：仅运行指定下游检查（`code-review` / `lint` / `log-audit`），逗号分隔。用于调试时加速，不传则全部运行。
 
 ## 使用示例
 
@@ -25,6 +26,13 @@
 > 平台: GitLab | MR: !123
 > [Round 1] CRITICAL: 0 | HIGH: 1 | MEDIUM: 2 | LOW: 1
 > 最终结论: REQUEST_CHANGES
+```
+
+**快速调试**：
+
+```
+/df:pr-review --only lint https://gitlab.com/org/repo/-/merge_requests/123
+> 仅执行 lint 检查，跳过 code-review 和 log-audit
 ```
 
 **CI 自动触发**：
