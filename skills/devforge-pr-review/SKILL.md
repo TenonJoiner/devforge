@@ -107,6 +107,30 @@ glab mr view <number> -F json
   - 若只有文档类文件（如 `.md`、`.txt`、`.rst`、`.adoc` 等）→ 进入第 4 阶段分支 B，由 `product-reviewer` agent 执行文档评审
 - 上下文不足 → 评审 agent 自行标注并建议作者补充信息。
 
+### 第 3.5 阶段：分支就绪（Worktree）
+
+确保下游 skill 能读到 MR 源分支的正确源码。
+
+**步骤 4.5：检测当前分支**
+
+```bash
+WORKTREE_PATH=""
+current_branch=$(git branch --show-current)
+```
+
+- 若 `$current_branch == <head_branch>`：`WORKTREE_PATH` 保持空字符串，跳过 worktree 创建，直接进入第 4 阶段
+- 若不同：创建 detached worktree
+
+**步骤 4.6：创建 Worktree**（仅分支不匹配时）
+
+```bash
+WORKTREE_PATH="/tmp/pr-review-worktree-<mr_number>"
+ORIGINAL_DIR=$(pwd)
+git worktree add --detach "$WORKTREE_PATH" "origin/<head_branch>"
+```
+
+进入 worktree 后，后续所有下游 skill 调用和源码读取均在该 worktree 内进行。若 worktree 已存在（上次残留），先 `git worktree remove --force "$WORKTREE_PATH"` 再重新创建。
+
 ### 第 4 阶段：变更内容评审
 
 根据步骤 4 的文件类型分流结果，选择对应评审分支。
@@ -118,30 +142,30 @@ glab mr view <number> -F json
 使用已计算的 diff 范围调用 `devforge-code-review`，将中间评审报告写到 MR 专属路径：
 
 ```
-/df:code-review --diff-range "git diff origin/<base_branch>...<head_branch>" --report-output-path /tmp/code-review-report-<mr_number>.md
+/df:code-review --diff-range "git diff origin/<base_branch>...<head_branch>" --report-output-path /tmp/code-review-report-<mr_number>.md --worktree-path "$WORKTREE_PATH"
 ```
 
-主会话通过 Skill 工具加载 `devforge-code-review`，传入 `diff-range` 和 `report-output-path` 参数。代码评审由 `devforge-code-review` 独立完成，pr-review 不干预其内部 agent 调度。
+主会话通过 Skill 工具加载 `devforge-code-review`，传入 `diff-range`、`report-output-path` 和 `worktree-path`（worktree 未创建时 `$WORKTREE_PATH` 为空字符串）参数。代码评审由 `devforge-code-review` 独立完成，pr-review 不干预其内部 agent 调度。
 
 **步骤 5b：调用 `devforge-lint-check` skill（与 5a 并行）**
 
-对本次 MR 执行编译检查与 lint 分析。使用 MR 模式调用 `devforge-lint-check`，将报告写入独立路径：
+对本次 MR 执行编译检查与 lint 分析。将已计算的 diff 范围传递给 `devforge-lint-check`，报告写入独立路径：
 
 ```
-/df:lint --mr <pr-link> --report-output-path /tmp/lint-report-<mr_number>.md
+/df:lint --diff-range "git diff origin/<base_branch>...<head_branch>" --report-output-path /tmp/lint-report-<mr_number>.md --worktree-path "$WORKTREE_PATH"
 ```
 
-主会话通过 Skill 工具加载 `devforge-lint-check`，传入 `mr` 和 `report-output-path` 参数。**不传 `autofix`**（默认 false），PR review 场景仅检测不修复。lint 检查由 `devforge-lint-check` 独立完成，pr-review 不干预其内部 agent 调度。
+主会话通过 Skill 工具加载 `devforge-lint-check`，传入 `diff-range`、`report-output-path` 和 `worktree-path`（worktree 未创建时 `$WORKTREE_PATH` 为空字符串）参数。**不传 `autofix`**（默认 false），PR review 场景仅检测不修复。lint 检查由 `devforge-lint-check` 独立完成，pr-review 不干预其内部 agent 调度。
 
 **步骤 5c：调用 `devforge-log-audit` skill（与 5a、5b 并行）**
 
 对本次 diff 范围内的日志语句执行两维度审计。使用已计算的 diff 范围调用 `devforge-log-audit`，将审计报告写入独立路径：
 
 ```
-/df:log-audit --diff-range "git diff origin/<base_branch>...<head_branch>" --report-output-path /tmp/log-audit-<mr_number>.md
+/df:log-audit --diff-range "git diff origin/<base_branch>...<head_branch>" --report-output-path /tmp/log-audit-<mr_number>.md --worktree-path "$WORKTREE_PATH"
 ```
 
-主会话通过 Skill 工具加载 `devforge-log-audit`，传入 `diff-range` 和 `report-output-path` 参数。**无需 `--log-dir`**——CI 场景下频率维度自动跳过，仅审级别合理性。日志审计由 `devforge-log-audit` 独立完成，pr-review 不干预其内部 agent 调度。
+主会话通过 Skill 工具加载 `devforge-log-audit`，传入 `diff-range`、`report-output-path` 和 `worktree-path`（worktree 未创建时 `$WORKTREE_PATH` 为空字符串）参数。**无需 `--log-dir`**——CI 场景下频率维度自动跳过，仅审级别合理性。日志审计由 `devforge-log-audit` 独立完成，pr-review 不干预其内部 agent 调度。
 
 #### 分支 B：纯文档变更评审
 
@@ -283,6 +307,16 @@ pr-review 的报告产出取决于分支：
   2. 退出码：
      - `0`：最终结论（verdict）为 APPROVE 或 COMMENT
      - `1`：最终结论（verdict）为 REQUEST_CHANGES
+
+**步骤 9：清理 Worktree**
+
+若第 3.5 阶段创建了 worktree：
+
+```bash
+cd "$ORIGINAL_DIR"
+git worktree remove "$WORKTREE_PATH"
+```
+
 ## CI 模式评论策略
 
 ### 评论格式

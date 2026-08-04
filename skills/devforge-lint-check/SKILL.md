@@ -1,17 +1,24 @@
 ---
 name: devforge-lint-check
-description: 编译检查与 Lint 分析——零 warning 验证，支持 branch 和 mr 两种模式
+description: 编译检查与 Lint 分析——零 warning 验证
 allowed-tools: [Read, Bash, Grep, Glob, Edit]
 parameters:
   - name: autofix
     description: 检测后自动修复问题（默认只检测不修复）
     required: false
     default: false
-  - name: mr
-    description: 指定 MR 网页链接，对 MR 源分支与目标分支的差异做 lint（CI 场景）。不提供时默认为 branch 模式
+  - name: diff-range
+    description: git diff 范围字符串，提供后原样传递给 lint 脚本做增量检查（由 pr-review 等调用方注入）
     required: false
+  - name: full
+    description: 全仓 lint 检查（默认只检查工作区未提交变更）
+    required: false
+    default: false
   - name: report-output-path
     description: 指定 lint 报告写入路径（如 /tmp/lint-report-<mr_number>.md）。未提供时使用默认时间戳命名
+    required: false
+  - name: worktree-path
+    description: worktree 根目录，提供后 agent 用其拼接源码文件的绝对路径（由 pr-review 注入）
     required: false
 ---
 
@@ -25,16 +32,18 @@ parameters:
 
 默认只检测并输出报告。带 `autofix` 参数时自动派遣 developer 修复并回归检查，最多 5 轮。
 
-## 模式
+## 检查范围
 
-两种模式仅作用于 **L2 Lint 检查**的命令选择。L1 编译步骤不受模式影响，始终使用全量构建命令。
+L1 编译步骤不受范围影响，始终使用全量构建命令。
 
-| 模式 | 触发 | 场景 | 命令查找方式 |
-|------|------|------|-------------|
-| `branch`（默认） | `/df:lint` | 开发期间，对本地分支相对主干的差异代码做 lint | 从项目上下文（CLAUDE.md 等）中查找对应 lint 命令；未找到则探测项目脚本后向用户确认 |
-| `mr` | `/df:lint --mr <url>` | 提交 MR 后 CI 流水线，对比 MR 源分支与目标分支的差异做 lint | 从项目上下文（CLAUDE.md 等）中查找对应 lint 命令；未找到则探测项目脚本后向用户确认 |
+L2 Lint 检查，范围确定优先级：
 
-> **代码就绪由脚本负责**：skill 不做 `git checkout`、`git fetch` 等操作。`branch` 模式假设用户已在开发分支上；`mr` 模式下 MR URL 透传给脚本，由脚本自行决定是否需要 checkout MR 分支或从 URL 获取 diff。如果本地环境缺少 MR 分支代码，脚本应自行处理（如 `gh pr checkout` 后执行 lint），而非依赖 skill 准备环境。
+1. **`diff-range` 参数存在**：直接使用，原样传递给 lint 脚本
+2. **`full` 参数存在**：全仓 lint——执行项目 lint 命令，检查全仓
+3. **都不传**（默认）：`git diff HEAD` + `git diff --cached`（工作区未提交变更），透传给 lint 脚本
+
+> **代码就绪由调用方负责**：skill 不做 `git checkout`、`git fetch` 等操作。调用方（如 pr-review）负责确保工作目录位于正确的分支上。
+> `diff-range` 由调用方注入，skill 不解析、不修改，直接转发给 lint 脚本。
 
 ## 职责边界
 
@@ -71,15 +80,13 @@ parameters:
 
 ## L2：Lint 分析
 
-1. **获取 Lint 命令**（模式感知）
+1. **获取 Lint 命令**
    - 在当前会话上下文中查找已知的 lint 方法（CLAUDE.md、README、项目 rules、先前对话等）
-   - 根据当前模式选择：
-     - **`branch` 模式**：从项目上下文中查找开发场景的增量 lint 命令；未找到则探测后向用户确认
-     - **`mr` 模式**：从项目上下文中查找 CI 场景的 lint 命令；未找到则探测后向用户确认，同时将 MR URL 透传给脚本
    - 若未找到，探测项目中存在的可执行 lint 脚本。项目可能包含多语言/多模块，逐一列出所有探测到的 lint 命令
-   - 自行探测结果需**向用户确认**后再使用。确认后将命令与模式映射记录到项目上下文中（如 CLAUDE.md 或项目 rules 文件），后续直接读取
+   - 自行探测结果需**向用户确认**后再使用。确认后将命令记录到项目上下文中（如 CLAUDE.md 或项目 rules 文件），后续直接读取
        - **阻断规则**：若 lint 命令来自自行探测且未经用户确认，禁止进入步骤 2。必须使用 `AskUserQuestion` 向用户确认后方可继续
        - 禁止根据变更文件（`git diff`、`git log` 输出）自行推断或拼凑 lint 命令
+   - 若 `diff-range` 已提供，执行 lint 命令时将其原样传递给 lint 脚本；若 `full` 已提供，全仓执行；否则使用默认增量范围（`git diff HEAD` + `git diff --cached`）
 
    **可执行 lint 脚本 vs 工具配置文件**：
 
@@ -147,7 +154,7 @@ parameters:
    | 历史遗留（需修复但非本次引入） | 保留，标注"历史遗留，不阻塞本次合并"，级别同上 |
    | 抑制（事实存在但无危害） | 排除，注明无危害证据（值域计算/守卫代码行号/路径分析） |
    | 误报 | 排除，注明排除理由和规则依据 |
-   | 规则建议 | 追加到报告末尾——建议屏蔽/新增的规则及理由 |
+   | 规则建议 | 追加到报告末尾——仅输出判定为"屏蔽"或"新增"的规则及理由。判定为"保留"的规则不出现在报告中 |
 
    | 模式 | 行为 |
    |------|------|
@@ -161,7 +168,7 @@ parameters:
 L1 + L2 均通过（零告警）时：
 
 ```
-模式: <branch / mr>
+范围: <全量 / 未提交变更 / MR>
 L1 编译检查
   ✓ <命令1>: PASSED
   ✓ <命令2>: PASSED
@@ -174,7 +181,7 @@ L2 Lint 分析
 L2 存在告警时：
 
 ```
-模式: <branch / mr>
+范围: <全量 / 未提交变更 / MR>
 L1 编译检查
   ✓ <命令1>: PASSED
   ✓ <命令2>: PASSED
@@ -200,11 +207,12 @@ Lint 分析报告
        ...
        ```
 
-  已排除 K 条：
-    1. [文件:行号] <告警内容> — 误报: <排除理由>
-    2. [文件:行号] <告警内容> — 抑制: <无危害证据>
+  已排除 K 条（误报 X 条，抑制 Y 条）：
+    - 误报: <规则名> N 条 — <共同排除理由>
+    - 抑制: <规则名> M 条 — <共同无危害证据>
+    （按规则归类合并，不逐条列出。若某规则仅 1 条，仍合并到同类别下，不单独成行）
 
-  规则建议：
+  规则建议：（仅列出需变更的规则，判定为"保留"的规则禁止出现在报告中）
     屏蔽: <规则名> — <理由>
     新增: <建议新增的规则描述> — <理由>
 ```
@@ -212,7 +220,7 @@ Lint 分析报告
 L1 失败时（直接退出，不进入 L2）：
 
 ```
-模式: <branch / mr>
+范围: <全量 / 未提交变更 / MR>
 L1 编译检查
   ✓ <命令1>: PASSED
   ✗ <命令2>: FAILED

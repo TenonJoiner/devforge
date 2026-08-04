@@ -4,7 +4,7 @@ description: 日志审计——从「级别合理性」与「打印频率」两�
 allowed-tools: [Read, Grep, Glob, Bash, Agent]
 parameters:
   - name: full
-    description: 全仓批量整改——审计全仓所有日志（默认为 MR 门禁范围：本分支相对 trunk 的变更）
+    description: 全仓批量整改——审计全仓所有日志（默认只审计工作区未提交变更）
     required: false
     default: false
   - name: log-dir
@@ -15,6 +15,9 @@ parameters:
     required: false
   - name: report-output-path
     description: 审计报告输出路径（由调用方注入，空则用默认 /tmp 路径）
+    required: false
+  - name: worktree-path
+    description: worktree 根目录，提供后 agent 用其拼接源码文件的绝对路径（由 pr-review 注入）
     required: false
 ---
 
@@ -40,14 +43,15 @@ parameters:
 
 | 场景 | 审计范围 | 触发方式 | 典型用途 |
 |------|---------|---------|---------|
+| **日常开发审计** | `git diff HEAD` + `git diff --cached`（工作区未提交变更） | `/df:log-audit`（默认） | 日常开发中审计本次变更的日志 |
 | **全仓批量整改** | 全仓所有日志语句 | `/df:log-audit --full` | 一次性排查并整改存量日志质量 |
-| **MR 门禁** | 本 MR 相对目标分支的变更（`git diff $(git merge-base HEAD <trunk>)..HEAD`） | `/df:log-audit`（默认）；CI/门禁经 `diff-range` 注入 | 每个 MR 增量把关，后续接入合并门禁 |
+| **外部注入** | 外部指定的 diff 范围 | `/df:log-audit --diff-range "..."` | CI/门禁场景 |
 
 **范围确定优先级**：
 
 1. `diff-range` 参数存在：直接使用（外部门禁 / `pr-review` 注入）
 2. `full` 参数存在：全仓批量整改（Grep 全仓日志语句，不做 diff）
-3. 都不传（默认）：MR 门禁范围——先检测 trunk（`git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null` 或 `git remote show origin 2>/dev/null | grep 'HEAD branch' | cut -d: -f2`），再 `git diff $(git merge-base HEAD origin/<trunk>)..HEAD`；**检测失败不猜测**，提示用户通过 `--diff-range` 显式指定
+3. 都不传（默认）：`git diff HEAD` + `git diff --cached`（工作区未提交变更）
 
 **范围铁律**：
 - 审计只针对范围内的日志语句。范围外发现降为 LOW，不阻塞本次合并
@@ -111,12 +115,13 @@ parameters:
 | `日志框架` | 第 1 阶段探测 | `zap` / `spdlog` / `自定义宏 LOG_*` |
 | `级别定义` | 可用级别集合 + 生产默认级别（探测所得，含"未探测到"标注） | `Debug<Informational<Notice<Warning<Error，生产默认 Informational` |
 | `级别语义映射` | 非标准级别与 RFC 5424 的语义对应关系，含排序说明与合规标注。合规则注"与 RFC 5424 一致" | `自定义 Notice 级别 → 排序位于 Warn 之后（RFC 5424 违规：Notice 应介于 Warning 和 Info 之间）`；`自定义位掩码级别 → 数值区间与严重性不匹配（RFC 5424 违规：位掩码数值排序与 RFC 5424 严重程度不一致）` |
-| `scope` | skill 计算后的审计范围（全仓 / MR diff 命令） | `全仓` / `git diff $(git merge-base HEAD origin/main)..HEAD` |
+| `scope` | skill 计算后的审计范围 | `git diff HEAD` / `全仓` / 外部 diff |
 | `project_levels` | 第 1 阶段探测的级别定义（RFC 5424 规范名+别名），注入脚本 `--levels` | `Debug\|DBG,Informational\|INFO,Notice\|NOTE,Warning\|WARN,Error\|ERR,Critical\|CRIT,Alert,Emergency\|FATAL\|PANIC,EMIT` |
 | `log_dir` | 运行时日志目录，未提供则注入"无" | `/var/log/myapp/` / `无` |
 | `analyze_script` | 运行时分析脚本路径 | `scripts/analyze_logs.py` |
 | `template_path` | 报告格式契约文件 | `skills/devforge-log-audit/log-audit-report.md` |
 | `report_output_path` | 报告写入路径 | `/tmp/log-audit-<ts>-<pid>.md` |
+| `worktree_path` | worktree 根目录，用于拼接源码文件绝对路径，为空则用当前工作目录 | `/tmp/pr-review-worktree-<id>` / 空 |
 
 ### 第 3 阶段：独立审核（派遣审核 subagent）
 

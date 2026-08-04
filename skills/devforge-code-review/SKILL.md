@@ -8,7 +8,7 @@ parameters:
     required: false
     default: false
   - name: full
-    description: 分支全量评审，范围为完整 proposal 变更（默认只评审工作区未提交变更）
+    description: 全仓源码评审（默认只评审工作区未提交变更）
     required: false
     default: false
   - name: diff-range
@@ -16,6 +16,9 @@ parameters:
     required: false
   - name: report-output-path
     description: 评审报告输出路径（由调用方注入）
+    required: false
+  - name: worktree-path
+    description: worktree 根目录，提供后 agent 用其拼接源码文件的绝对路径（由 pr-review 注入）
     required: false
 ---
 
@@ -53,14 +56,13 @@ parameters:
 
 | 场景 | 评审范围 | 触发方式 |
 |------|---------|---------|
-| 日常轻量评审 | `git diff HEAD` + `git diff --cached`（工作区未提交变更） | `/df:code-review` |
-| task group 完成后 | 当前 task group 对应的 `git diff`（自上次评审以来的变更） | 自动触发 |
-| Q.4 全量收尾 | `git diff $(git merge-base HEAD <trunk>)..HEAD`（完整 proposal 变更，trunk 动态检测） | 质量收尾阶段 |
-| 指定文件 | `file-pattern` 匹配的文件 | `/df:code-review <pattern>` |
+| 日常开发评审 | `git diff HEAD` + `git diff --cached`（工作区未提交变更） | `/df:code-review` |
+| 全仓评审 | 全仓源码 | `/df:code-review --full` |
+| 指定范围 | 外部注入的 diff 范围 | `/df:code-review --diff-range "..."` |
 **diff 范围确定优先级**：
 
 1. **`diff-range` 参数存在**：直接使用（由外部调用方如 `pr-review` 传入），不做任何处理
-2. **`full` 参数存在**：检测 trunk 分支后计算。先通过 `git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null` 或 `git remote show origin 2>/dev/null | grep 'HEAD branch' | cut -d: -f2` 获取远程默认分支，再做 `git diff $(git merge-base HEAD origin/<trunk>)..HEAD`。若检测失败，回退到 `git diff $(git merge-base HEAD main)..HEAD`
+2. **`full` 参数存在**：全仓评审——Grep 全仓源码文件，按模块拆分并行评审
 3. **都不传**（默认）：`git diff HEAD` + `git diff --cached`（工作区未提交变更）
 
 **范围铁律**：评审只针对本次变更范围内的代码。发现范围外的问题时，记录为LOW变体分析发现，不阻塞本次合并。
@@ -218,11 +220,12 @@ Correctness 和 Security 维度中的部分检查项引用 `coding-style-<lang>.
 | `任务模式` | 轻量评审（D1+D2）/ 深度评审（D1-D5）/ 单维度 subagent / 误报审核 | `深度评审-D3-Architecture` / `误报审核` |
 | `主语言` | skill 从项目文件系统探测后注入 | `C` / `Go` |
 | `评审维度` | 本次评审覆盖的维度子集（D1-D5 子集） | `D1, D2` / `D3` 单维度 |
-| `diff_range` | skill 计算后注入的 git diff 命令或范围 | `git diff HEAD` / `git diff $(git merge-base HEAD main)..HEAD` |
+| `diff_range` | skill 计算后注入的 git diff 命令或范围 | `git diff HEAD` / `全仓` |
 | `领域信号` | 从代码结构/架构文档识别的领域特征 | `存储/WAL` / `高性能服务` |
 | `report_output_path` | 评审报告写入路径 | `/tmp/code-review-report-<ts>.md` |
 | `subagent_dimension` | 深度评审多实例时，每个 subagent 负责的单一维度 | `D4-Security` |
 | `draft_report_path` | 误报审核模式下，待复核的初评草稿路径 | `/tmp/code-review-<ts>-draft.md` |
+| `worktree_path` | worktree 根目录，用于拼接源码文件绝对路径，为空则用当前工作目录 | `/tmp/pr-review-worktree-<id>` / 空 |
 
 ## 评审执行与报告汇总
 
