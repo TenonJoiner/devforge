@@ -10,10 +10,10 @@
 
 | 参数 | 说明 |
 |------|------|
-| （无） | **MR 门禁**：审计本 MR 相对目标分支的变更（trunk 自动检测） |
+| （无） | 审计工作区未提交变更（`git diff HEAD` + `git diff --cached`） |
 | `--full` | **全仓批量整改**：审计全仓所有日志语句 |
 | `--log-dir <path>` | 指定运行时日志目录——提供后两维度均执行：频率量化 + 运行时增强的级别审计（日志分布/高频模板作为级别滥用的实证线索） |
-| `--diff-range <range>` | （内部参数）CI/门禁由 `pr-review` 等调用方注入显式 diff 范围，覆盖 trunk 自动检测 |
+| `--diff-range <range>` | 显式指定 git diff 范围，优先级最高（由 pr-review 等调用方注入） |
 
 ## 产出物
 
@@ -21,14 +21,14 @@
 
 ## 示例
 
-**MR 门禁（默认）**：
+**未提交变更（默认）**：
 
 ```
 /df:log-audit
 > 探测：语言 Go，框架 zap，生产默认 Informational
-> 审计本 MR 变更（相对 origin/main）｜频率维度未审（未提供 --log-dir）
+> 审计未提交变更（3 个文件）｜频率维度未审（未提供 --log-dir）
 > CRITICAL 0 | HIGH 1 | MEDIUM 1 | LOW 1
-> 结论: NEEDS-FIX（存在 HIGH，阻断合并）
+> 结论: NEEDS-FIX
 ```
 
 **全仓批量整改（结合真实日志）**：

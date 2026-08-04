@@ -1,27 +1,27 @@
 # /df:lint
 
-编译检查与静态分析——零 warning 验证。支持 `branch` 和 `mr` 两种场景。
+编译检查与静态分析——零 warning 验证。
 
 ## 用法
 
 ```
-/df:lint [autofix] [--mr <url>]
+/df:lint [autofix] [--full] [--diff-range <range>]
 ```
 
 | 参数 | 说明 |
 |------|------|
-| （无） | `branch` 模式，只检测不修复 |
-| `autofix` | 检测后自动修复问题并回归检查（可与 `--mr` 叠加） |
-| `--mr <url>` | MR 模式，对指定 MR 的源分支与目标分支差异做 lint（CI 场景） |
+| （无） | 检查工作区未提交变更（`git diff HEAD` + `git diff --cached`），只检测不修复 |
+| `autofix` | 检测后自动修复问题并回归检查（最多 5 轮） |
+| `--full` | 全仓 lint 检查 |
+| `--diff-range <range>` | 显式指定 git diff 范围，优先级最高（由 pr-review 等调用方注入） |
 
 ## 场景
 
 | 触发 | 场景 | 命令来源 |
 |------|------|---------|
-| `/df:lint` | 开发期间本地检查 | 项目上下文 → 探测确认 |
-| `/df:lint --mr <url>` | 提交 MR 后 CI 检查 | 项目上下文 → 探测确认，URL 透传给脚本 |
-
-具体命令从项目上下文（CLAUDE.md 等）中发现，参数不绑死。
+| `/df:lint` | 检查未提交变更 | 项目上下文 → 探测确认，diff 透传给 lint 脚本 |
+| `/df:lint --full` | 全仓 lint | 项目上下文 → 探测确认 |
+| `/df:lint --diff-range <range>` | MR 门禁 | 项目上下文 → 探测确认，范围透传给 lint 脚本 |
 
 ## 产出物
 
@@ -34,26 +34,37 @@ lint 原始告警不是最终结果。每条告警经 `developer` 读源码、�
 
 ## 示例
 
-**branch 模式（本地开发）**：
+**未提交变更（默认）**：
 
 ```
 /df:lint
-> 模式: branch
+> 范围: 未提交变更
 > L1 编译检查
 >   ✓ make build: PASSED
 > L2 Lint 分析
 >   ✓ make lint-changed: 零告警通过
 ```
 
-**mr 模式（CI）**：
+**全仓 lint**：
 
 ```
-/df:lint --mr https://github.com/org/repo/pull/123
-> 模式: mr
+/df:lint --full
+> 范围: 全量
 > L1 编译检查
 >   ✓ make build: PASSED
 > L2 Lint 分析
->   ✓ ci/lint.sh --mr https://github.com/org/repo/pull/123: 零告警通过
+>   ✓ make lint: 零告警通过
+```
+
+**MR 门禁**（通常由 pr-review 调用）：
+
+```
+/df:lint --diff-range "git diff origin/main...HEAD"
+> 范围: MR
+> L1 编译检查
+>   ✓ make build: PASSED
+> L2 Lint 分析
+>   ✓ ci/lint.sh "git diff origin/main...HEAD": 零告警通过
 ```
 
 执行细节进入 `devforge-lint-check` Skill。
