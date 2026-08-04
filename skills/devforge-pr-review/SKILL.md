@@ -19,8 +19,9 @@ parameters:
 本 skill 对 GitHub Pull Request 或 GitLab Merge Request 执行评审，包括：
 - **MR 元数据检查**：大小、描述、标题等 MR 自身属性
 - **代码评审入口**：调用 `devforge-code-review` 完成 diff 级代码评审
+- **Lint 检查入口**：调用 `devforge-lint-check` 完成编译检查与 lint 分析
 - **日志审计入口**：调用 `devforge-log-audit` 完成 diff 级日志审计（级别合理性 + 打印频率）
-- **MR 级结论合成**：结合元数据、代码评审和日志审计结果，输出最终结论
+- **MR 级结论合成**：结合元数据、代码评审、lint 检查和日志审计结果，输出最终结论
 
 **两种运行模式**：
 - **手动模式**：评审人员指定 PR/MR 链接，或自动检测当前 git 分支对应的 PR/MR，AI 输出结构化评审报告。
@@ -28,10 +29,11 @@ parameters:
 
 **与下游 skill 的关系**：
 - `devforge-code-review` 是通用代码评审 skill，负责代码/脚本/配置文件的五维度评审。
+- `devforge-lint-check` 是编译检查与 lint 分析 skill，负责编译通过验证与 lint 告警分析。
 - `devforge-log-audit` 是日志审计 skill，负责 diff 内日志语句的级别合理性与打印频率两维度审计。
 - `devforge-pr-review` 是 MR 入口 skill，负责平台交互、MR 上下文准备、MR 元数据检查、文件类型分流：
-  - 含代码类文件时并行调用 `devforge-code-review` 和 `devforge-log-audit`
-  - 纯文档变更时派遣 `product-reviewer` agent（不跑日志审计）
+  - 含代码类文件时并行调用 `devforge-code-review`、`devforge-lint-check` 和 `devforge-log-audit`
+  - 纯文档变更时派遣 `product-reviewer` agent（不跑 code-review、lint 和日志审计）
   - 最后合并结果，合成 MR 级报告。
 
 ## 何时使用
@@ -116,12 +118,22 @@ glab mr view <number> -F json
 使用已计算的 diff 范围调用 `devforge-code-review`，将中间评审报告写到 MR 专属路径：
 
 ```
-/df:code-review --diff-range "git diff origin/<base_branch>...<head_branch>" --report-output-path /tmp/pr-review-report-<mr_number>.md
+/df:code-review --diff-range "git diff origin/<base_branch>...<head_branch>" --report-output-path /tmp/code-review-report-<mr_number>.md
 ```
 
 主会话通过 Skill 工具加载 `devforge-code-review`，传入 `diff-range` 和 `report-output-path` 参数。代码评审由 `devforge-code-review` 独立完成，pr-review 不干预其内部 agent 调度。
 
-**步骤 5b：调用 `devforge-log-audit` skill（与 5a 并行）**
+**步骤 5b：调用 `devforge-lint-check` skill（与 5a 并行）**
+
+对本次 MR 执行编译检查与 lint 分析。使用 MR 模式调用 `devforge-lint-check`，将报告写入独立路径：
+
+```
+/df:lint --mr <pr-link> --report-output-path /tmp/lint-report-<mr_number>.md
+```
+
+主会话通过 Skill 工具加载 `devforge-lint-check`，传入 `mr` 和 `report-output-path` 参数。**不传 `autofix`**（默认 false），PR review 场景仅检测不修复。lint 检查由 `devforge-lint-check` 独立完成，pr-review 不干预其内部 agent 调度。
+
+**步骤 5c：调用 `devforge-log-audit` skill（与 5a、5b 并行）**
 
 对本次 diff 范围内的日志语句执行两维度审计。使用已计算的 diff 范围调用 `devforge-log-audit`，将审计报告写入独立路径：
 
@@ -133,7 +145,7 @@ glab mr view <number> -F json
 
 #### 分支 B：纯文档变更评审
 
-**步骤 5c：派遣 `product-reviewer` agent**
+**步骤 5d：派遣 `product-reviewer` agent**
 
 对纯文档 MR 进行深入文档评审，注入字段：
 
@@ -141,7 +153,7 @@ glab mr view <number> -F json
 |------|------|------|
 | `任务模式` | 文档变更评审 | `文档变更评审` |
 | `diff_range` | 已计算的 diff 命令 | `git diff origin/main...HEAD` |
-| `report_output_path` | 评审报告写入路径 | `/tmp/pr-review-report-<mr_number>.md` |
+| `report_output_path` | 评审报告写入路径 | `/tmp/doc-review-report-<mr_number>.md` |
 
 评审维度：
 - **完整性**：变更是否说明了背景、目的、影响范围
@@ -154,14 +166,23 @@ glab mr view <number> -F json
 
 **步骤 6：读取并合并中间评审报告**
 
-pr-review 可能产出一到两份中间报告：
+pr-review 的报告产出取决于分支：
+
+**分支 A（含代码文件）**：最多三份报告
 
 | 来源 | 路径 | 触发条件 |
 |------|------|---------|
-| 代码评审 | `/tmp/pr-review-report-<mr_number>.md` | 分支 A（含代码文件） |
-| 日志审计 | `/tmp/log-audit-<mr_number>.md` | 分支 A（含代码文件） |
+| 代码评审 | `/tmp/code-review-report-<mr_number>.md` | 分支 A |
+| Lint 检查 | `/tmp/lint-report-<mr_number>.md` | 分支 A |
+| 日志审计 | `/tmp/log-audit-<mr_number>.md` | 分支 A |
 
-分支 B（纯文档）仅产出代码评审报告，无日志审计报告。
+**分支 B（纯文档）**：仅一份报告
+
+| 来源 | 路径 | 触发条件 |
+|------|------|---------|
+| 文档评审 | `/tmp/doc-review-report-<mr_number>.md` | 分支 B |
+
+分支 B 无代码评审、lint 和日志审计报告。
 
 从各报告提取：
 - 各份报告的问题统计：CRITICAL / HIGH / MEDIUM / LOW 数量
@@ -169,7 +190,7 @@ pr-review 可能产出一到两份中间报告：
 
 **合并规则**：
 - 各级别计数为各份报告对应级别之和
-- 两份报告在 CI 评论中各自一个 `<details>` 折叠块，代码评审在前、日志审计在后
+- 三份报告在 CI 评论中各自一个 `<details>` 折叠块，代码评审在前、lint 检查居中、日志审计在后
 - 任一报告不存在或为空，对应折叠块省略，不计入统计
 
 **注意**：`/tmp` 下的 `code-review-*-d*.md` 等文件是 `devforge-code-review` 的 subagent 中间产物，**不要用于生成 MR 评论**，应被忽略。
@@ -196,7 +217,7 @@ pr-review 可能产出一到两份中间报告：
   输出结构化评审报告到会话，包含：
   - MR 元数据摘要（变更文件数、+/- 行数、代码/文档/其他分类统计）
   - MR 元数据检查结果
-  - 步骤 6 合并后的问题统计与关键发现概述（含代码评审与日志审计）
+  - 步骤 6 合并后的问题统计与关键发现概述（含代码评审、lint 检查与日志审计）
   - 最终结论（verdict）
 
 - **CI 模式（`ci` 为 true）**：
@@ -220,9 +241,8 @@ pr-review 可能产出一到两份中间报告：
   3. 按 `templates/pr-review-comment.md` 严格填充各占位符，写入 `/tmp/pr-review-comment-<mr_number>.md`：
      - 外层摘要只展示数量，不展示具体问题的标题、文件位置或描述
      - 中间报告的完整内容**原样粘贴**进对应 `<details>` 块，禁止概括、删减、改写、只摘录部分
-     - 代码评审折叠块在前，日志审计折叠块在后
-     - 若日志审计报告不存在（分支 B 纯文档），对应折叠块省略
-     - 问题计数表为两份报告合并后的各级别总数
+     - 分支 A：代码评审折叠块在前，lint 检查居中，日志审计折叠块在后；问题计数为三份报告之和
+     - 分支 B：仅文档评审折叠块；问题计数为文档评审报告的数量
   
   4. **自检闸门**：逐项执行 `templates/pr-review-comment.md` 末尾的自检清单。任一项不通过 → 修正文件后重新自检，禁止跳过自检直接发送。
   
@@ -252,8 +272,10 @@ pr-review 可能产出一到两份中间报告：
        "high": 1,
        "medium": 2,
        "low": 1,
-       "code_review_report_path": "/tmp/pr-review-report-<mr_number>.md",
+       "code_review_report_path": "/tmp/code-review-report-<mr_number>.md",
+       "lint_report_path": "/tmp/lint-report-<mr_number>.md",
        "log_audit_report_path": "/tmp/log-audit-<mr_number>.md",
+       "doc_review_report_path": "/tmp/doc-review-report-<mr_number>.md",
        "comment_posted": true
      }
      ```
@@ -269,7 +291,8 @@ pr-review 可能产出一到两份中间报告：
 - **单条总结评论**：外层摘要包含 MR 标题、变更分类统计表格、评审结论与各级别计数；中间报告的完整内容在 `<details>` 折叠块内，禁止露到外层。
 - **自检闸门**：评论正文写入文件后，必须执行 `templates/pr-review-comment.md` 末尾的自检清单，全部通过才能进入步骤 8b。
 - **每次发新评论**：每次 CI 运行都发一条新评论，不更新已有评论。
-- `/tmp/pr-review-report-<mr_number>.md` 和 `/tmp/log-audit-<mr_number>.md` 同时作为 CI artifact 保存。
+- 分支 A：`/tmp/code-review-report-<mr_number>.md`、`/tmp/lint-report-<mr_number>.md`、`/tmp/log-audit-<mr_number>.md` 作为 CI artifact 保存。
+- 分支 B：`/tmp/doc-review-report-<mr_number>.md` 作为 CI artifact 保存。
 
 ### CLI 白名单
 
@@ -291,7 +314,7 @@ pr-review 可能产出一到两份中间报告：
 
 ## 关联
 
-- **相关 Skill**: `devforge-code-review`、`devforge-log-audit`
-- **相关 Agent**: `code-reviewer`（通过 `devforge-code-review` 间接使用）、`product-reviewer`、`log-auditor`（通过 `devforge-log-audit` 间接使用）
+- **相关 Skill**: `devforge-code-review`、`devforge-lint-check`、`devforge-log-audit`
+- **相关 Agent**: `code-reviewer`（通过 `devforge-code-review` 间接使用）、`developer`（通过 `devforge-lint-check` 间接使用）、`product-reviewer`、`log-auditor`（通过 `devforge-log-audit` 间接使用）
 - **相关 Rules**: `coding-style`, `testing`
 - **相关 Hooks**: 无

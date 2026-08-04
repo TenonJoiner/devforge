@@ -37,6 +37,6 @@ claude -p "/df:pr-review --ci <pr-link>"
 
 ## 关联
 
-- Skill: `devforge-pr-review`, `devforge-code-review`
-- Agent: `product-reviewer`
+- Skill: `devforge-pr-review`, `devforge-code-review`, `devforge-lint-check`, `devforge-log-audit`
+- Agent: `product-reviewer`, `developer`（通过 `devforge-lint-check` 间接使用）
 - Rules: `coding-style`, `testing`
