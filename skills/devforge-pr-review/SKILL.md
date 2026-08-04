@@ -134,7 +134,13 @@ ORIGINAL_DIR=$(pwd)
 git worktree add --detach "$WORKTREE_PATH" "origin/<head_branch>"
 ```
 
-进入 worktree 后，后续所有下游 skill 调用和源码读取均在该 worktree 内进行。若 worktree 已存在（上次残留），先 `git worktree remove --force "$WORKTREE_PATH"` 再重新创建。
+**主会话保持在 `$ORIGINAL_DIR`（原始仓库目录），不进入 worktree。**worktree 仅作为 MR 源码的只读目录供下游 skill 通过 `--worktree-path` 访问。
+
+路径职责：
+- **CWD**：基础设施——CLAUDE.md、规则文件、lint 脚本及其规则配置（`.clang-tidy`、`.golangci.yml` 等）。调用方应从基础设施最新（通常为 main）的分支发起 pr-review
+- **`--worktree-path`**：MR 源码——待审查/待检查的代码与构建脚本（Makefile、CMakeLists.txt 等）
+
+若 worktree 已存在（上次残留），先 `git worktree remove --force "$WORKTREE_PATH"` 再重新创建。
 
 ### 第 4 阶段：变更内容评审
 
@@ -320,7 +326,6 @@ pr-review 的报告产出取决于分支：
 若第 3.5 阶段创建了 worktree：
 
 ```bash
-cd "$ORIGINAL_DIR"
 git worktree remove "$WORKTREE_PATH"
 ```
 

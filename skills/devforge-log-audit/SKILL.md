@@ -17,7 +17,7 @@ parameters:
     description: 审计报告输出路径（由调用方注入，空则用默认 /tmp 路径）
     required: false
   - name: worktree-path
-    description: worktree 根目录，提供后 agent 用其拼接源码文件的绝对路径（由 pr-review 注入）
+    description: worktree 根目录，仅用于拼接源码文件的绝对路径；CLAUDE.md 等从 CWD 读取（由 pr-review 注入）
     required: false
 ---
 
@@ -65,15 +65,23 @@ parameters:
 
 审计前必须先弄清"这个项目的级别是怎么定义的"，否则会用通用假设误判项目的自定义约定。
 
+**路径来源**：
+
+| 资源 | 来源 | 说明 |
+|------|------|------|
+| 源码（级别定义结构体、日志调用点） | `--worktree-path`（提供时）或 CWD | MR 分支的代码 |
+| 日志框架配置文件 | `--worktree-path`（提供时）或 CWD | 和源码配套 |
+| CLAUDE.md、README、项目文档 | **CWD**（原始仓库） | 日志约定指引，由主线定义 |
+
 **步骤 1：探测语言与日志框架**
-- 按源码文件扫描统计范围内各语言占比（源码后缀计数 → 构建文件佐证）
+- 扫描 `--worktree-path`（提供时）或 CWD 中的源码文件，统计各语言占比（源码后缀计数 → 构建文件佐证）
 - **多语言项目**：范围内出现的语言均纳入审计，按语言分别派遣 `log-auditor`（每种语言有独立的日志框架和级别定义）
-- 定位各语言的日志框架：搜索日志调用符号（如 `LOG_ERROR`/`zap.`/`logger.`/`slog.`/`spdlog::`）与依赖声明
+- 定位各语言的日志框架：在 worktree 源码中搜索日志调用符号（如 `LOG_ERROR`/`zap.`/`logger.`/`slog.`/`spdlog::`）与依赖声明
 
 **步骤 2：探测级别定义**（按优先级）
-1. 从源码中定位日志级别定义结构体/枚举/常量（如 `LOG_LEVEL_*` 宏、`Level` enum、`zapcore.Level`），确定可用级别集合——这是最可靠来源
-2. 从日志配置文件（`log4j2.xml`、`logback.xml`、`*.conf` 等）或框架初始化代码（zap/slog 初始化、glog flags、spdlog set_level）提取生产默认级别——配置文件通常只设阈值，无法反推全量级别集合
-3. 项目文档 / CLAUDE.md / README 中的日志约定作为补充佐证（极少存在，不作为主要来源）
+1. 从 `--worktree-path`（提供时）或 CWD 的源码中定位日志级别定义结构体/枚举/常量（如 `LOG_LEVEL_*` 宏、`Level` enum、`zapcore.Level`），确定可用级别集合——这是最可靠来源
+2. 从 `--worktree-path`（提供时）或 CWD 的日志配置文件（`log4j2.xml`、`logback.xml`、`*.conf` 等）或框架初始化代码（zap/slog 初始化、glog flags、spdlog set_level）提取生产默认级别——配置文件通常只设阈值，无法反推全量级别集合
+3. 从 **CWD** 的 CLAUDE.md / README 中的日志约定作为补充佐证（极少存在，不作为主要来源）
 
 **步骤 3：记录探测结果**——各语言、对应日志框架、可用级别集合（含自定义级别）、生产默认级别（未探测到则显式标注）。探测结果按语言分别注入对应 `log-auditor`，并在报告元数据中记录供人工复核。
 
@@ -121,7 +129,7 @@ parameters:
 | `analyze_script` | 运行时分析脚本路径 | `scripts/analyze_logs.py` |
 | `template_path` | 报告格式契约文件 | `skills/devforge-log-audit/log-audit-report.md` |
 | `report_output_path` | 报告写入路径 | `/tmp/log-audit-<ts>-<pid>.md` |
-| `worktree_path` | worktree 根目录，用于拼接源码文件绝对路径，为空则用当前工作目录 | `/tmp/pr-review-worktree-<id>` / 空 |
+| `worktree_path` | worktree 根目录，**仅用于**拼接源码文件绝对路径；CLAUDE.md 等从 **CWD** 读取。为空则 CWD 同时作为源码和基础设施来源 | `/tmp/pr-review-worktree-<id>` / 空 |
 
 ### 第 3 阶段：独立审核（派遣审核 subagent）
 

@@ -18,7 +18,7 @@ parameters:
     description: 评审报告输出路径（由调用方注入）
     required: false
   - name: worktree-path
-    description: worktree 根目录，提供后 agent 用其拼接源码文件的绝对路径（由 pr-review 注入）
+    description: worktree 根目录，仅用于拼接源码文件的绝对路径；CLAUDE.md、规则等从 CWD 读取（由 pr-review 注入）
     required: false
 ---
 
@@ -225,7 +225,7 @@ Correctness 和 Security 维度中的部分检查项引用 `coding-style-<lang>.
 | `report_output_path` | 评审报告写入路径 | `/tmp/code-review-report-<ts>.md` |
 | `subagent_dimension` | 深度评审多实例时，每个 subagent 负责的单一维度 | `D4-Security` |
 | `draft_report_path` | 误报审核模式下，待复核的初评草稿路径 | `/tmp/code-review-<ts>-draft.md` |
-| `worktree_path` | worktree 根目录，用于拼接源码文件绝对路径，为空则用当前工作目录 | `/tmp/pr-review-worktree-<id>` / 空 |
+| `worktree_path` | worktree 根目录，**仅用于**拼接源码文件绝对路径；CLAUDE.md、架构文档、规则文件等从 **CWD** 读取。为空则 CWD 同时作为源码和基础设施来源 | `/tmp/pr-review-worktree-<id>` / 空 |
 
 ## 评审执行与报告汇总
 

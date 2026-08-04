@@ -18,7 +18,7 @@ parameters:
     description: 指定 lint 报告写入路径（如 /tmp/lint-report-<mr_number>.md）。未提供时使用默认时间戳命名
     required: false
   - name: worktree-path
-    description: worktree 根目录，提供后 agent 用其拼接源码文件的绝对路径（由 pr-review 注入）
+    description: worktree 根目录，仅用于拼接源码文件和构建脚本的路径；lint 脚本、规则配置从 CWD 读取（由 pr-review 注入）
     required: false
 ---
 
@@ -45,6 +45,17 @@ L2 Lint 检查，范围确定优先级：
 > **代码就绪由调用方负责**：skill 不做 `git checkout`、`git fetch` 等操作。调用方（如 pr-review）负责确保工作目录位于正确的分支上。
 > `diff-range` 由调用方注入，skill 不解析、不修改，直接转发给 lint 脚本。
 
+### 路径来源
+
+| 资源 | 来源 | 说明 |
+|------|------|------|
+| 构建脚本（Makefile、CMakeLists.txt 等） | `--worktree-path` | 和源码结构强耦合，从 MR 分支读取 |
+| 源码 | `--worktree-path` | 待检查的代码 |
+| Lint 脚本 + 规则配置（`.clang-tidy`、`.golangci.yml` 等） | **CWD**（原始仓库） | 门禁标准由主线定义；脚本和规则配套使用，同源避免兼容性问题 |
+| CLAUDE.md、规则文件 | **CWD**（原始仓库） | 纯 AI 指引，和源码解耦 |
+
+Lint 执行模式：`cd $WORKTREE_PATH && run_lint --config $CWD/.clang-tidy ...`——源码和构建在 worktree，工具和规则在 CWD。`--worktree-path` 为空时（本地开发场景），CWD 同时作为上述两类来源。
+
 ## 职责边界
 
 - ✅ Lint 工具执行 + 告警分类（误报/有意为之/历史遗留/需修复）
@@ -58,9 +69,11 @@ L2 Lint 检查，范围确定优先级：
 
 ## L1：编译检查
 
+> 构建命令和构建脚本从 `--worktree-path` 读取（见路径来源）。
+
 1. **获取构建命令**
-   - 在当前会话上下文中查找已知的构建方法（CLAUDE.md、README、项目 rules、先前对话等），如找到则直接使用
-   - 若未找到，探测项目中存在的构建系统文件（Makefile、`build.sh`、`CMakeLists.txt`、`go.mod`、`package.json` 等）。项目可能包含多语言/多模块，逐一列出所有探测到的构建命令
+   - 从 CWD 的 CLAUDE.md、README、项目 rules 中查找已知的构建方法
+   - 若未找到，在 `--worktree-path`（提供时）或 CWD 中探测构建系统文件（Makefile、`build.sh`、`CMakeLists.txt`、`go.mod`、`package.json` 等）
    - 自行探测结果需**向用户确认**后再使用。确认后将命令记录到项目上下文中（如 CLAUDE.md 或项目 rules 文件），后续直接读取
        - **阻断规则**：若构建命令来自自行探测且未经用户确认，禁止进入步骤 2。必须使用 `AskUserQuestion` 向用户确认后方可继续
        - 禁止根据变更文件（`git diff`、`git log` 输出）自行推断或拼凑构建命令
@@ -80,9 +93,11 @@ L2 Lint 检查，范围确定优先级：
 
 ## L2：Lint 分析
 
+> lint 脚本和规则配置从 **CWD**（原始仓库）读取；执行时 `cd` 到 `--worktree-path`（提供时），lint 命令中的配置路径指向 CWD（见路径来源）。
+
 1. **获取 Lint 命令**
-   - 在当前会话上下文中查找已知的 lint 方法（CLAUDE.md、README、项目 rules、先前对话等）
-   - 若未找到，探测项目中存在的可执行 lint 脚本。项目可能包含多语言/多模块，逐一列出所有探测到的 lint 命令
+   - 从 **CWD** 的 CLAUDE.md、README、项目 rules 中查找已知的 lint 方法
+   - 若未找到，在 **CWD** 中探测可执行 lint 脚本（`ci/`、`scripts/`、`utils/` 下 + Makefile lint target + `package.json` lint script 等）
    - 自行探测结果需**向用户确认**后再使用。确认后将命令记录到项目上下文中（如 CLAUDE.md 或项目 rules 文件），后续直接读取
        - **阻断规则**：若 lint 命令来自自行探测且未经用户确认，禁止进入步骤 2。必须使用 `AskUserQuestion` 向用户确认后方可继续
        - 禁止根据变更文件（`git diff`、`git log` 输出）自行推断或拼凑 lint 命令
