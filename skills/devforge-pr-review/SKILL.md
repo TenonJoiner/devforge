@@ -158,7 +158,7 @@ git worktree add --detach "$WORKTREE_PATH" "origin/<head_branch>"
 /df:code-review --diff-range "git diff origin/<base_branch>...<head_branch>" --report-output-path /tmp/code-review-report-<mr_number>.md --worktree-path "$WORKTREE_PATH"
 ```
 
-主会话通过 Skill 工具加载 `devforge-code-review`，传入 `diff-range`、`report-output-path` 和 `worktree-path`（worktree 未创建时 `$WORKTREE_PATH` 为空字符串）参数。代码评审由 `devforge-code-review` 独立完成，pr-review 不干预其内部 agent 调度。
+主会话通过 Skill 工具调用 `devforge-code-review`（以 `/df:code-review --diff-range "..." --report-output-path "..." --worktree-path "..."` 形式），让 skill 独立完成其内部流水线（深度评审时：5 个 subagent 并行 → 汇总去重 → 误报审核 → 最终报告；轻量评审时：单 agent 初评 → 误报审核 → 最终报告）。**严禁使用 Agent 工具直接派发 code-reviewer agent 做全维度评审**——这会绕过 skill 的汇总与误报审核流水线，产出的报告保留 D1-D5 维度结构和独立编号，不符合最终报告格式（应按 CRITICAL/HIGH/MEDIUM/LOW 四级统一编排）。pr-review 不干预 `devforge-code-review` 的内部 agent 调度。
 
 **步骤 5b：调用 `devforge-lint-check` skill（与 5a 并行）**（`--only` 未提供或包含 `lint` 时执行）
 
@@ -168,7 +168,7 @@ git worktree add --detach "$WORKTREE_PATH" "origin/<head_branch>"
 /df:lint --diff-range "git diff origin/<base_branch>...<head_branch>" --report-output-path /tmp/lint-report-<mr_number>.md --worktree-path "$WORKTREE_PATH"
 ```
 
-主会话通过 Skill 工具加载 `devforge-lint-check`，传入 `diff-range`、`report-output-path` 和 `worktree-path`（worktree 未创建时 `$WORKTREE_PATH` 为空字符串）参数。**不传 `autofix`**（默认 false），PR review 场景仅检测不修复。lint 检查由 `devforge-lint-check` 独立完成，pr-review 不干预其内部 agent 调度。
+主会话通过 Skill 工具调用 `devforge-lint-check`（以 `/df:lint --diff-range "..." --report-output-path "..." --worktree-path "..."` 形式），让 skill 独立完成其内部流水线（L1 编译检查 → L2 lint 分析 → 交叉判定 → 按需修复/最终报告）。**严禁使用 Agent 工具直接派发 agent 替代 skill 流水线**。不传 `autofix`（默认 false），PR review 场景仅检测不修复。pr-review 不干预 `devforge-lint-check` 的内部 agent 调度。
 
 **步骤 5c：调用 `devforge-log-audit` skill（与 5a、5b 并行）**（`--only` 未提供或包含 `log-audit` 时执行）
 
@@ -178,7 +178,7 @@ git worktree add --detach "$WORKTREE_PATH" "origin/<head_branch>"
 /df:log-audit --diff-range "git diff origin/<base_branch>...<head_branch>" --report-output-path /tmp/log-audit-<mr_number>.md --worktree-path "$WORKTREE_PATH"
 ```
 
-主会话通过 Skill 工具加载 `devforge-log-audit`，传入 `diff-range`、`report-output-path` 和 `worktree-path`（worktree 未创建时 `$WORKTREE_PATH` 为空字符串）参数。**无需 `--log-dir`**——CI 场景下频率维度自动跳过，仅审级别合理性。日志审计由 `devforge-log-audit` 独立完成，pr-review 不干预其内部 agent 调度。
+主会话通过 Skill 工具调用 `devforge-log-audit`（以 `/df:log-audit --diff-range "..." --report-output-path "..." --worktree-path "..."` 形式），让 skill 独立完成其内部流水线。**严禁使用 Agent 工具直接派发 agent 替代 skill 流水线**。无需 `--log-dir`——CI 场景下频率维度自动跳过，仅审级别合理性。pr-review 不干预 `devforge-log-audit` 的内部 agent 调度。
 
 #### 分支 B：纯文档变更评审
 
@@ -220,6 +220,19 @@ pr-review 的报告产出取决于分支：
 | 文档评审 | `/tmp/doc-review-report-<mr_number>.md` | 分支 B |
 
 分支 B 无代码评审、lint 和日志审计报告。
+
+**步骤 6.0：报告格式验证闸门**
+
+在提取报告内容之前，主会话必须验证每份报告的文件格式符合下游 skill 的输出规范。**此步为硬门控——任一份报告格式不符则中止，不得继续合并。**
+
+| 报告 | 验证项 | 不合规信号 |
+|------|--------|-----------|
+| 代码评审 | 按 CRITICAL/HIGH/MEDIUM/LOW 四级编排，非 D1-D5 维度结构 | 报告中出现 `D1:` `D2:` `D3:` `D4:` `D5:` 章节标题、维度内独立编号、或"同类缺陷扫描"等中间产物特征 |
+| Lint 检查 | 按模板自检清单通过后的格式 | 报告中出现"静态编码规范检查""逐规则审查"等非 L1/L2 章节、或级别字段使用工具原始级别（P0-P4 等） |
+| 日志审计 | 按模板自检清单通过后的格式 | 报告中出现"待确认""疑似"等未完成结论 |
+
+- 通过 → 进入"从各报告提取"
+- 不通过 → **驳回**：报告格式不符说明下游 skill 的流水线未正确执行（通常是因为 Skill 工具被绕过、改用 Agent 工具直接派发 agent）。**不得**手动修正报告或直接提取内容——必须回到步骤 5a/5b/5c，通过 Skill 工具重新调用对应下游 skill，让它完整执行内部流水线后重新生成报告
 
 从各报告提取：
 - 各份报告的问题统计：CRITICAL / HIGH / MEDIUM / LOW 数量
@@ -357,6 +370,7 @@ git worktree remove "$WORKTREE_PATH"
 | 外层摘要暴露具体问题 | 评论页面过长，未折叠 | 具体发现全部放在 `<details>` 内 |
 | 改写/概括中间报告内容 | 丢失细节，与原始报告不一致 | 原样粘贴完整内容 |
 | 跳过自检直接发送 | 格式错误、折叠缺失 | 逐项自检通过后再发 |
+| 用 Agent 工具直接派发 agent 替代 Skill 工具调用下游 skill | 绕过 skill 内部流水线（汇总/去重/误报审核），产出中间格式报告（如 D1-D5 维度结构）而非最终报告 | 使用 Skill 工具调用下游 skill，让它完整执行内部流水线 |
 
 ## 关联
 
