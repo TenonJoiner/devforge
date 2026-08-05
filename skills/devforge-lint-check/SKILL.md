@@ -54,7 +54,10 @@ L2 Lint 检查，范围确定优先级：
 | Lint 脚本 + 规则配置（`.clang-tidy`、`.golangci.yml` 等） | **CWD**（原始仓库） | 门禁标准由主线定义；脚本和规则配套使用，同源避免兼容性问题 |
 | CLAUDE.md、规则文件 | **CWD**（原始仓库） | 纯 AI 指引，和源码解耦 |
 
-Lint 执行模式：`cd $WORKTREE_PATH && run_lint --config $CWD/.clang-tidy ...`——源码和构建在 worktree，工具和规则在 CWD。`--worktree-path` 为空时（本地开发场景），CWD 同时作为上述两类来源。
+**L1 执行模式**：`cd $WORKTREE_PATH && <构建命令>`——构建脚本和源码均在 worktree。
+**L2 执行模式**：Lint 脚本从 CWD 执行，通过参数传递 worktree 路径：`<lint 命令> <worktree 路径参数>`。具体参数名（如 `REPO`、`--src-dir` 等）由项目 lint 脚本定义，从 CLAUDE.md 或项目 lint 说明文档中读取。
+
+`--worktree-path` 为空时（本地开发场景），CWD 同时作为上述两类来源，L1/L2 均从 CWD 执行。
 
 ## 职责边界
 
@@ -72,7 +75,7 @@ Lint 执行模式：`cd $WORKTREE_PATH && run_lint --config $CWD/.clang-tidy ...
 > 构建命令和构建脚本从 `--worktree-path` 读取（见路径来源）。
 
 1. **获取构建命令**
-   - 从 CWD 的 CLAUDE.md、README、项目 rules 中查找已知的构建方法
+   - 从 CWD 的 CLAUDE.md、README、项目 rules、项目构建说明文档（如 `building.md`）中查找已知的构建方法
    - 若未找到，在 `--worktree-path`（提供时）或 CWD 中探测构建系统文件（Makefile、`build.sh`、`CMakeLists.txt`、`go.mod`、`package.json` 等）
    - 自行探测结果需**向用户确认**后再使用。确认后将命令记录到项目上下文中（如 CLAUDE.md 或项目 rules 文件），后续直接读取
        - **阻断规则**：若构建命令来自自行探测且未经用户确认，禁止进入步骤 2。必须使用 `AskUserQuestion` 向用户确认后方可继续
@@ -96,10 +99,10 @@ Lint 执行模式：`cd $WORKTREE_PATH && run_lint --config $CWD/.clang-tidy ...
 
 ## L2：Lint 分析
 
-> lint 脚本和规则配置从 **CWD**（原始仓库）读取；执行时 `cd` 到 `--worktree-path`（提供时），lint 命令中的配置路径指向 CWD（见路径来源）。
+> lint 脚本和规则配置从 **CWD**（原始仓库）读取；执行时从 CWD 发起，通过参数传递 worktree 路径（见路径来源）。
 
 1. **获取 Lint 命令**
-   - 从 **CWD** 的 CLAUDE.md、README、项目 rules 中查找已知的 lint 方法
+   - 从 **CWD** 的 CLAUDE.md、README、项目 rules、项目 lint 说明文档（如 `linting.md`）中查找已知的 lint 方法
    - 若未找到，在 **CWD** 中探测可执行 lint 脚本（`ci/`、`scripts/`、`utils/` 下 + Makefile lint target + `package.json` lint script 等）
    - 自行探测结果需**向用户确认**后再使用。确认后将命令记录到项目上下文中（如 CLAUDE.md 或项目 rules 文件），后续直接读取
        - **阻断规则**：若 lint 命令来自自行探测且未经用户确认，禁止进入步骤 2。必须使用 `AskUserQuestion` 向用户确认后方可继续
