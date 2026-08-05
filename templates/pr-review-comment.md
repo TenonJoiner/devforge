@@ -6,6 +6,7 @@ mandatory-sections:
   - 评审结论
   - 问题计数表
   - 代码评审折叠块（分支 A 必填，分支 B 省略）
+  - Lint 检查折叠块（分支 A 必填，分支 B 省略）
   - 日志审计折叠块（分支 A 必填，分支 B 省略）
 optional-sections: []
 checklist-at-end: true
@@ -39,6 +40,13 @@ checklist-at-end: true
 </details>
 
 <details>
+<summary>展开查看 Lint 检查报告</summary>
+
+<Lint 检查报告完整内容，原样粘贴，禁止概括/删减/改写>
+
+</details>
+
+<details>
 <summary>展开查看日志审计报告</summary>
 
 <日志审计报告完整内容，原样粘贴，禁止概括/删减/改写>
@@ -52,7 +60,7 @@ checklist-at-end: true
 > 2. 完整报告的问题详情必须放在 `<details>`/`<summary>` 折叠块内
 > 3. 中间报告内容原样粘贴进折叠块，禁止重新概括、删减、改写、只摘录部分
 > 4. 禁止把 CRITICAL/HIGH 的具体发现提到外层的"阻塞项""强烈建议"等段落
-> 5. 若日志审计报告不存在，对应折叠块省略；代码评审折叠块始终存在（本 skill 调用方）
+> 5. 任一报告不存在或为空，对应折叠块省略，不计入统计
 
 ---
 
@@ -66,4 +74,5 @@ checklist-at-end: true
 - [ ] 问题计数表各级别数量与折叠块内报告摘要一致
 - [ ] 所有问题详情在 `<details>` 折叠块内，外层无泄露的具体发现
 - [ ] 每个折叠块以 `<details>` 开始、`</details>` 结束，标签完整闭合
-- [ ] 折叠块内容与对应的中间报告文件（`/tmp/pr-review-report-*.md`、`/tmp/log-audit-*.md`）内容一致，未被改写
+- [ ] 分支 A 时三个折叠块全部存在（代码评审、Lint 检查、日志审计），顺序正确
+- [ ] 折叠块内容与对应的中间报告文件（`/tmp/code-review-report-*.md`、`/tmp/lint-report-*.md`、`/tmp/log-audit-*.md`）内容一致，未被改写
