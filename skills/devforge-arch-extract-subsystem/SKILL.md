@@ -172,6 +172,15 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent, AskUserQuestion]
 3. 锁策略：全局锁、锁顺序规则
 4. 线程/协程模型：角色划分、调度方式
 
+**Mermaid 语法规则**（生成 stateDiagram 时必须遵守）：
+- 代码块以 ` ```mermaid` 开头
+- 状态名含空格、中文或特殊字符时，**必须**用双引号包裹：`state "等待锁" as WaitingLock`
+- 带引号的状态名需先用 `state "名称" as Alias` 声明，后续转换用别名引用
+- `{}` 花括号在 Mermaid 中是语法保留字符，**禁止**出现在状态名或转换标签中。如需表示占位符，用文字替代（如"返回错误码"代替"返回 {error}"）
+- `<br/>` 在 Mermaid 中无法渲染，**禁止**使用。如需换行，拆为多条转换或另加注释文字
+- 转换标签文本同样避免使用 `()` `[]`、冒号 `:`——这些也是语法保留字符。如需表达，用 `&#40;` `&#41;` 转义或用文字替代
+- 不写 `note`、`<<fork>>`、复合状态（嵌套 `state {}`）——保持最简
+
 **输出**（写入 `/tmp/arch-extract-subsys-data-<ts>.md`）：
 - 核心数据模型描述
 - 状态机图（Mermaid stateDiagram，如适用）
@@ -312,9 +321,10 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent, AskUserQuestion]
 - 参照模板自检清单
 - 去掉章节间重复
 - 术语统一
+- **Mermaid 语法自检**：检查文档中所有 ` ```mermaid` 代码块，逐条验证状态/参与者名称是否正确加引号、转换/箭头标签是否含未转义的特殊字符。发现语法问题必须修正后再输出
 ```
 
-**质量门禁**：文档 ≤300 行，所有必填章节均已覆盖。
+**质量门禁**：文档 ≤300 行，所有必填章节均已覆盖，Mermaid 代码块无语法错误。
 
 ### 第 9 阶段：评审
 
@@ -344,7 +354,12 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent, AskUserQuestion]
 
 ```
 **任务模式**：独立评审
-**评审视角**：篇幅 ≤300 行、图表清晰正确、术语统一、无占位填充
+**评审视角**：
+1. 文档篇幅 ≤300 行
+2. Mermaid 图表语法正确性（逐条检查：状态/参与者名称含空格/中文是否加引号、转换/箭头标签是否含未转义的括号/尖括号、代码块是否以 ```mermaid 开头）
+3. ASCII Art 图清晰、组件名正确
+4. 术语是否统一
+5. 无占位填充
 **被评审对象**：`/tmp/arch-extract-subsys-draft-<ts>.md`
 **review_output_path**：`/tmp/arch-extract-subsys-review-expr-<ts>.md`
 ```

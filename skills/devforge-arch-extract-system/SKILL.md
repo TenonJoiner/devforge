@@ -131,6 +131,15 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
 - 阶段 1 收集结果 + 阶段 2 合成结果
 - 模板：skills/devforge-arch-extract-system/templates/arch-reverse-system.md（写作前 MUST 先读取）
 
+**Mermaid 语法规则**（生成数据流图时必须遵守）：
+- 代码块以 ` ```mermaid` 开头
+- 参与者/节点名称含空格、中文或特殊字符时，**必须**用双引号包裹并用 `as` 指定短别名：`participant "存储层 Storage" as Storage`
+- `{}` 花括号在 Mermaid 中是语法保留字符，**禁止**出现在标签或节点文本中。如需表示占位符，用文字描述替代（如"返回错误码"代替"返回 {error}"）
+- `<br/>` 在 Mermaid 中无法渲染，**禁止**使用。如需换行，拆为多条消息或交给文字描述补充
+- 箭头/连线标签文本同样避免使用 `()` `[]`、尖括号 `<>`——这些也是语法保留字符。如需表达，用 `&#40;` `&#41;` 转义或用文字替代
+- 时序图只用四种基础箭头：`->>` `-->>` `->` `-->`；不写 `activate`/`deactivate`/`Note`/`loop`/`alt`
+- 流程图（flowchart）只用最简节点语法，不写 `style`/`classDef`/`click` 等样式声明
+
 **输出**（写入 `/tmp/arch-extract-sys-secB-<ts>.md`）
 ```
 
@@ -142,9 +151,10 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
 - 参照模板自检清单
 - 去掉章节间重复
 - 术语统一
+- **Mermaid 语法自检**：检查文档中所有 ` ```mermaid` 代码块，逐条验证参与者/节点名称是否正确加引号、箭头/连线标签是否含未转义的特殊字符。发现语法问题必须修正后再输出
 ```
 
-**质量门禁**：文档 ≤300 行，所有必填章节均已覆盖。
+**质量门禁**：文档 ≤300 行，所有必填章节均已覆盖，Mermaid 代码块无语法错误。
 
 ### 第 4 阶段：评审
 
@@ -175,7 +185,8 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
 2. 各章节最低深度达标
 3. 文档 ≤300 行
 4. 未展开子系统内部设计（那是 subsystem 文档的职责）
-5. 图表清晰、术语统一、无占位填充
+5. Mermaid 图表语法正确性（逐条检查：参与者/节点名称含空格/中文是否加引号、箭头标签是否含未转义的括号/尖括号、代码块是否以 ```mermaid 开头）
+6. ASCII Art 图清晰、术语统一、无占位填充
 
 **被评审对象**：`/tmp/arch-extract-sys-draft-<ts>.md`
 **review_output_path**：`/tmp/arch-extract-sys-review-comp-<ts>.md`
