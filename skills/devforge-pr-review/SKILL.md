@@ -305,7 +305,7 @@ pr-review 的报告产出取决于分支：
      gh pr comment <number> --body-file /tmp/pr-review-comment-<mr_number>.md
      
      # GitLab
-     glab mr note create <number> --body-file /tmp/pr-review-comment-<mr_number>.md
+     glab mr note create <number> < /tmp/pr-review-comment-<mr_number>.md
      ```
      **严禁使用** `gh pr review`（评论会贴到代码行而非评论区）、`gh api`（可绕过约束拆分评论）、或任何其他评论方式。**严禁多次调用**——一次 MR 评审只产生一条评论。违者会导致报告拆分、格式丢失、或评论出现在错误位置。
   
@@ -360,7 +360,7 @@ git worktree prune
 只允许以下命令发送评论，**单次调用**：
 
 - GitHub：`gh pr comment <number> --body-file /tmp/pr-review-comment-<mr_number>.md`
-- GitLab：`glab mr note create <number> --body-file /tmp/pr-review-comment-<mr_number>.md`
+- GitLab：`glab mr note create <number> < /tmp/pr-review-comment-<mr_number>.md`
 
 ### 反模式（严禁）
 
