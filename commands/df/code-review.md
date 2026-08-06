@@ -6,7 +6,7 @@
 
 - **独立使用**：日常开发中任何需要外部视角检查代码质量的时刻
   - `/df:code-review` — 只评审不修复
-  - `/df:code-review autofix` — 评审并自动修复
+  - `/df:code-review --autofix` — 评审并自动修复
 - **批量变更后**：一批 task 完成后做全仓收尾评审
 
 ## 执行流程
@@ -21,17 +21,17 @@
 4. **误报审核**：全新 `code-reviewer` 实例逐条复核初评发现，结合源码剔除可证伪的误报，存疑保留；被排除项记入「已排除（疑似误报）」附录
 5. 输出结构化评审报告，按 CRITICAL → HIGH → MEDIUM 分级
 
-**`autofix` 未设置（默认）**：输出评审报告后结束，不执行修复。
+**`--autofix` 未设置（默认）**：输出评审报告后结束，不执行修复。
 
-**`autofix` 已设置**：继续以下步骤——
+**`--autofix` 已设置**：继续以下步骤——
 6. **修复**：`developer` 按报告逐项修复（CRITICAL → HIGH → MEDIUM）
 7. **验证轮**（仅深度评审）：修复完成后再执行一轮评审。若有新增 CRITICAL/HIGH，继续修复并再次评审，直到无新增 CRITICAL/HIGH 时收敛
 
 ## 结束条件
 
-**`autofix` 未设置（默认）**：输出评审报告和最终结论后结束。
+**`--autofix` 未设置（默认）**：输出评审报告和最终结论后结束。
 
-**`autofix` 已设置**——
+**`--autofix` 已设置**——
 - 轻量评审：单轮评审 + 修复后结束
 - 深度评审：新一轮评审无新增 CRITICAL/HIGH 时结束
 - MEDIUM 由 developer 判断是否修复，未修复的标注为"已接受风险"
@@ -40,12 +40,13 @@
 ## 参数
 
 ```
-/df:code-review [autofix] [--full] [--diff-range <value>] [file-pattern]
+/df:code-review [--autofix] [--full] [--diff-range <value>] [--report-output-path <path>] [file-pattern]
 ```
 
-- `autofix`（可选）：评审后自动修复代码。不带此参数时只评审不修复
+- `--autofix`（可选）：评审后自动修复代码。不带此参数时只评审不修复
 - `--full`（可选）：全仓源码评审。不传时默认评审工作区未提交变更（`git diff HEAD` + `git diff --cached`）
 - `--diff-range`（可选）：显式指定 git diff 范围，如 `"git diff origin/main...HEAD"`。优先级高于 `--full`，由外部调用方（如 pr-review）传入
+- `--report-output-path <path>`（可选）：指定评审报告写入路径，未提供时使用默认时间戳路径
 - `file-pattern`（可选）：只评审匹配的文件，如 `src/storage/*.c`
 
 ## 使用示例
@@ -53,7 +54,7 @@
 **全仓评审**：
 
 ```
-/df:code-review autofix --full
+/df:code-review --autofix --full
 > 评审范围：全仓源码，45 个文件
 > 启动深度评审（5 维度并行）...
 ```
@@ -83,7 +84,7 @@
 **评审并自动修复**：
 
 ```
-/df:code-review autofix
+/df:code-review --autofix
 > 评审 3 个文件，+120 -45
 >
 > [Round 1] CRITICAL: 0 | HIGH: 1 | MEDIUM: 2 | LOW: 1

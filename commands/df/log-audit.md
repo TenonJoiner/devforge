@@ -5,19 +5,21 @@
 ## 用法
 
 ```
-/df:log-audit [--full] [--log-dir <path>] [--diff-range <range>]
+/df:log-audit [--autofix] [--full] [--log-dir <path>] [--diff-range <range>] [--report-output-path <path>]
 ```
 
 | 参数 | 说明 |
 |------|------|
-| （无） | 审计工作区未提交变更（`git diff HEAD` + `git diff --cached`） |
+| （无） | 审计工作区未提交变更（`git diff HEAD` + `git diff --cached`），只审计不修复 |
+| `--autofix` | 审计后自动修复日志问题并回归验证（最多 5 轮） |
 | `--full` | **全仓批量整改**：审计全仓所有日志语句 |
 | `--log-dir <path>` | 指定运行时日志目录——提供后两维度均执行：频率量化 + 运行时增强的级别审计（日志分布/高频模板作为级别滥用的实证线索） |
 | `--diff-range <range>` | 显式指定 git diff 范围，优先级最高（由 pr-review 等调用方注入） |
+| `--report-output-path <path>` | 指定报告写入路径，未提供时使用默认 `/tmp/log-audit-<ts>-<pid>.md` |
 
 ## 产出物
 
-结构化日志审计报告（默认 `/tmp/log-audit-<ts>-<pid>.md`），按 CRITICAL / HIGH / MEDIUM / LOW 分级。无 `--log-dir` 时仅做级别合理性审计；提供 `--log-dir` 时两维度均执行（频率量化 + 运行时增强的级别审计）。只评审不修复。
+结构化日志审计报告（默认 `/tmp/log-audit-<ts>-<pid>.md`），按 CRITICAL / HIGH / MEDIUM / LOW 分级。无 `--log-dir` 时仅做级别合理性审计；提供 `--log-dir` 时两维度均执行（频率量化 + 运行时增强的级别审计）。带 `--autofix` 时审计后自动修复 CRITICAL/HIGH 问题并回归验证（最多 5 轮）。
 
 ## 示例
 

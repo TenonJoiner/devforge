@@ -5,15 +5,16 @@
 ## 用法
 
 ```
-/df:lint [autofix] [--full] [--diff-range <range>]
+/df:lint [--autofix] [--full] [--diff-range <range>] [--report-output-path <path>]
 ```
 
 | 参数 | 说明 |
 |------|------|
 | （无） | 检查工作区未提交变更（`git diff HEAD` + `git diff --cached`），只检测不修复 |
-| `autofix` | 检测后自动修复问题并回归检查（最多 5 轮） |
+| `--autofix` | 检测后自动修复问题并回归检查（最多 5 轮） |
 | `--full` | 全仓 lint 检查 |
 | `--diff-range <range>` | 显式指定 git diff 范围，优先级最高（由 pr-review 等调用方注入） |
+| `--report-output-path <path>` | 指定报告写入路径，未提供时使用默认时间戳路径 |
 
 ## 场景
 
@@ -27,8 +28,8 @@
 
 检查报告（输出到对话，不写入文件）。
 
-- **不带 `autofix`**：输出经源码+规则交叉验证后的分析报告，不执行修复
-- **带 `autofix`**：对确认需修复的问题派遣 `developer` 修复并回归检查（最多 5 轮）
+- **不带 `--autofix`**：输出经源码+规则交叉验证后的分析报告，不执行修复
+- **带 `--autofix`**：对确认需修复的问题派遣 `developer` 修复并回归检查（最多 5 轮）
 
 lint 原始告警不是最终结果。每条告警经 `developer` 读源码、查规则后做四维判定（是否误报 / 是否需修复 / 级别是否合适 / 规则是否合理），结果直接覆盖原报告，同时给出规则层面的建议（屏蔽/新增）。
 
