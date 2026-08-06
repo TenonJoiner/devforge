@@ -89,7 +89,7 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
 
 **每一阶段迭代的产出必须写入项目文件，禁止仅在对话中输出。**
 
-- **原始 agent**（researcher / architect）：将完整产出写入 `-draft-` 标记的中间文件，向主会话返回结构化摘要，包含以下字段（缺失项跳过，不超过 10 行）：
+- **原始 agent**（devforge:researcher / architect）：将完整产出写入 `-draft-` 标记的中间文件，向主会话返回结构化摘要，包含以下字段（缺失项跳过，不超过 10 行）：
   - `产出`：写入的文件路径 + 核心产出数（方案数/章节数/ADR 数等）
   - `数字`：覆盖率、完整度等可量化指标
   - `异常`：覆盖缺口、数据矛盾、视角间分歧（附 1-2 句定位，供后续合并/评审参考）
@@ -126,7 +126,7 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
 
 **已下放给 agent 的职责**（主会话不再执行）：
 - 文件写入：agent 自行 Write/Edit 到 draft/review/最终文件
-- 内容整合：由**同类型新 agent 实例**执行合并去重（researcher 合并 researcher 的 draft，architect 合并 architect 的 draft）
+- 内容整合：由**同类型新 agent 实例**执行合并去重（devforge:researcher 合并 devforge:researcher 的 draft，architect 合并 architect 的 draft）
 - 评审记录：reviewer 追加到 `-review.md`，合并 agent 将 PASS 标记写入最终文件
 
 **边界警戒**（这些行为会破坏 agent 协作的质量保障机制）：
@@ -154,7 +154,7 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
 
 ### 视角切分原则
 
-#### 发散视角（researcher / architect 等产出 agent）
+#### 发散视角（devforge:researcher / architect 等产出 agent）
 
 多 agent 并行发散时，每个 agent 从独立、互补的视角产出。视角由主会话基于**本次产品的具体上下文**动态生成，在派遣 prompt 中说明切分理由。
 
@@ -162,7 +162,7 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
 
 **反面约束**：不得套用固定视角清单（如对所有产品都用"数据流/状态/性能/故障/演进"五视角）。视角服务于产品决策——不同产品的决策关注点不同，视角应反映这种差异。
 
-#### 产出者派遣 prompt 必备字段（architect / researcher agent）
+#### 产出者派遣 prompt 必备字段（architect / devforge:researcher agent）
 
 **核心原则**：产出者 agent 已解耦 `工作模式` / `template 路径` / `output 路径` 等流程性细节。skill 派遣时必须在 prompt 中显式注入：
 
@@ -173,7 +173,7 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
 5. **length_hint**（如 `ADR 80-200 行` / `系统总纲 300-600 行` / `子系统设计 200-500 行`）
 6. **上游输入路径**（如 `docs/architecture/reference/<product>.md` 标杆研究、`docs/requirements/product-spec.md` 需求约束）
 
-**researcher agent 额外字段**：
+**devforge:researcher agent 额外字段**：
 - **研究视角**（`架构研究`：系统/架构/实现视角，按三层剖析模型）
 - **output_path**（`docs/architecture/reference/<product>.md`）
 
@@ -185,7 +185,7 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
 |---------|------|------|
 | **对象特异视角**（评审项） | 被评审 template | `mandatory-sections` + `checklist-at-end` 段（每个 template 已自带评审锚点） |
 | **场景特异视角**（评审深度） | 主会话派遣 prompt | 基于 `domain_specific` / `quality_attributes.priorities` 前两项 / Non-Goals 等动态注入 |
-| **评审思维风格** | reviewer agent 人设 | architect-reviewer = 技术/架构视角；product-reviewer = 业务/用户视角；project-reviewer = 进度/资源视角 |
+| **评审思维风格** | reviewer agent 人设 | devforge:architect-reviewer = 技术/架构视角；devforge:product-reviewer = 业务/用户视角；devforge:project-reviewer = 进度/资源视角 |
 | **评审报告格式** | `templates/review-report.md` | 统一输出格式，**不含**任何评审项；reviewer 按格式产出 |
 
 **派遣 prompt 必备字段**（主会话每次派遣 reviewer 时必须传入）：
@@ -198,9 +198,9 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
 6. **被评审对象在系统中的位置说明**（作为问题分级判定的系统上下文）
 
 **反面约束**：
-- 禁止 skill 中硬编码 reviewer 的检查项清单（如"product-reviewer 看用户场景 / Non-Goals 覆盖度 / 量化指标合理性"——这类视角应在被评审 template 中或派遣 prompt 中表达）
+- 禁止 skill 中硬编码 reviewer 的检查项清单（如"devforge:product-reviewer 看用户场景 / Non-Goals 覆盖度 / 量化指标合理性"——这类视角应在被评审 template 中或派遣 prompt 中表达）
 - 禁止 skill 中硬编码 reviewer 数量（统一用 ≥N 描述下限）
-- 禁止默认"两个不同类型 reviewer = 一种分工组合"——同一类型也可多实例做交叉验证（如 2 个 architect-reviewer 对比意见）
+- 禁止默认"两个不同类型 reviewer = 一种分工组合"——同一类型也可多实例做交叉验证（如 2 个 devforge:architect-reviewer 对比意见）
 - 禁止 reviewer agent 在 prompt 之外携带任何评审项
 
 各阶段文件引用本原则，不再重复定义。
@@ -212,13 +212,13 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
 | 阶段 | 内容类型 | 复杂度 | agent 配置 |
 |------|---------|-------|-----------|
 | 第 0 阶段 | 交互式信息收集 | 低 | 1 个 architect（交互式，豁免评审循环） |
-| 第 1 阶段 | 标杆研究（架构调研报告） | 高 | 每个标杆 ≥2 个 researcher + 整体 ≥2 个 reviewer |
+| 第 1 阶段 | 标杆研究（架构调研报告） | 高 | 每个标杆 ≥2 个 devforge:researcher + 整体 ≥2 个 reviewer |
 | 第 2 阶段 步骤 1 | 整体架构发散（系统级方案） | **极高** | 阶段总 architect ≥5 + ≥3 个 reviewer |
 | 第 2 阶段 步骤 3 | 维度方案发散 | 高 | 每维度 ≥3 个 architect + ≥2 个 reviewer |
 | 第 3 阶段 步骤 1 | ADR 收敛（不可逆决策） | **极高** | 阶段总 architect ≥5 + ≥3 个 reviewer |
 | 第 3 阶段 步骤 2 | 系统架构总纲定稿 | **极高** | 阶段总 architect ≥5 + ≥3 个 reviewer |
 | 第 3 阶段 步骤 3 | 子系统架构定稿 | 高 | 每子系统 ≥3 个 architect + ≥2 个 reviewer |
-| 第 4 阶段 | 维护模式快速通道 | 低 | 1 个 architect-reviewer 快速复核 |
+| 第 4 阶段 | 维护模式快速通道 | 低 | 1 个 devforge:architect-reviewer 快速复核 |
 
 **说明**：
 - 极高/高复杂度的 agent 数下限是**阶段或步骤的总 agent 数**，不要求每个子单元独立达标

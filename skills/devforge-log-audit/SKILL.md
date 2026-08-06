@@ -27,15 +27,15 @@ parameters:
 
 两个审计维度：**级别合理性**（级别偏高/偏低，各级别生产可用性以语义表「生产默认」列为准）与 **打印频率**（是否过于频繁）。无 `--log-dir` 时仅做纯静态级别审计；提供 `--log-dir` 时两个维度都执行——频率量化 + 运行时增强的级别审计（脚本输出的级别分布 / 高频模板 / 打印速率作为实证，结合源码判定级别是否滥用）。
 
-审计知识基线（级别语义 + 反模式 + 判定阈值）内建于 `log-auditor` agent；**项目特定级别定义由第 1 阶段探测后注入 `log-auditor`**。默认只审计不修复。
+审计知识基线（级别语义 + 反模式 + 判定阈值）内建于 `devforge:log-auditor` agent；**项目特定级别定义由第 1 阶段探测后注入 `devforge:log-auditor`**。默认只审计不修复。
 
 ### 职责边界
 
 - ✅ 探测范围内各语言的日志级别定义（配置/文档/源码反推）与日志框架
-- ✅ 派遣 `log-auditor` 执行审计（无 `--log-dir` 时仅级别审计，有时两维度均执行），汇总分级报告
+- ✅ 派遣 `devforge:log-auditor` 执行审计（无 `--log-dir` 时仅级别审计，有时两维度均执行），汇总分级报告
 - ❌ 不修改日志、不改代码（本 skill 只评审）
 - ❌ 不评日志文案措辞、标点、大小写等风格偏好 → 超出两维度范围（完全无动态变量的静态消息除外——属结构性缺陷，非措辞问题）
-- ❌ 主会话不做深度审计判断（由 `log-auditor` 完成），不读 agent 完整产出（只读 ≤5 行数字摘要）
+- ❌ 主会话不做深度审计判断（由 `devforge:log-auditor` 完成），不读 agent 完整产出（只读 ≤5 行数字摘要）
 
 ## 使用场景与审计范围
 
@@ -75,7 +75,7 @@ parameters:
 
 **步骤 1：探测语言与日志框架**
 - 扫描 `--worktree-path`（提供时）或 CWD 中的源码文件，统计各语言占比（源码后缀计数 → 构建文件佐证）
-- **多语言项目**：范围内出现的语言均纳入审计，按语言分别派遣 `log-auditor`（每种语言有独立的日志框架和级别定义）
+- **多语言项目**：范围内出现的语言均纳入审计，按语言分别派遣 `devforge:log-auditor`（每种语言有独立的日志框架和级别定义）
 - 定位各语言的日志框架：在 worktree 源码中搜索日志调用符号（如 `LOG_ERROR`/`zap.`/`logger.`/`slog.`/`spdlog::`）与依赖声明
 
 **步骤 2：探测级别定义**（按优先级）
@@ -83,20 +83,20 @@ parameters:
 2. 从 `--worktree-path`（提供时）或 CWD 的日志配置文件（`log4j2.xml`、`logback.xml`、`*.conf` 等）或框架初始化代码（zap/slog 初始化、glog flags、spdlog set_level）提取生产默认级别——配置文件通常只设阈值，无法反推全量级别集合
 3. 从 **CWD** 的 CLAUDE.md / README 中的日志约定作为补充佐证（极少存在，不作为主要来源）
 
-**步骤 3：记录探测结果**——各语言、对应日志框架、可用级别集合（含自定义级别）、生产默认级别（未探测到则显式标注）。探测结果按语言分别注入对应 `log-auditor`，并在报告元数据中记录供人工复核。
+**步骤 3：记录探测结果**——各语言、对应日志框架、可用级别集合（含自定义级别）、生产默认级别（未探测到则显式标注）。探测结果按语言分别注入对应 `devforge:log-auditor`，并在报告元数据中记录供人工复核。
 
 **步骤 4：RFC 5424 合规校验**——将探测到的级别体系与 RFC 5424 规范对照：
 
 - 级别**排序**必须与 RFC 5424 一致（Emergency > Alert > Critical > Error > Warning > Notice > Informational > Debug）。项目可裁减子集、使用别名，但不可乱序
 - 级别**语义**必须与 RFC 5424 一致——同一级别名称在不同语言/框架中的语义不可漂移（如 Notice 在 RFC 5424 中严格介于 Warning 和 Informational 之间，不可变为 Debug 级别语义）
 - 常见违规：自定义级别的数值排序与 RFC 5424 严重程度不匹配（如中间级别的数值落在不正确的区间、位掩码体系中数值大小与严重性倒置）
-- 违规项作为独立问题记录，注入 `log-auditor` 纳入报告问题清单（级别合理性维度，定为 HIGH 或 CRITICAL）。合规则标注"级别体系与 RFC 5424 一致"
+- 违规项作为独立问题记录，注入 `devforge:log-auditor` 纳入报告问题清单（级别合理性维度，定为 HIGH 或 CRITICAL）。合规则标注"级别体系与 RFC 5424 一致"
 
-> 探测不到明确级别定义时，回退 `log-auditor` 内建通用基线，并在报告中标注"级别定义来源：源码反推/通用基线"。
+> 探测不到明确级别定义时，回退 `devforge:log-auditor` 内建通用基线，并在报告中标注"级别定义来源：源码反推/通用基线"。
 
-### 第 2 阶段：日志审计（派遣 `log-auditor`）
+### 第 2 阶段：日志审计（派遣 `devforge:log-auditor`）
 
-派遣 `log-auditor`（多语言时按语言切分，范围大时还可按目录/模块切分多实例并行，合并规则见下）：
+派遣 `devforge:log-auditor`（多语言时按语言切分，范围大时还可按目录/模块切分多实例并行，合并规则见下）：
 
 **多实例并行合并规则**：多实例时，主会话负责汇合为**单一报告**（非多份独立报告）——无论多少种语言、多少个模块，最终只输出一个 `report_output_path` 文件。汇合方法：
 1. 各 agent 产出独立报告片段（完整报告，含元数据/分析/问题清单），主会话合并为一份：
@@ -108,14 +108,14 @@ parameters:
 
 根据是否提供 `--log-dir` 决定审计策略：
 
-- **未提供 `--log-dir`** → 执行**纯静态级别合理性审计**：逐条核对范围内日志语句级别，对照 `log-auditor` 内建级别滥用反模式标出滥用（级别偏高、级别偏低、log-and-throw、裸 printf/printStackTrace 等）。报告标注"频率维度未审：未提供 --log-dir"
+- **未提供 `--log-dir`** → 执行**纯静态级别合理性审计**：逐条核对范围内日志语句级别，对照 `devforge:log-auditor` 内建级别滥用反模式标出滥用（级别偏高、级别偏低、log-and-throw、裸 printf/printStackTrace 等）。报告标注"频率维度未审：未提供 --log-dir"
 - **提供 `--log-dir`** → 执行**双维度审计**：先运行 `scripts/analyze_logs.py` 解析真实日志，获取级别分布 / 高频模板 Top-N / 打印速率；再派遣 agent 同时做：
   1. **频率审计**——用量化数据定位洪泛源、高频模板、打印速率异常，把高频消息对回源码打印点并分级
   2. **运行时增强的级别审计**——以脚本输出的级别分布 / 高频模板为实证线索，对回源码逐条验证级别是否滥用（如某级别占比极端偏高 → 对回源码找代表性打印点验证）。仅凭源码静态推断的局限性被运行时数据弥补
 
-`log-auditor` 按 `skills/devforge-log-audit/log-audit-report.md` 生成**草稿**报告，写入 `report_output_path`，返回数字摘要。**严禁**自创文件名（如 `log-audit-draft.md`）——草稿和终稿共用同一个 `report_output_path`，由第 3 阶段审核覆盖。
+`devforge:log-auditor` 按 `skills/devforge-log-audit/log-audit-report.md` 生成**草稿**报告，写入 `report_output_path`，返回数字摘要。**严禁**自创文件名（如 `log-audit-draft.md`）——草稿和终稿共用同一个 `report_output_path`，由第 3 阶段审核覆盖。
 
-### `log-auditor` 派遣字段（必填，由 skill 注入）
+### `devforge:log-auditor` 派遣字段（必填，由 skill 注入）
 
 | 字段 | 说明 | 示例 |
 |------|------|------|
@@ -133,11 +133,11 @@ parameters:
 
 ### 第 3 阶段：独立审核（派遣审核 subagent）
 
-`log-auditor` 产出的草稿报告可能存在误报或级别误判。派遣**独立审核 subagent**（使用 general-purpose agent，不与 `log-auditor` 共享上下文），以独立视角对草稿问题清单逐条做实质性复核后输出最终报告。
+`devforge:log-auditor` 产出的草稿报告可能存在误报或级别误判。派遣**独立审核 subagent**（使用 general-purpose agent，不与 `devforge:log-auditor` 共享上下文），以独立视角对草稿问题清单逐条做实质性复核后输出最终报告。
 
 **审核流程**：
 
-1. 读取草稿报告（`report_output_path`）与 `log-auditor` agent 内建的级别语义 + 反模式基线（`agents/log-auditor.md`），结合第 1 阶段探测的项目级别定义
+1. 读取草稿报告（`report_output_path`）与 `devforge:log-auditor` agent 内建的级别语义 + 反模式基线（`agents/log-auditor.md`），结合第 1 阶段探测的项目级别定义
 2. 逐条复核（重心在实质性判断，而非机械验证）：
    - **判断是否真的是问题**：对照级别语义与反模式基线，独立判断该日志语句是否构成问题——草稿的判定是否成立？是否存在过度敏感（如将合理的 Error 误判为滥用、将必要的 Informational 误判为刷屏）？是否忽略了上下文（如本层确实无法恢复、该路径确为关键状态变更）？判定不成立 → 移除
    - **判断是否需要修改**：即便存在轻微不合规范之处，评估实际影响——不影响排障、不会导致洪泛、不会触发误告警的，可判定为无需修改 → 移除
@@ -158,9 +158,9 @@ parameters:
 **审核约束**：
 
 - 对每条问题给出判断：✅ 保留 / ⬇️ 降级为 X / ⬆️ 升级为 X / ❌ 移除（附一句话理由，说明为什么不构成问题或不需要修改）。这些标记仅供审核过程内部使用，**禁止写入最终报告**
-- 只做减法或调整，**不做加法**——不新增 `log-auditor` 未发现的问题（对称审查的「潜在遗漏方向」为轻量标注，不改变问题清单条目数，不算新增问题）
+- 只做减法或调整，**不做加法**——不新增 `devforge:log-auditor` 未发现的问题（对称审查的「潜在遗漏方向」为轻量标注，不改变问题清单条目数，不算新增问题）
 - **设计确认不进入问题清单**：若审计判定结论是"设计正确、无需修改"，该条目不是缺陷。移入「级别使用分析」的发现要点中，以 `✅ <设计选择>已确认合理：<理由>` 形式记录，禁止以问题形式留在问题清单中。示例：`✅ trace 路径 D_NOTE 级别设计已确认合理：虽有暴露面但有显式 flag 门控 + proposal 文档标注`
-- 独立判断，不盲从草稿——即便 `log-auditor` 判定为 HIGH，复核认为实际影响微小、无需修改，直接移除
+- 独立判断，不盲从草稿——即便 `devforge:log-auditor` 判定为 HIGH，复核认为实际影响微小、无需修改，直接移除
 - 级别调整直接生效，无需人工确认——审核 subagent 的判断即为最终级别
 - 审核 subagent 直接编辑报告（移除/调整问题条目、刷新数字摘要），返回最终数字摘要供主会话输出对话结论
 
@@ -170,8 +170,8 @@ parameters:
 |------|------|
 | `draft_report_path` | 草稿报告路径（同 `report_output_path`） |
 | `template_path` | 报告格式契约文件 `skills/devforge-log-audit/log-audit-report.md` |
-| `auditor_baseline` | `log-auditor` 级别语义 + 反模式基线文件 `agents/log-auditor.md` |
-| `级别定义` | 第 1 阶段探测结果（同 `log-auditor` 注入） |
+| `auditor_baseline` | `devforge:log-auditor` 级别语义 + 反模式基线文件 `agents/log-auditor.md` |
+| `级别定义` | 第 1 阶段探测结果（同 `devforge:log-auditor` 注入） |
 | `scope` | 审计范围 |
 | `report_output_path` | 最终报告写入路径（覆盖草稿） |
 
@@ -189,14 +189,14 @@ python3 scripts/analyze_logs.py --log-dir <dir> \
 - `--levels`：第 1 阶段探测结果，逗号分隔，低→高。管道符指定别名：`Warning|WARN` 表示规范名 Warning，别名 WARN
 - `--log-format`：`auto`（默认，自动探测）、`text`（纯文本正则匹配）、`json`（结构化解析，自动提取 level/msg/ts 字段）
 
-输出各级别计数、总行数、打印速率（时间戳可解析时给稳态/峰值 行/秒）、高频重复消息 Top-N（消息经归一化后聚合：剥离时间戳/数字/十六进制/UUID/引号内容）。`log-auditor` 读取其 `--json` 输出，转化为分级发现，判定阈值见 `log-auditor` 内建频率基线。
+输出各级别计数、总行数、打印速率（时间戳可解析时给稳态/峰值 行/秒）、高频重复消息 Top-N（消息经归一化后聚合：剥离时间戳/数字/十六进制/UUID/引号内容）。`devforge:log-auditor` 读取其 `--json` 输出，转化为分级发现，判定阈值见 `devforge:log-auditor` 内建频率基线。
 
 ## 报告输出
 
 - `report-output-path` 存在则写入该路径；为空则用默认 `/tmp/log-audit-<ts>-<pid>.md`
-- 报告路径通过 `report_output_path` 字段注入 `log-auditor` 和审核 subagent
+- 报告路径通过 `report_output_path` 字段注入 `devforge:log-auditor` 和审核 subagent
 - **整个审计流程只产生一个文件**：草稿写入 `report_output_path`，审核后覆盖同一路径。禁止 agent 使用其他文件名（如含 `draft` 后缀的变体）
-- 主会话只读 `log-auditor` 返回的数字摘要（`{critical, high, medium, low, sites}`），据此输出对话摘要与结论，不读报告全文
+- 主会话只读 `devforge:log-auditor` 返回的数字摘要（`{critical, high, medium, low, sites}`），据此输出对话摘要与结论，不读报告全文
 
 ## 出口标准
 
@@ -211,9 +211,9 @@ python3 scripts/analyze_logs.py --log-dir <dir> \
 
 | 红旗 | 触发条件 | 处理方式 |
 |------|---------|---------|
-| 🚩 级别定义未知 | 文档/配置/源码均无法确定级别集合 | 回退 `log-auditor` 内建通用基线，报告显式标注，不臆造项目约定 |
+| 🚩 级别定义未知 | 文档/配置/源码均无法确定级别集合 | 回退 `devforge:log-auditor` 内建通用基线，报告显式标注，不臆造项目约定 |
 | 🚩 日志目录不可读 | `--log-dir` 提供但目录不存在/无日志文件 | 跳过运行时分析，报告标注原因，频率维度记为未审，仅执行纯静态级别审计 |
-| 🚩 主会话越界审计 | 主会话自己逐条判断日志级别/频率 | 回退到派遣 `log-auditor` |
+| 🚩 主会话越界审计 | 主会话自己逐条判断日志级别/频率 | 回退到派遣 `devforge:log-auditor` |
 | 🚩 超范围审计 | 评日志文案措辞/结构化字段/脱敏等两维度外问题 | 剔除，本 skill 只审级别 + 频率 |
 
 ## 审计后处置
@@ -221,7 +221,7 @@ python3 scripts/analyze_logs.py --log-dir <dir> \
 本 skill 只审计不修复。报告产出后，主会话输出数字摘要与结论；用户决定处置策略：
 
 - **接受修复**：对 HIGH/CRITICAL 项逐条确认后，用 `/df:tdd` 逐项整改
-- **接受风险**：显式记录某条不修复的原因（如"本 Error 确为不可恢复场景，级别正确"），由 `log-auditor` 误报则反馈改进基线
+- **接受风险**：显式记录某条不修复的原因（如"本 Error 确为不可恢复场景，级别正确"），由 `devforge:log-auditor` 误报则反馈改进基线
 - **批量整改**：全仓场景产出整改清单后，按模块分批用 `/df:tdd` 修复
 
 MR 门禁阻断时，建议在 MR 评论中引用报告路径与数字摘要，便于 reviewer 对照决策。
@@ -229,5 +229,5 @@ MR 门禁阻断时，建议在 MR 评论中引用报告路径与数字摘要，�
 ## Integration
 
 - **相关 Template**：`skills/devforge-log-audit/log-audit-report.md`
-- **相关 Agent**：`log-auditor` 执行两维度审计（级别语义 + 反模式 + 判定阈值基线内建于此）
+- **相关 Agent**：`devforge:log-auditor` 执行两维度审计（级别语义 + 反模式 + 判定阈值基线内建于此）
 - **相关脚本**：`scripts/analyze_logs.py` 运行时日志量化分析

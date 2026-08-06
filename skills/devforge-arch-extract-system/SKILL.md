@@ -49,7 +49,7 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
 
 **职责**：读取所有 subsystem overview 文档
 
-派遣 1 个 researcher agent：
+派遣 1 个 devforge:researcher agent：
 
 ```
 **任务模式**：subsystem 文档收集
@@ -77,7 +77,7 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
 
 **职责**：跨子系统汇总——数据流、接口索引、全局约束
 
-派遣 1 个 researcher agent：
+派遣 1 个 devforge:researcher agent：
 
 ```
 **任务模式**：跨子系统合成
@@ -106,7 +106,7 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
 
 **职责**：按 system 模板合成文档
 
-派遣 2 个 architect agent 并行（按章切分），然后 1 个 architect agent 合并：
+派遣 2 个 devforge:architect agent 并行（按章切分），然后 1 个 devforge:architect agent 合并：
 
 **Agent A — 系统简介 + 分层与设计思想 + 子系统全景**：
 
@@ -150,7 +150,7 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
 
 **职责**：独立评审 + 修正循环（最多 3 轮）
 
-派遣 2 个 architect-reviewer agent 并行：
+派遣 2 个 devforge:architect-reviewer agent 并行：
 
 **Agent A — 技术准确性 + 一致性**：
 

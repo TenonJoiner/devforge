@@ -1,6 +1,6 @@
 ---
 name: devforge-feature-research
-description: 特性级研究 skill，产出标杆方案分析与关键决策维度对比。派遣 researcher + architect-reviewer 评审循环（最多 3 轮）。
+description: 特性级研究 skill，产出标杆方案分析与关键决策维度对比。派遣 devforge:researcher + devforge:architect-reviewer 评审循环（最多 3 轮）。
 allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
 ---
 
@@ -60,7 +60,7 @@ skill 在 **change-dir**（默认当前工作目录）查找输入文件、输�
 | 中等（缓存机制/调度）   | 2-3   | 150-200 行 | 100-200 行 | 350-600 行 |
 | 复杂（分布式一致性）    | 3     | 200-250 行 | 150-300 行 | 600-900 行 |
 
-**复杂度判断**：researcher agent 读 proposal 后自动判断，无需主人介入。
+**复杂度判断**：devforge:researcher agent 读 proposal 后自动判断，无需主人介入。
 
 ---
 
@@ -75,7 +75,7 @@ skill 在 **change-dir**（默认当前工作目录）查找输入文件、输�
 
 ### [2] 标杆产品识别
 
-派遣 1 个 researcher agent，任务：
+派遣 1 个 devforge:researcher agent，任务：
 - 读 proposal.md，理解特性的核心问题和技术挑战
 - 识别 **2-3 个**相关标杆产品（开源项目 / 论文 / 商业产品）
 - 每个标杆产品标注**互补性说明**（不是穷举，而是覆盖方案空间的不同范式）
@@ -114,7 +114,7 @@ skill 在 **change-dir**（默认当前工作目录）查找输入文件、输�
 
 ### [3] 标杆方案研究（按标杆并发）
 
-对每个标杆产品，派遣 1 个 researcher agent（并发上限 3），任务：
+对每个标杆产品，派遣 1 个 devforge:researcher agent（并发上限 3），任务：
 
 **任务核心**：保持方案的整体性，让评审者能完整理解一个标杆的设计哲学。**不要**把方案拆散到多个孤立的"技术关注点"。
 
@@ -164,7 +164,7 @@ skill 在 **change-dir**（默认当前工作目录）查找输入文件、输�
 
 ### [4] 对比分析生成
 
-派遣 1 个 researcher agent，任务：
+派遣 1 个 devforge:researcher agent，任务：
 
 **子任务 1：提炼核心决策维度**
 - 读所有标杆 draft
@@ -221,7 +221,7 @@ skill 在 **change-dir**（默认当前工作目录）查找输入文件、输�
 
 ### [5] 评审循环（最多 3 轮）
 
-派遣 1 个 architect-reviewer agent，任务：
+派遣 1 个 devforge:architect-reviewer agent，任务：
 - 读 research.md 全文
 - 检查评审维度（见下）
 - 产出：问题清单（CRITICAL / HIGH / MEDIUM / LOW）
@@ -254,7 +254,7 @@ skill 在 **change-dir**（默认当前工作目录）查找输入文件、输�
 **通过门禁**：无 CRITICAL + 缺陷密度 ≤ 0.3
 
 - 通过 → 进入 [6]
-- 不通过 → 派遣 1 个 researcher agent 修正，回到本步骤重新评审
+- 不通过 → 派遣 1 个 devforge:researcher agent 修正，回到本步骤重新评审
 - 3 轮后仍未通过 → 进入 [5.1] 带债推进确认
 
 ### [5.1] 带债推进确认（仅在 3 轮评审后未通过时触发）
@@ -320,7 +320,7 @@ rm -f research-review.md
 
 ## Agent 派遣 Prompt 模板
 
-### researcher agent（标杆产品识别）
+### devforge:researcher agent（标杆产品识别）
 
 ```
 当前是特性级 research 阶段，识别相关标杆产品。
@@ -351,7 +351,7 @@ rm -f research-review.md
 - 设计清晰：有详细文档或源码可追溯
 ```
 
-### researcher agent（标杆方案研究）
+### devforge:researcher agent（标杆方案研究）
 
 ```
 当前是特性级 research 阶段，研究标杆产品「<product>」。
@@ -401,7 +401,7 @@ rm -f research-review.md
 写入 `research-benchmark-<product>-draft.md`。
 ```
 
-### researcher agent（对比分析生成）
+### devforge:researcher agent（对比分析生成）
 
 ```
 当前是特性级 research 阶段，生成对比分析。
@@ -439,7 +439,7 @@ rm -f research-review.md
 **输出**：写入 change-dir `research.md`。
 ```
 
-### architect-reviewer agent
+### devforge:architect-reviewer agent
 
 ```
 当前是特性级 research 阶段，评审 research.md。

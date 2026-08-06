@@ -1,6 +1,6 @@
 ---
 name: devforge-feature-design
-description: 特性级架构设计 skill，产出 design.md（HOW 实现 specs）。派遣 architect agent 生成、architect-reviewer 评审（最多 3 轮）。强制图示触发条件。
+description: 特性级架构设计 skill，产出 design.md（HOW 实现 specs）。派遣 devforge:architect agent 生成、devforge:architect-reviewer 评审（最多 3 轮）。强制图示触发条件。
 allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
 ---
 
@@ -20,7 +20,7 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
 1. **在既有架构内展开**：不新建子系统，不改变系统级架构决策
 2. **强制图示**：结构图（ASCII Art）、时序图（Mermaid）、状态机图（Mermaid）、数据流图（ASCII Art 或 Mermaid），按触发条件强制出图
 3. **Decision 追溯标杆**：每个 Decision 的候选方案标注 research.md 中的标杆来源
-4. **skill 内化评审**：最多 3 轮 architect agent → architect-reviewer 循环
+4. **skill 内化评审**：最多 3 轮 devforge:architect agent → devforge:architect-reviewer 循环
 
 ---
 
@@ -92,7 +92,7 @@ skill 在 **change-dir** 查找输入文件、输出产出文件：
 
 ### [2] Decision 生成
 
-派遣 1 个 architect agent，任务：
+派遣 1 个 devforge:architect agent，任务：
 - 读 research.md 的设计空间地图，识别关键决策点
 - 对每个决策点，列出候选方案（标注 research.md 中的标杆来源）
 - 用表格比较 trade-off（复杂度 / 性能影响 / 可维护性 / 与本项目约束的匹配度）
@@ -116,25 +116,25 @@ skill 在 **change-dir** 查找输入文件、输出产出文件：
 | 状态机图 | Mermaid | 在 `design-draft.md` 中嵌入 `stateDiagram` 代码块 |
 | 数据流图 | Markdown ASCII Art 或 Mermaid | 按表达清晰度选择 |
 
-未满足 → 派遣 architect agent 补充图示。
+未满足 → 派遣 devforge:architect agent 补充图示。
 
 ### [4] 其他章节生成
 
-派遣 1 个 architect agent，任务：
+派遣 1 个 devforge:architect agent，任务：
 - 读取 `../../openspec-schema/schemas/spec-driven-enhanced/templates/design.md`，按模板章节顺序补全 design.md 剩余章节
 - 产出：完整 design.md（写入 `design-draft.md`）
 - 注意：模板中已定义各章节的内容要求、自检清单和强制图示触发条件，无需在 prompt 中重复
 
 ### [5] 评审循环（最多 3 轮）
 
-派遣 1 个 architect-reviewer agent，任务：
+派遣 1 个 devforge:architect-reviewer agent，任务：
 - 读 design-draft.md 全文
 - 检查：方案可行性、方案竞争力、方案合理性、架构一致性、设计内部一致性、可维护性、故障处理、决策备选方案、并发模型、状态机表达、性能评估、**升级影响评估（按 `../../openspec-schema/schemas/spec-driven-enhanced/templates/design.md` 的 `## Upgrade Impact` 章节检查）**
 - 产出：问题清单（CRITICAL / HIGH / MEDIUM / LOW）
 
 计算缺陷密度（问题分数之和 / Decision 数）：
 - 无 CRITICAL + 缺陷密度 ≤ 2.0 → 通过，进入 [6]
-- 否则 → 派遣 1 个 architect agent 修正，回到本步骤重新评审
+- 否则 → 派遣 1 个 devforge:architect agent 修正，回到本步骤重新评审
 - 3 轮后仍未通过 → 标注残留问题，进入 [6]
 
 ### [6] 落地输出
@@ -174,7 +174,7 @@ skill 在 **change-dir** 查找输入文件、输出产出文件：
 
 ## Agent 派遣 Prompt 模板
 
-### architect agent（Decision 生成）
+### devforge:architect agent（Decision 生成）
 
 ```
 当前是特性级 design 阶段，生成 design.md。
@@ -211,7 +211,7 @@ skill 在 **change-dir** 查找输入文件、输出产出文件：
 - 涉及多状态组件时提供状态转换表
 ```
 
-### architect-reviewer agent
+### devforge:architect-reviewer agent
 
 ```
 当前是特性级 design 阶段，评审 design-draft.md。

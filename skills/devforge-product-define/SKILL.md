@@ -110,7 +110,7 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
 
 **每一阶段迭代的产出必须写入项目文件，禁止仅在对话中输出。**
 
-- **原始 agent**（researcher / product）：将完整产出写入 `-draft-` 标记的中间文件，向主会话返回结构化摘要，包含以下字段（缺失项跳过，不超过 10 行）：
+- **原始 agent**（devforge:researcher / product）：将完整产出写入 `-draft-` 标记的中间文件，向主会话返回结构化摘要，包含以下字段（缺失项跳过，不超过 10 行）：
   - `产出`：写入的文件路径 + 核心产出数（Actor 数/Feature 数/Scenario 数等）
   - `数字`：覆盖率、完整度等可量化指标
   - `异常`：覆盖缺口、数据矛盾、视角间分歧（附 1-2 句定位，供后续合并/评审参考）
@@ -151,7 +151,7 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
 
 **已下放给 agent 的职责**（主会话不再执行）：
 - 文件写入：agent 自行 Write/Edit 到 draft/review/最终文件
-- 内容整合：由**同类型新 agent 实例**执行合并去重（researcher 合并 researcher 的 draft，product 合并 product 的 draft）
+- 内容整合：由**同类型新 agent 实例**执行合并去重（devforge:researcher 合并 devforge:researcher 的 draft，product 合并 product 的 draft）
 - 评审记录：reviewer 追加到 `-review.md`，合并 agent 将 PASS 标记写入最终文件
 
 **禁止**：
@@ -169,7 +169,7 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
 
 ### 视角切分原则
 
-#### 发散视角（researcher / product 等产出 agent）
+#### 发散视角（devforge:researcher / product 等产出 agent）
 
 多 agent 并行发散时，每个 agent 从独立、互补的视角产出。视角由主会话基于**本次产品的具体上下文**动态生成，在派遣 prompt 中说明切分理由。
 
@@ -177,7 +177,7 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
 
 **反面约束**：不得套用固定视角清单（如对所有产品都用"用户角色/使用阶段/分析维度"三视角）。视角服务于产品决策——不同产品的决策关注点不同，视角应反映这种差异。
 
-#### 产出者派遣 prompt 必备字段（product / researcher / architect agent）
+#### 产出者派遣 prompt 必备字段（product / devforge:researcher / devforge:architect agent）
 
 **核心原则**：产出者 agent 已解耦 `工作模式` / `template 路径` / `output 路径` 等流程性细节。skill 派遣时必须在 prompt 中显式注入：
 
@@ -188,11 +188,11 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
 5. **length_hint**（如 `product-spec.md 完整展开` / `特性域文档 150-400 行`）
 6. **上游输入路径**（如 `docs/requirements/reference/<product>.md` 标杆研究）
 
-**researcher agent 额外字段**：
+**devforge:researcher agent 额外字段**：
 - **研究视角**（`需求研究`：用户/需求/产品视角，禁止输出核心算法/复杂度分析）
 - **output_path**（`docs/requirements/reference/<product>.md`）
 
-**architect agent 额外字段**（需求评审顾问模式）：
+**devforge:architect agent 额外字段**（需求评审顾问模式）：
 - **任务模式**：`��求可行性顾问`（评估实现复杂度、标记高风险 Feature，不承担需求定义主角责任）
 - **关注点**：技术可行性、实现复杂度、Non-Goals 边界
 
@@ -204,7 +204,7 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
 |---------|------|------|
 | **对象特异视角**（评审项） | 被评审 template | `mandatory-sections` + `checklist-at-end` 段（每个 template 已自带评审锚点） |
 | **场景特异视角**（评审深度） | 主会话派遣 prompt | 基于 `domain_specific` / `quality_attributes.priorities` 前两项 / Non-Goals 等动态注入 |
-| **评审思维风格** | reviewer agent 人设 | product-reviewer = 业务/用户视角；architect-reviewer = 技术/架构视角 |
+| **评审思维风格** | reviewer agent 人设 | devforge:product-reviewer = 业务/用户视角；devforge:architect-reviewer = 技术/架构视角 |
 | **评审报告格式** | `templates/review-report.md` | 统一输出格式，**不含**任何评审项；reviewer 按格式产出 |
 
 **派遣 prompt 必备字段**（主会话每次派遣 reviewer 时必须传入）：
@@ -217,9 +217,9 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
 6. **被评审对象在系统中的位置说明**（作为问题分级判定的系统上下文）
 
 **反面约束**：
-- 禁止 skill 中硬编码 reviewer 的检查项清单（如"product-reviewer 看用户场景 / Non-Goals 覆盖度 / 量化指标合理性"——这类视角应在被评审 template 中或派遣 prompt 中表达）
+- 禁止 skill 中硬编码 reviewer 的检查项清单（如"devforge:product-reviewer 看用户场景 / Non-Goals 覆盖度 / 量化指标合理性"——这类视角应在被评审 template 中或派遣 prompt 中表达）
 - 禁止 skill 中硬编码 reviewer 数量（统一用 ≥N 描述下限）
-- 禁止默认"两个不同类型 reviewer = 一种分工组合"——同一类型也可多实例做交叉验证（如 2 个 product-reviewer 各侧重不同稳定视角）
+- 禁止默认"两个不同类型 reviewer = 一种分工组合"——同一类型也可多实例做交叉验证（如 2 个 devforge:product-reviewer 各侧重不同稳定视角）
 - 禁止 reviewer agent 在 prompt 之外携带任何评审项
 
 各阶段文件引用本原则，不再重复定义。
@@ -242,7 +242,7 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
 | 阶段 | 内容类型 | 复杂度 | agent 配置 |
 |------|---------|-------|-----------|
 | 第 0 阶段 | 交互式信息收集 | 低 | 主会话直接执行（豁免） |
-| 第 1 阶段 | 标杆研究（调研报告） | 高 | 每个标杆 2-3 个 researcher + 整体 2 个 reviewer |
+| 第 1 阶段 | 标杆研究（调研报告） | 高 | 每个标杆 2-3 个 devforge:researcher + 整体 2 个 reviewer |
 | 第 2 阶段 | Actor-Feature 定义 | 极高 | 多 agent 分步协作（详见 `02-actor-feature.md`） |
 | 第 3 阶段 | Scenario 挖掘 | 中等（基准） | 每个 domain 独立判定（综合 Actor 数量、依赖密度、规模与并发、质量关键路径等因素，非二维布尔，详见 `03-scenario.md`）：高复杂度 → ≥3 个 product + ≥2 个 reviewer；中等 → 1-2 个 product + 1-2 个 reviewer |
 | 第 4 阶段 | 维护模式 | 低 | 1 个对应角色 agent |

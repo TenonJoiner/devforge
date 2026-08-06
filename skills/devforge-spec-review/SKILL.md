@@ -98,7 +98,7 @@ skill 在 **change-dir** 查找输入文件、输出产出文件：
 主会话做轻量准备，为调度 agent 和计分提供必要信息：
 
 1. **验证输入存在性**：确认 change-dir 下存在 `proposal.md`、`specs/**/*.md`、`design.md` 中的至少一个；一个都不存在则立即报错并停止。存在多个时，由 agent 按需评审实际存在的文件。
-2. **发现产品级架构文档**：用 `Glob` 列出项目根目录 `docs/architecture/` 下可能与本次变更相关的文件路径，供 architect-reviewer 读取。
+2. **发现产品级架构文档**：用 `Glob` 列出项目根目录 `docs/architecture/` 下可能与本次变更相关的文件路径，供 devforge:architect-reviewer 读取。
 3. **读取 review.md template**：`../../openspec-schema/schemas/spec-driven-enhanced/templates/review.md`，作为组装最终 review.md 的格式依据。
 
 主会话**不读取** proposal.md / specs/**/*.md / design.md / 产品级架构文档的内容；由各 agent 在 prompt 中按需读取。
@@ -106,9 +106,9 @@ skill 在 **change-dir** 查找输入文件、输出产出文件：
 ### [2] 并行评审
 
 根据实际存在的文件，并行派遣 reviewer agent：
-- **`product-reviewer（proposal + specs）`**：当 `proposal.md` 或 `specs/**/*.md` 存在时派遣；评审 Proposal 质量 + Specs 质量
-- **`product-reviewer（cross-doc）`**：当 `proposal.md`、`specs/**/*.md`、`design.md` 中任一存在时派遣；评审跨文档一致性与格式合规（6 项）；其中需要跨文档比对的维度仅在至少两个文档存在时检查
-- **`architect-reviewer`**：当 `design.md` 存在时派遣；评审 Design 质量 + 对照 `docs/architecture/` 检查架构约束
+- **`devforge:product-reviewer（proposal + specs）`**：当 `proposal.md` 或 `specs/**/*.md` 存在时派遣；评审 Proposal 质量 + Specs 质量
+- **`devforge:product-reviewer（cross-doc）`**：当 `proposal.md`、`specs/**/*.md`、`design.md` 中任一存在时派遣；评审跨文档一致性与格式合规（6 项）；其中需要跨文档比对的维度仅在至少两个文档存在时检查
+- **`devforge:architect-reviewer`**：当 `design.md` 存在时派遣；评审 Design 质量 + 对照 `docs/architecture/` 检查架构约束
 
 每个被派遣的 reviewer 产出问题清单（CRITICAL / HIGH / MEDIUM / LOW）。
 
@@ -185,12 +185,12 @@ skill 在 **change-dir** 查找输入文件、输出产出文件：
 
 为避免同一轮内多个修复 agent 并行修改不同文件导致不一致，本轮修复按固定顺序**串行**执行：
 
-1. 先派遣 **`product`（修复 proposal + specs）**：当 `proposal.md` 或 `specs/**/*.md` 存在时派遣；负责修复 location 落在这些文件上的问题，写回后输出本轮修改摘要。
-2. 再派遣 **`architect`（修复 design）**：当 `design.md` 存在时派遣；负责修复 location 落在 `design.md` 上的问题。`architect` 执行前必须读取 `product` 本轮的修改摘要，并据此同步调整 design 中对应的 Requirement / Capability / 范围 / 术语表述。
+1. 先派遣 **`devforge:product`（修复 proposal + specs）**：当 `proposal.md` 或 `specs/**/*.md` 存在时派遣；负责修复 location 落在这些文件上的问题，写回后输出本轮修改摘要。
+2. 再派遣 **`devforge:architect`（修复 design）**：当 `design.md` 存在时派遣；负责修复 location 落在 `design.md` 上的问题。`devforge:architect` 执行前必须读取 `devforge:product` 本轮的修改摘要，并据此同步调整 design 中对应的 Requirement / Capability / 范围 / 术语表述。
 
 **问题归属规则**：
-- location 中文件路径属于 `proposal.md` 或 `specs/**/*.md` 的问题 → 由 `product` 修复
-- location 中文件路径属于 `design.md` 的问题 → 由 `architect` 修复
+- location 中文件路径属于 `proposal.md` 或 `specs/**/*.md` 的问题 → 由 `devforge:product` 修复
+- location 中文件路径属于 `design.md` 的问题 → 由 `devforge:architect` 修复
 - 一个问题跨多个文件时，各文件由对应 agent 分别修复；agent 读取问题时应自行判断与本职相关的部分
 
 **修复范围**（autofix 每轮保持全新上下文，不以上一轮问题是否关闭作为判断标准）：
@@ -198,8 +198,8 @@ skill 在 **change-dir** 查找输入文件、输出产出文件：
 - **信息不足时保留**：因信息不足无法修复的问题，转入「遗留问题 / 附加条件」，供 Tech Leader 决策时参考
 
 **同轮次一致性上下文**：
-- `architect` 修复 design 前，主会话必须将**本轮 `product` 已输出的修改摘要**作为 prompt 上下文传入。
-- 若 `product` 不存在（即本轮只改 design），则无同轮次摘要。
+- `devforge:architect` 修复 design 前，主会话必须将**本轮 `devforge:product` 已输出的修改摘要**作为 prompt 上下文传入。
+- 若 `devforge:product` 不存在（即本轮只改 design），则无同轮次摘要。
 
 #### 步骤 3：agent 修复并写回
 
@@ -211,13 +211,13 @@ skill 在 **change-dir** 查找输入文件、输出产出文件：
 5. 若某个问题因信息不足无法修复，在修改摘要中说明并标记为残留风险
 6. 输出修改摘要：修改了哪些文件、修复了哪些问题（含原问题分级）、残留风险
 
-`architect` 额外要求：修复 design 前读取 `product` 本轮修改摘要；若 `product` 的修改改变了 Requirement / Capability / Scenario 的语义，必须同步检查 design.md 中对应表述并一并调整。
+`devforge:architect` 额外要求：修复 design 前读取 `devforge:product` 本轮修改摘要；若 `devforge:product` 的修改改变了 Requirement / Capability / Scenario 的语义，必须同步检查 design.md 中对应表述并一并调整。
 
 #### 步骤 3.5：跨文档一致性同步检查
 
-`architect` 修复 design 写回后，派遣 `product-reviewer（cross-doc）` 做一轮轻量同步检查：
+`devforge:architect` 修复 design 写回后，派遣 `devforge:product-reviewer（cross-doc）` 做一轮轻量同步检查：
 
-- **只关注本轮修改涉及的内容**：重点检查 `product` 修改 proposal/specs 与 `architect` 修改 design 之间是否出现语义偏差、术语不一致或范围冲突。
+- **只关注本轮修改涉及的内容**：重点检查 `devforge:product` 修改 proposal/specs 与 `devforge:architect` 修改 design 之间是否出现语义偏差、术语不一致或范围冲突。
 - **即时修正**：若同步检查发现问题，直接派遣对应修复 agent 修正，**不增加 autofix 轮次计数**。修正顺序仍遵循 product → architect，确保同轮次一致性闭环。
 - **输出**：同步检查摘要（新增不一致 + 已修正项），合并到本轮修复摘要中。
 
@@ -249,7 +249,7 @@ skill 在 **change-dir** 查找输入文件、输出产出文件：
 
 以下维度清单用于主会话调度、状态跟踪和计分。**各维度不再追求“找出尽量多问题”，而是按「通过标准」判定：满足通过标准时，不在该维度提出问题；未满足时，按问题分级标准记录 CRITICAL / HIGH / MEDIUM / LOW。**
 
-### 跨文档一致性与格式合规（由 `product-reviewer（cross-doc）` 统一评审）
+### 跨文档一致性与格式合规（由 `devforge:product-reviewer（cross-doc）` 统一评审）
 
 1. **模板符合性**
    - 通过标准：各文档章节结构、必填项、自检清单与对应 template 一致；缺失章节有合理说明或标注为 N/A。
@@ -275,7 +275,7 @@ skill 在 **change-dir** 查找输入文件、输出产出文件：
    - 通过标准：从外部调用方/用户视角描述可见行为；proposal/spec 只承载 **why** 和 **what**，design 承载 **how**；术语准确、长句可理解；文字本身能独立表达方案。
    - 触发问题：proposal/spec 中出现研发视角的内部架构、数据结构、算法、接口实现等 how 细节；关键段落歧义到影响理解、术语错误导致误解。
 
-### Proposal 质量（由 `product-reviewer（proposal + specs）` 评审）
+### Proposal 质量（由 `devforge:product-reviewer（proposal + specs）` 评审）
 
 7. **动机合理性**
    - 通过标准：Why 清晰说明问题根因、业务价值、影响范围；核心假设有数据或现状支撑；不只是表面描述。
@@ -285,7 +285,7 @@ skill 在 **change-dir** 查找输入文件、输出产出文件：
    - 通过标准：Capabilities 从外部调用方/用户视角定义，是可见的行为能力或质量属性承诺；只描述 **what**（外部可见行为），不描述 **how**（实现方案、技术选型、内部架构）；覆盖完整且粒度适当（能独立验收、避免为内部实现动作拆分过细）；命名规范；Acceptance Criteria 可验证；考虑过替代方案。
    - 触发问题：Capabilities 为内部实现动作、包含研发视角的技术方案或架构细节、Acceptance Criteria 不可验证、完全无替代方案分析。
 
-### Specs 质量（由 `product-reviewer（proposal + specs）` 评审）
+### Specs 质量（由 `devforge:product-reviewer（proposal + specs）` 评审）
 
 9. **需求合理性与必要性**
    - 通过标准：每条 Requirement 合理、必要，不过度、不遗漏、不矛盾，能追溯到 proposal 的 Capability。
@@ -303,7 +303,7 @@ skill 在 **change-dir** 查找输入文件、输出产出文件：
     - 通过标准：异常路径从业务语义出发；Non-Functional Requirements 覆盖所需维度，指标可量化、可验证并落地到 Requirement。
     - 触发问题：核心异常路径缺失、NFR 指标不可量化或与 Requirement 脱节。
 
-### Design 质量（由 `architect-reviewer` 评审）
+### Design 质量（由 `devforge:architect-reviewer` 评审）
 
 13. **方案可行性与合理性**
     - 通过标准：技术方案能满足 specs 的每条 Requirement；关键决策有 trade-off 分析。
@@ -337,7 +337,7 @@ skill 在 **change-dir** 查找输入文件、输出产出文件：
 
 ## Agent 派遣 Prompt 模板
 
-### product-reviewer agent（proposal + specs）
+### devforge:product-reviewer agent（proposal + specs）
 
 ```
 当前是 review 阶段，从产品视角评审 proposal 和 specs。
@@ -388,7 +388,7 @@ skill 在 **change-dir** 查找输入文件、输出产出文件：
 问题清单（CRITICAL / HIGH / MEDIUM / LOW），每个问题标注 Location（文件:章节）。
 ```
 
-### architect-reviewer agent
+### devforge:architect-reviewer agent
 
 ```
 当前是 review 阶段，从架构视角评审 design 是否满足 specs 的 Requirement，并符合产品级架构约束。
@@ -443,7 +443,7 @@ skill 在 **change-dir** 查找输入文件、输出产出文件：
 问题清单（CRITICAL / HIGH / MEDIUM / LOW），每个问题标注 Location（文件:章节）。
 ```
 
-### product-reviewer agent（cross-doc）
+### devforge:product-reviewer agent（cross-doc）
 
 ```
 当前是 review 阶段，统一评审 proposal / specs / design 的跨文档一致性与格式合规。
@@ -497,7 +497,7 @@ skill 在 **change-dir** 查找输入文件、输出产出文件：
 
 ## autofix 修复 agent Prompt 模板
 
-### product agent（autofix 修复 proposal + specs）
+### devforge:product agent（autofix 修复 proposal + specs）
 
 ```
 当前是 review 的 autofix 阶段，负责根据本轮 review.md 中的问题清单修复 proposal.md 和 specs/**/*.md。
@@ -527,10 +527,10 @@ skill 在 **change-dir** 查找输入文件、输出产出文件：
 
 **输出**：
 1. 直接修改原文件（proposal.md / specs/**/*.md）
-2. 修改摘要：修复了哪些问题（含原分级）、修改了哪些文件、未修复的问题及原因、残留风险。摘要须清晰说明哪些 Requirement / Capability / Scenario 的语义发生了变化，供后续 `architect` agent 同步 design 时参考。
+2. 修改摘要：修复了哪些问题（含原分级）、修改了哪些文件、未修复的问题及原因、残留风险。摘要须清晰说明哪些 Requirement / Capability / Scenario 的语义发生了变化，供后续 `devforge:architect` agent 同步 design 时参考。
 ```
 
-### architect agent（autofix 修复 design）
+### devforge:architect agent（autofix 修复 design）
 
 ```
 当前是 review 的 autofix 阶段，负责根据本轮 review.md 中的问题清单修复 design.md。
@@ -542,7 +542,7 @@ skill 在 **change-dir** 查找输入文件、输出产出文件：
 
 **参考输入**：
 - review.md：<路径>（读取其中 Location 落在 design.md 的问题）
-- 同轮次 `product` 修改摘要：<product 本轮修改摘要>（修复前读取，评估 proposal/specs 的语义变化是否要求 design 同步调整）
+- 同轮次 `devforge:product` 修改摘要：<product 本轮修改摘要>（修复前读取，评估 proposal/specs 的语义变化是否要求 design 同步调整）
 - 上游文档（按需读取，确保修复后仍然覆盖 specs 的 Requirement）：
   - proposal.md：<路径>
   - specs/**/*.md：<路径列表>
@@ -550,7 +550,7 @@ skill 在 **change-dir** 查找输入文件、输出产出文件：
 
 **修复范围**：
 1. **按优先级修复**：本轮 review.md 中 Location 落在 design.md 的问题，按 CRITICAL → HIGH → MEDIUM → LOW 顺序处理
-2. **同步上游变化**：读取 `product` 本轮修改摘要后，若 Requirement / Capability / Scenario 语义发生变化，必须同步调整 design.md 中的对应 Decision / 接口 / 范围 / 术语表述
+2. **同步上游变化**：读取 `devforge:product` 本轮修改摘要后，若 Requirement / Capability / Scenario 语义发生变化，必须同步调整 design.md 中的对应 Decision / 接口 / 范围 / 术语表述
 3. **LOW 问题**：格式、拼写、minor 文案等 LOW 问题可视修复成本跳过
 4. **信息不足时保留**：因信息不足无法修复的问题，在修改摘要中列出并说明原因
 
@@ -563,7 +563,7 @@ skill 在 **change-dir** 查找输入文件、输出产出文件：
 
 **输出**：
 1. 直接修改原文件（design.md）
-2. 修改摘要：修复了哪些问题（含原分级）、修改了哪些文件、未修复的问题及原因、残留风险。摘要须清晰说明是否因同步 `product` 修改而调整了 design 中的对应表述。
+2. 修改摘要：修复了哪些问题（含原分级）、修改了哪些文件、未修复的问题及原因、残留风险。摘要须清晰说明是否因同步 `devforge:product` 修改而调整了 design 中的对应表述。
 ```
 
 ---

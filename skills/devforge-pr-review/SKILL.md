@@ -38,7 +38,7 @@ parameters:
 - `devforge-log-audit` 是日志审计 skill，负责 diff 内日志语句的级别合理性与打印频率两维度审计。
 - `devforge-pr-review` 是 MR 入口 skill，负责平台交互、MR 上下文准备、MR 元数据检查、文件类型分流：
   - 含代码类文件时并行调用 `devforge-code-review`、`devforge-lint-check` 和 `devforge-log-audit`
-  - 纯文档变更时派遣 `product-reviewer` agent（不跑 code-review、lint 和日志审计）
+  - 纯文档变更时派遣 `devforge:product-reviewer` agent（不跑 code-review、lint 和日志审计）
   - 最后合并结果，合成 MR 级报告。
 
 ## 何时使用
@@ -109,7 +109,7 @@ glab mr view <number> -F json
 - diff 为空 → 输出 "本次 PR/MR 无代码变更需要检视"，最终结论（verdict）= COMMENT，直接结束。
 - 分析 diff 中的文件类型：
   - 若存在代码/脚本/配置文件（如 `.go`、`.c`、`.py`、`.sh`、`.yml`、`.json`、`.toml` 等）→ 进入第 4 阶段分支 A，调用 `devforge-code-review`
-  - 若只有文档类文件（如 `.md`、`.txt`、`.rst`、`.adoc` 等）→ 进入第 4 阶段分支 B，由 `product-reviewer` agent 执行文档评审
+  - 若只有文档类文件（如 `.md`、`.txt`、`.rst`、`.adoc` 等）→ 进入第 4 阶段分支 B，由 `devforge:product-reviewer` agent 执行文档评审
 - 上下文不足 → 评审 agent 自行标注并建议作者补充信息。
 
 ### 第 3.5 阶段：分支就绪（Worktree）
@@ -182,7 +182,7 @@ git worktree add --detach "$WORKTREE_PATH" "origin/<head_branch>"
 
 #### 分支 B：纯文档变更评审
 
-**步骤 5d：派遣 `product-reviewer` agent**
+**步骤 5d：派遣 `devforge:product-reviewer` agent**
 
 对纯文档 MR 进行深入文档评审，注入字段：
 
@@ -377,6 +377,6 @@ git worktree prune
 ## 关联
 
 - **相关 Skill**: `devforge-code-review`、`devforge-lint-check`、`devforge-log-audit`
-- **相关 Agent**: `code-reviewer`（通过 `devforge-code-review` 间接使用）、`lint-analyst`（通过 `devforge-lint-check` 间接使用）、`developer`（通过 `devforge-lint-check` autofix 模式间接使用）、`product-reviewer`、`log-auditor`（通过 `devforge-log-audit` 间接使用）
+- **相关 Agent**: `devforge:code-reviewer`（通过 `devforge-code-review` 间接使用）、`devforge:lint-analyst`（通过 `devforge-lint-check` 间接使用）、`devforge:developer`（通过 `devforge-lint-check` autofix 模式间接使用）、`devforge:product-reviewer`、`devforge:log-auditor`（通过 `devforge-log-audit` 间接使用）
 - **相关 Rules**: `coding-style`, `testing`
 - **相关 Hooks**: 无

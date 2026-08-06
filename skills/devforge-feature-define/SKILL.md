@@ -1,6 +1,6 @@
 ---
 name: devforge-feature-define
-description: 特性级需求定义 skill，产出 specs/*.md（Delta 格式 Requirement + Scenario + Non-Functional Requirements）。派遣 product agent 生成、product-reviewer + architect-reviewer 双视角评审（最多 3 轮）。
+description: 特性级需求定义 skill，产出 specs/*.md（Delta 格式 Requirement + Scenario + Non-Functional Requirements）。派遣 devforge:product agent 生成、devforge:product-reviewer + devforge:architect-reviewer 双视角评审（最多 3 轮）。
 allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
 ---
 
@@ -21,7 +21,7 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
 2. **Delta 语义**：严格遵守 ADDED / MODIFIED / REMOVED / RENAMED 格式，archive 引擎依赖这套语义
 3. **Requirement 可测试**：每条 Requirement 读完能明确判断"通过"还是"不通过"
 4. **Scenario 完整**：每条 Requirement 至少一个正常路径 + 一个异常路径 Scenario
-5. **skill 内化评审**：最多 3 轮 product agent → product-reviewer + architect-reviewer 循环
+5. **skill 内化评审**：最多 3 轮 devforge:product agent → devforge:product-reviewer + devforge:architect-reviewer 循环
 
 ---
 
@@ -93,7 +93,7 @@ skill 在 **change-dir** 查找输入文件、输出产出文件：
 
 ### [2] Capability 拆解
 
-对每个 Capability（来自 proposal.md），派遣 1 个 product agent（并发上限 5），任务：
+对每个 Capability（来自 proposal.md），派遣 1 个 devforge:product agent（并发上限 5），任务：
 - 读 proposal.md 的该 Capability 描述
 - 读 research.md 的约束清单（作为 Requirement 边界）
 - 读产品级需求文档（获取 Actor 清单和验收标准）
@@ -105,14 +105,14 @@ skill 在 **change-dir** 查找输入文件、输出产出文件：
 ### [3] 双视角评审（最多 3 轮）
 
 并行派遣 2 个 reviewer agent：
-- **product-reviewer**：检查 Requirement 合理性、必要性、完整性、清晰性、可验收性、异常路径质量、安全覆盖
-- **architect-reviewer**：检查 Requirement 与 research.md 约束的一致性、与产品级需求的追溯链
+- **devforge:product-reviewer**：检查 Requirement 合理性、必要性、完整性、清晰性、可验收性、异常路径质量、安全覆盖
+- **devforge:architect-reviewer**：检查 Requirement 与 research.md 约束的一致性、与产品级需求的追溯链
 
 每个 reviewer 产出问题清单（CRITICAL / HIGH / MEDIUM / LOW）。
 
 计算缺陷密度（问题分数之和 / spec 文件数）：
 - 无 CRITICAL + 缺陷密度 ≤ 2.0 → 通过，进入 [4]
-- 否则 → 派遣 1 个 product agent 修正，回到本步骤重新评审
+- 否则 → 派遣 1 个 devforge:product agent 修正，回到本步骤重新评审
 - 3 轮后仍未通过 → 标注残留问题，进入 [4]
 
 ### [4] 落地输出
@@ -146,7 +146,7 @@ skill 在 **change-dir** 查找输入文件、输出产出文件：
 
 ## Agent 派遣 Prompt 模板
 
-### product agent（Requirement 生成）
+### devforge:product agent（Requirement 生成）
 
 ```
 当前是特性级 specs 阶段，为 Capability「<capability>」生成 spec.md。
@@ -179,7 +179,7 @@ skill 在 **change-dir** 查找输入文件、输出产出文件：
 写入 `specs/<capability>/spec-draft.md`。
 ```
 
-### product-reviewer agent
+### devforge:product-reviewer agent
 
 ```
 当前是特性级 specs 阶段，评审 specs/<capability>/spec-draft.md。
@@ -200,7 +200,7 @@ skill 在 **change-dir** 查找输入文件、输出产出文件：
 问题清单（CRITICAL / HIGH / MEDIUM / LOW），计算缺陷密度。
 ```
 
-### architect-reviewer agent
+### devforge:architect-reviewer agent
 
 ```
 当前是特性级 specs 阶段，评审 specs/<capability>/spec-draft.md。

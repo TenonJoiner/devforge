@@ -52,7 +52,7 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent, AskUserQuestion]
 
 **职责**：扫描代码库，识别子系统目录/模块边界
 
-派遣 1 个 researcher agent：
+派遣 1 个 devforge:researcher agent：
 
 ```
 **任务模式**：子系统边界识别
@@ -85,7 +85,7 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent, AskUserQuestion]
 
 **前置条件**：`--doc=<dir>` 已提供。未提供则跳过。
 
-派遣 2 个 researcher agent 并行：
+派遣 2 个 devforge:researcher agent 并行：
 
 **Agent A — 文档发现与筛选**：
 
@@ -133,7 +133,7 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent, AskUserQuestion]
 
 **职责**：子系统内部架构、数据模型、并发模型、接口契约、设计约束
 
-派遣 3 个 researcher agent 并行（按关注域切分）：
+派遣 3 个 devforge:researcher agent 并行（按关注域切分）：
 
 **Agent A — 架构与接口**：
 
@@ -206,7 +206,7 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent, AskUserQuestion]
 
 **前置条件**：阶段 2 产出了设计声明清单。未启用 `--doc` 则跳过。
 
-派遣 2 个 researcher agent 并行：
+派遣 2 个 devforge:researcher agent 并行：
 
 **Agent A — 接口契约核对**：
 
@@ -230,7 +230,7 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent, AskUserQuestion]
 
 **职责**：识别子系统内的核心技术主题，与已有 topic 文档关联
 
-派遣 1 个 researcher agent：
+派遣 1 个 devforge:researcher agent：
 
 ```
 **任务模式**：技术主题发现
@@ -261,7 +261,7 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent, AskUserQuestion]
 
 **职责**：按 subsystem 模板生成完整文档
 
-派遣 3 个 architect agent 并行（按章切分），然后 1 个 architect agent 合并：
+派遣 3 个 devforge:architect agent 并行（按章切分），然后 1 个 devforge:architect agent 合并：
 
 **Agent A — 子系统定位 + 技术主题索引 + 内部架构**：
 
@@ -320,7 +320,7 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent, AskUserQuestion]
 
 **职责**：独立评审 + 修正循环（最多 3 轮）
 
-派遣 3 个 architect-reviewer agent 并行（按视角切分）：
+派遣 3 个 devforge:architect-reviewer agent 并行（按视角切分）：
 
 **Agent A — 技术准确性**：
 

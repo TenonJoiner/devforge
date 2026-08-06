@@ -150,7 +150,7 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
 
 ### 视角切分原则
 
-#### 发散视角（project / architect / product / researcher 等产出 agent）
+#### 发散视角（project / architect / product / devforge:researcher 等产出 agent）
 
 多 agent 并行发散时，每个 agent 从独立、互补的视角产出。视角由主会话基于**本次产品的具体上下文**动态生成，在派遣 prompt 中说明切分理由。
 
@@ -158,9 +158,9 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
 
 **反面约束**：不得套用固定视角清单（如"容量/依赖/价值"三视角适用于所有项目）。视角服务于产品决策——不同产品的决策关注点不同，视角应反映这种差异。
 
-#### 产出者派遣 prompt 必备字段（project agent）
+#### 产出者派遣 prompt 必备字段（devforge:project agent）
 
-**核心原则**：`project` agent 已解耦四种「工作模式」、`milestone-plan.md` 等硬编码文件名、SKILL.md 模板读取。skill 派遣时必须在 prompt 中显式注入：
+**核心原则**：`devforge:project` agent 已解耦四种「工作模式」、`milestone-plan.md` 等硬编码文件名、SKILL.md 模板读取。skill 派遣时必须在 prompt 中显式注入：
 
 1. **任务模式**（`初始规划` / `滚动更新` / `快速调整` / `评审顾问`）
 2. **template_path**（如 `templates/plan-milestone.md` / `templates/plan-iteration.md`）
@@ -177,7 +177,7 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
 |---------|------|------|
 | **对象特异视角**（评审项） | 被评审 template | `mandatory-sections` + `checklist-at-end` 段（每个 template 已自带评审锚点） |
 | **场景特异视角**（评审深度） | 主会话派遣 prompt | 基于 `domain-config.yaml` / `quality_attributes.priorities` / 里程碑上下文等动态注入 |
-| **评审思维风格** | reviewer agent 人设 | project-reviewer = 进度/资源视角；architect-reviewer = 技术/架构视角；product-reviewer = 业务/用户视角 |
+| **评审思维风格** | reviewer agent 人设 | devforge:project-reviewer = 进度/资源视角；devforge:architect-reviewer = 技术/架构视角；devforge:product-reviewer = 业务/用户视角 |
 | **评审报告格式** | `templates/review-report.md` | 统一输出格式，**不含**任何评审项；reviewer 按格式产出 |
 
 **派遣 prompt 必备字段**（主会话每次派遣 reviewer 时必须传入）：
@@ -190,7 +190,7 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent]
 6. **被评审对象在系统中的位置说明**（作为问题分级判定的系统上下文）
 
 **反面约束**：
-- 禁止 skill 中硬编码 reviewer 的检查项清单（如"project-reviewer 看计划编排/里程碑划分/团队容量匹配"——这类视角应在被评审 template 中或派遣 prompt 中表达）
+- 禁止 skill 中硬编码 reviewer 的检查项清单（如"devforge:project-reviewer 看计划编排/里程碑划分/团队容量匹配"——这类视角应在被评审 template 中或派遣 prompt 中表达）
 - 禁止 skill 中硬编码 reviewer 数量（统一用 ≥N 描述下限）
 - 禁止默认"三个不同类型 reviewer = 一种分工组合"——同一类型也可多实例做交叉验证
 - 禁止 reviewer agent 在 prompt 之外携带任何评审项

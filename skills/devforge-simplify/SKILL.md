@@ -104,9 +104,9 @@ allowed-tools: [Read, Bash, Grep, Glob, Agent]
 
 ### Step 2：启动三评审 Agent 并行
 
-同时启动 3 个 `code-reviewer` subagent，各获得完整 diff 和以下指令约束。通过 prompt 限定各自的评审维度，重载 code-reviewer 的默认评审视角。
+同时启动 3 个 `devforge:code-reviewer` subagent，各获得完整 diff 和以下指令约束。通过 prompt 限定各自的评审维度，重载 devforge:code-reviewer 的默认评审视角。
 
-**code-reviewer 派遣字段（必填，由 skill 注入）**：
+**devforge:code-reviewer 派遣字段（必填，由 skill 注入）**：
 
 | 字段 | 说明 |
 |------|------|
@@ -268,5 +268,5 @@ allowed-tools: [Read, Bash, Grep, Glob, Agent]
 ## Integration
 
 - **相关 Rules**: `rules/coding-style.md`、`rules/testing.md`
-- **Agent**: `developer` 调度，`code-reviewer` 作为 subagent
+- **Agent**: `devforge:developer` 调度，`devforge:code-reviewer` 作为 subagent
 - **排除标记**: `simplify-ignore-start` / `simplify-ignore-end`、`// perf-critical`、`// intentional`

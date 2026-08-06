@@ -91,7 +91,7 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent, AskUserQuestion]
 5. 仓库识别：对 --src 执行 `git remote get-url origin` 获取远程 URL；若 --ref-doc 在独立仓库中，同样获取其仓库信息
 
 **输出**（写入 `/tmp/arch-extract-topic-locate-<ts>.md`）：
-- 仓库清单：名称 | 本地路径 | 远程 URL
+- 仓库清单：名称 | 远程 URL
 - 文件清单：按目录分组的文件列表
 - 入口点：3-5 个核心入口文件/函数
 - 依赖关系：文件间的 include/import 关系概览
@@ -179,7 +179,7 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent, AskUserQuestion]
 - 若启用了 `--topic-catalog`：catalog 中的概要描述，agent 分析时据此聚焦关注点，避免分析方向偏离
 - 若 `<output-docs>/architecture/<subsystem>/` 下已有 subsystem/topic 文档：留作阶段 7 写作参考（避免重复已有上下文），不注入阶段 4
 
-派遣 5 个 architect agent 并行：
+派遣 5 个 devforge:architect agent 并行：
 
 **Agent A1 — 代码组织与调用链**：
 
@@ -307,7 +307,7 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent, AskUserQuestion]
 
 **职责**：综合阶段 4 五个维度的代码事实和阶段 4 验证结果，归纳架构设计思路
 
-派遣 1 个 architect agent：
+派遣 1 个 devforge:architect agent：
 
 ```
 **任务**：读取阶段 4 的代码分析产出和验证结果，归纳主题的架构设计思路
@@ -359,7 +359,7 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent, AskUserQuestion]
 
 **职责**：按 topic 模板生成完整文档
 
-派遣 3 个 architect agent 并行（按章切分），然后 1 个 architect agent 合并。
+派遣 3 个 devforge:architect agent 并行（按章切分），然后 1 个 devforge:architect agent 合并。
 
 **共享写作约束**（三个 agent 均须遵守）：
 - 写作前 MUST 先读取模板：`skills/devforge-arch-extract-topic/templates/arch-reverse-topic.md`
@@ -458,7 +458,7 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent, AskUserQuestion]
 - 已知问题：文档-代码矛盾 + 推断依据不足项，性质使用 5 个标准枚举值；无则写"未发现"
 ```
 
-**Agent D — 合并**（architect agent）：
+**Agent D — 合并**（devforge:architect agent）：
 
 ```
 **任务**：将三个章节文件合并为完整文档，做去重和术语统一。不做内容创作，不添加新的技术陈述。
@@ -483,7 +483,7 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent, AskUserQuestion]
 
 **职责**：独立评审 + 修正循环（最多 5 轮）
 
-派遣 3 个 architect-reviewer agent 并行（按视角切分）。所有 reviewer 必须能读取阶段 4 代码分析产出和阶段 5 架构推断，用于交叉验证。
+派遣 3 个 devforge:architect-reviewer agent 并行（按视角切分）。所有 reviewer 必须能读取阶段 4 代码分析产出和阶段 5 架构推断，用于交叉验证。
 
 **Agent A — 技术准确性**：
 
@@ -545,7 +545,7 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent, AskUserQuestion]
 1. 汇总 3 个 agent 的问题清单
 2. 存在任何 CRITICAL 问题 → **直接判定不通过**（CRITICAL 一票否决，不受缺陷密度阈值豁免）
 3. 无 CRITICAL 且缺陷密度 ≤ 2.0 → 通过，进入第 9 阶段
-4. 否则 → 主会话汇总三份评审报告，合并为修正清单（每条问题附所属评审报告路径），注入 1 个 architect agent 的派遣 prompt。agent 按清单逐项修正后，回到本阶段重新评审
+4. 否则 → 主会话汇总三份评审报告，合并为修正清单（每条问题附所属评审报告路径），注入 1 个 devforge:architect agent 的派遣 prompt。agent 按清单逐项修正后，回到本阶段重新评审
 5. 最多 5 轮。3 轮后仍未通过 → 标注残留问题，进入第 9 阶段
 
 **问题分值**：CRITICAL=10, HIGH=3, MEDIUM=1, LOW=0.1

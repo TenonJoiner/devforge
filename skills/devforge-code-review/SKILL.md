@@ -37,12 +37,12 @@ parameters:
 **评审哲学**：像导师一样评审，不是像看门人一样。每个发现都 teach something —— 解释为什么有问题，而不只是指出问题。评审是为了提升代码质量和开发者能力，不只是找出错误。
 
 **核心原则**：
-- **审修可控**：默认只评审不修复（`autofix` 未设置时），输出评审报告后结束；带 `autofix` 参数时 `code-reviewer` 初评 → `code-reviewer` 误报审核 → `developer` 修复 → `code-reviewer` 验证修复，skill 内完整闭环。角色分离由 agent 分离保证（`code-reviewer` 不写代码，`developer` 按报告修复），不是靠拆成两次调用
+- **审修可控**：默认只评审不修复（`autofix` 未设置时），输出评审报告后结束；带 `autofix` 参数时 `devforge:code-reviewer` 初评 → `devforge:code-reviewer` 误报审核 → `devforge:developer` 修复 → `devforge:code-reviewer` 验证修复，skill 内完整闭环。角色分离由 agent 分离保证（`devforge:code-reviewer` 不写代码，`devforge:developer` 按报告修复），不是靠拆成两次调用
 - **分级明确**：CRITICAL 必须修，HIGH 强烈建议修，MEDIUM 优化建议，LOW 轻微问题可延期。风格问题不进入评审管线（由 `post-edit-format` hook 自动处理）
 - **证据说话**：每个问题必须引用代码行、说明影响、提供改进方案
 - **领域适配**：根据项目文件系统自动推断的主语言，以及代码结构中的领域特征调整评审侧重
 
-**风格问题不进入评审**：命名风格、格式、minor 文档缺失等由 `coding-style` rule + `post-edit-format` hook（对应语言的格式化工具，如 `clang-format`/`gofmt`/`black`）在编辑时自动处理。code-reviewer 聚焦于 correctness / security / maintainability，不讨论 tabs vs spaces。
+**风格问题不进入评审**：命名风格、格式、minor 文档缺失等由 `coding-style` rule + `post-edit-format` hook（对应语言的格式化工具，如 `clang-format`/`gofmt`/`black`）在编辑时自动处理。devforge:code-reviewer 聚焦于 correctness / security / maintainability，不讨论 tabs vs spaces。
 
 ## 何时使用
 
@@ -199,7 +199,7 @@ Correctness 和 Security 维度中的部分检查项引用 `coding-style-<lang>.
 | | 轻量评审 | 深度评审 |
 |--|---------|---------|
 | **覆盖维度** | D1 Correctness + D2 Readability | D1-D5 全维度 |
-| **执行方式** | `code-reviewer` 单 agent | 5 个 subagent 并行（D1-D5 各一个），汇总去重 |
+| **执行方式** | `devforge:code-reviewer` 单 agent | 5 个 subagent 并行（D1-D5 各一个），汇总去重 |
 | **误报审核** | 执行（初评草稿 → 复核 → 终稿） | 执行（汇总去重 → 复核 → 终稿） |
 | **变体分析** | 不执行 | CRITICAL/HIGH 安全发现时触发 |
 | **收敛轮数** | 单轮 | 多轮，直到无新增 CRITICAL/HIGH |
@@ -211,9 +211,9 @@ Correctness 和 Security 维度中的部分检查项引用 `coding-style-<lang>.
   - 轻量评审（< 300 行且模块 ≤ 2）
   - 深度评审（≥ 300 行，或 3+ 模块）
 
-### `code-reviewer` 派遣字段（必填，由 skill 注入）
+### `devforge:code-reviewer` 派遣字段（必填，由 skill 注入）
 
-`code-reviewer` agent 已解耦语言推断/工作模式/git 命令——skill 派遣时必须在 prompt 中显式注入以下字段：
+`devforge:code-reviewer` agent 已解耦语言推断/工作模式/git 命令——skill 派遣时必须在 prompt 中显式注入以下字段：
 
 | 字段 | 说明 | 示例 |
 |------|------|------|
@@ -233,18 +233,18 @@ Correctness 和 Security 维度中的部分检查项引用 `coding-style-<lang>.
 
 ### 轻量评审（初评）
 
-- 派遣单个 `code-reviewer` agent（`任务模式=轻量评审`），读取 diff、执行 D1+D2 评审，将**初评草稿**写入 `/tmp/code-review-<ts>-draft.md`（不直接写 `report_output_path`）。
+- 派遣单个 `devforge:code-reviewer` agent（`任务模式=轻量评审`），读取 diff、执行 D1+D2 评审，将**初评草稿**写入 `/tmp/code-review-<ts>-draft.md`（不直接写 `report_output_path`）。
 
 ### 深度评审（初评）
 
-1. 并行派遣 5 个 `code-reviewer` subagent，每个负责一个维度（D1-D5）。
+1. 并行派遣 5 个 `devforge:code-reviewer` subagent，每个负责一个维度（D1-D5）。
 2. 每个 subagent 的临时报告写入独立中间文件，例如 `/tmp/code-review-<ts>-d1.md` 至 `/tmp/code-review-<ts>-d5.md`，避免相互覆盖。
 3. 所有 subagent 完成后，主会话读取这 5 份中间报告，按 CRITICAL/HIGH/MEDIUM/LOW 汇总、去重、重新编号，生成**初评草稿**写入 `/tmp/code-review-<ts>-draft.md`。
 4. `/tmp` 中的维度中间文件仅供汇总使用，不对外暴露。
 
 ### 误报审核（两种深度均执行）
 
-初评草稿产出后，派遣一个**全新的 `code-reviewer` 实例**（`任务模式=误报审核`），对草稿逐条复核后产出最终报告。这是「假阳性排除规则（硬规则）」之上的**语义判断层**：硬规则拦已知模式，本环节拦硬规则覆盖不到的新型误报。**仅作用于初评（Round 1）；autofix 的验证轮（Round 2+）不再复核。**
+初评草稿产出后，派遣一个**全新的 `devforge:code-reviewer` 实例**（`任务模式=误报审核`），对草稿逐条复核后产出最终报告。这是「假阳性排除规则（硬规则）」之上的**语义判断层**：硬规则拦已知模式，本环节拦硬规则覆盖不到的新型误报。**仅作用于初评（Round 1）；autofix 的验证轮（Round 2+）不再复核。**
 
 1. **注入字段**：`draft_report_path`（初评草稿路径）、`diff_range`、`主语言`、`report_output_path`。
 2. **逐条复核**：对草稿中每条 CRITICAL/HIGH/MEDIUM 发现，结合源码判定：
@@ -275,7 +275,7 @@ Correctness 和 Security 维度中的部分检查项引用 `coding-style-<lang>.
 
 - 若 `report-output-path` 参数存在，将评审报告写入该路径。
 - 若 `report-output-path` 为空，由 skill 选择默认路径（如 `/tmp/code-review-report-<ts>.md`）。
-- 报告路径通过 `report_output_path` 字段注入 `code-reviewer` agent。
+- 报告路径通过 `report_output_path` 字段注入 `devforge:code-reviewer` agent。
 
 ## 审修闭环输出格式
 
@@ -398,15 +398,15 @@ Developer 按报告逐项修复后输出：
 
 ### `autofix` 未设置（默认）— 只评审
 
-1. **初评**：`code-reviewer` 输出初评草稿（轻量单 agent / 深度 5 维汇总）
-2. **误报审核**：全新 `code-reviewer`（`任务模式=误报审核`）逐条复核，剔除误报、调整级别，按最终级别生成最终报告
+1. **初评**：`devforge:code-reviewer` 输出初评草稿（轻量单 agent / 深度 5 维汇总）
+2. **误报审核**：全新 `devforge:code-reviewer`（`任务模式=误报审核`）逐条复核，剔除误报、调整级别，按最终级别生成最终报告
 3. **结束**：输出最终报告和最终结论，不执行修复
 
 ### `autofix` 已设置 — 评审 + 自动修复
 
-1. **初评**：`code-reviewer` 输出初评草稿
-2. **误报审核**：全新 `code-reviewer`（`任务模式=误报审核`）逐条复核，剔除误报、调整级别，按最终级别生成最终报告——developer 只修复审核后保留的发现，避免在误报上浪费修复动作
-3. **修复**：`developer` 按最终报告逐项修复（CRITICAL → HIGH → MEDIUM）
+1. **初评**：`devforge:code-reviewer` 输出初评草稿
+2. **误报审核**：全新 `devforge:code-reviewer`（`任务模式=误报审核`）逐条复核，剔除误报、调整级别，按最终级别生成最终报告——developer 只修复审核后保留的发现，避免在误报上浪费修复动作
+3. **修复**：`devforge:developer` 按最终报告逐项修复（CRITICAL → HIGH → MEDIUM）
 4. **验证轮**（仅深度评审）：修复完成后再执行一轮评审。最多 3 轮：
    - 若有新增 CRITICAL/HIGH → 继续修复并进入下一轮验证
    - 无新增 CRITICAL/HIGH → 收敛，结束
@@ -433,4 +433,4 @@ Developer 按报告逐项修复后输出：
 
 - **相关 Rules**: `rules/coding-style.md`, `rules/testing.md`
 - **相关 Hooks**: `post-edit-format`（风格问题在编辑时自动处理，不进入评审管线）
-- **相关 Agent**: `code-reviewer`(A3) 执行评审，`developer`(A2) 负责修复
+- **相关 Agent**: `devforge:code-reviewer`(A3) 执行评审，`devforge:developer`(A2) 负责修复

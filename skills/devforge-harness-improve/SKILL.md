@@ -119,9 +119,9 @@ bash skills/devforge-harness-improve/aggregate.sh "$WORK_DIR/reports" > "$WORK_D
 
 ### 第 4 阶段：分析
 
-**步骤 4：派遣 harness-engineer agent 分析聚合报告**
+**步骤 4：派遣 devforge:harness-engineer agent 分析聚合报告**
 
-主会话派遣 harness-engineer agent（分析模式），注入以下 prompt。
+主会话派遣 devforge:harness-engineer agent（分析模式），注入以下 prompt。
 
 **注意**：主会话需先计算 plugin 根目录（当前 skill 文件路径向上三级，即 `skills/devforge-harness-improve/SKILL.md` → plugin 根），将以下 prompt 中的 `{plugin_dir}` 替换为实际绝对路径后再发送给 agent。同时将 `{project_dir}` 替换为实际项目路径（即 `$project_dir` 参数值）。
 
@@ -234,6 +234,6 @@ rm -f <trace_dir>/*.tar.gz
 
 ## 关联
 
-- **相关 Agent**: `harness-engineer`
+- **相关 Agent**: `devforge:harness-engineer`
 - **相关 Hook**: `trace-collector`（PreToolUse + PostToolUse）、`trace-upload`（SessionEnd）
 - **相关脚本**: `trace-distill.sh`、`aggregate.sh`
