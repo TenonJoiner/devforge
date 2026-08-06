@@ -20,11 +20,12 @@
 ## 调用方式
 
 ```
-/df:arch-extract-topic --target=<主题名> [--src=<源码目录>] [--ref-doc=<社区文档目录>] [--output-docs=<输出目录>]
+/df:arch-extract-topic --target=<主题名> [--topic-catalog=<catalog路径>] [--src=<源码目录>] [--ref-doc=<社区文档目录>] [--output-docs=<输出目录>]
 ```
 
 **参数**：
-- `--target`（必选）：技术主题名，如 "协程调度模型""本地存储引擎""Raft 共识"
+- `--target`（必选）：技术主题名，如 "协程调度模型""本地存储引擎""Raft 共识"。若同时指定 `--topic-catalog`，则 `--target` 作为 catalog 中的查找键，匹配成功后使用 catalog 中的规范名称
+- `--topic-catalog`（可选）：子系统 topic 清单文件路径，包含该子系统所有 topic 的名称、概要描述和范围定义。传入后，`--target` 变为 catalog 查找键，利用 catalog 中的丰富描述指导定位和分析，利用相邻 topic 边界约束本 topic 范围
 - `--src`（可选，默认：当前工作目录）：源码目录路径
 - `--ref-doc`（可选）：社区文档目录（上游开源项目的文档），用于提供设计背景和概念框架
 - `--output-docs`（可选，默认：`docs`）：输出文档根目录
@@ -33,4 +34,5 @@
 ```
 /df:arch-extract-topic --target=协程调度
 /df:arch-extract-topic --target=本地存储引擎 --ref-doc=reference/project/docs/
+/df:arch-extract-topic --target=l1-cache --topic-catalog=docs/architecture/lmcache/topic-inventory.md
 ```
