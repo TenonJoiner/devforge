@@ -140,7 +140,7 @@ git worktree add --detach "$WORKTREE_PATH" "origin/<head_branch>"
 - **CWD**：基础设施——CLAUDE.md、规则文件、lint 脚本及其规则配置（`.clang-tidy`、`.golangci.yml` 等）。调用方应从基础设施最新（通常为 main）的分支发起 pr-review
 - **`--worktree-path`**：MR 源码——待审查/待检查的代码与构建脚本（Makefile、CMakeLists.txt 等）
 
-若 worktree 已存在（上次残留），先 `git worktree remove --force "$WORKTREE_PATH"` 再重新创建。
+若 worktree 已存在（上次残留），先 `rm -rf "$WORKTREE_PATH" && git worktree prune` 再重新创建。
 
 ### 第 4 阶段：变更内容评审
 
@@ -274,11 +274,12 @@ pr-review 的报告产出取决于分支：
   
   **步骤 8a：生成评论正文并自检**
   
-  1. 读取评论格式模板：
-     ```
-     templates/pr-review-comment.md
-     ```
-     模板路径相对于 DevForge plugin 安装目录。模板定义了评论正文的固定结构、占位符替换规则和自检清单。**必须先读取模板再生成评论**，禁止凭记忆或推测格式。
+  1. 读取评论格式模板。模板定义了评论正文的固定结构、占位符替换规则和自检清单。**必须先读取模板再生成评论**，禁止凭记忆或推测格式。
+
+     模板查找（按优先级）：
+     - `<skill_base_dir>/templates/pr-review-comment.md`（skill 基础目录由 skill launch 时的 base_dir 确定）
+     - `find ~/.claude/plugins/ -name pr-review-comment.md`（兜底定位）
+     - 仍未找到 → 报错终止，报两个候选路径供人工确认
   
   2. 生成 MR 变更分类统计：
      - 使用 `git diff --numstat <diff_range>` 获取本次 diff 每个文件的增删行数。
@@ -288,13 +289,13 @@ pr-review 的报告产出取决于分支：
        - **其他**：不属于以上两类的文件
      - 汇总填入模板的变更统计表格。
   
-  3. 按 `templates/pr-review-comment.md` 严格填充各占位符，写入 `/tmp/pr-review-comment-<mr_number>.md`：
+  3. 按步骤 1 读取的模板严格填充各占位符，写入 `/tmp/pr-review-comment-<mr_number>.md`：
      - 外层摘要只展示数量，不展示具体问题的标题、文件位置或描述
      - 中间报告的完整内容**原样粘贴**进对应 `<details>` 块，禁止概括、删减、改写、只摘录部分
      - 分支 A：代码评审折叠块在前，lint 检查居中，日志审计折叠块在后；问题计数为三份报告之和
      - 分支 B：仅文档评审折叠块；问题计数为文档评审报告的数量
   
-  4. **自检闸门**：逐项执行 `templates/pr-review-comment.md` 末尾的自检清单。任一项不通过 → 修正文件后重新自检，禁止跳过自检直接发送。
+  4. **自检闸门**：逐项执行模板末尾的自检清单。任一项不通过 → 修正文件后重新自检，禁止跳过自检直接发送。
   
   **步骤 8b：发送评论**
   
@@ -304,7 +305,7 @@ pr-review 的报告产出取决于分支：
      gh pr comment <number> --body-file /tmp/pr-review-comment-<mr_number>.md
      
      # GitLab
-     glab mr note <number> -m "$(cat /tmp/pr-review-comment-<mr_number>.md)"
+     glab mr note create <number> --body-file /tmp/pr-review-comment-<mr_number>.md
      ```
      **严禁使用** `gh pr review`（评论会贴到代码行而非评论区）、`gh api`（可绕过约束拆分评论）、或任何其他评论方式。**严禁多次调用**——一次 MR 评审只产生一条评论。违者会导致报告拆分、格式丢失、或评论出现在错误位置。
   
@@ -339,7 +340,8 @@ pr-review 的报告产出取决于分支：
 若第 3.5 阶段创建了 worktree：
 
 ```bash
-git worktree remove "$WORKTREE_PATH"
+rm -rf "$WORKTREE_PATH"
+git worktree prune
 ```
 
 ## CI 模式评论策略
@@ -358,7 +360,7 @@ git worktree remove "$WORKTREE_PATH"
 只允许以下命令发送评论，**单次调用**：
 
 - GitHub：`gh pr comment <number> --body-file /tmp/pr-review-comment-<mr_number>.md`
-- GitLab：`glab mr note <number> -m "$(cat /tmp/pr-review-comment-<mr_number>.md)"`
+- GitLab：`glab mr note create <number> --body-file /tmp/pr-review-comment-<mr_number>.md`
 
 ### 反模式（严禁）
 
