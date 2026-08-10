@@ -95,7 +95,7 @@ skill 在 **change-dir** 查找输入文件、输出产出文件：
 
 ### [1] 上下文准备
 
-主会话做轻量准备，为调度 agent 和计分提供必要信息：
+主会话做轻量准备，为调度 agent 和判定汇总提供必要信息：
 
 1. **验证输入存在性**：确认 change-dir 下存在 `proposal.md`、`specs/**/*.md`、`design.md` 中的至少一个；一个都不存在则立即报错并停止。存在多个时，由 agent 按需评审实际存在的文件。
 2. **发现产品级架构文档**：用 `Glob` 列出项目根目录 `docs/architecture/` 下可能与本次变更相关的文件路径，供 devforge:architect-reviewer 读取。
@@ -114,45 +114,29 @@ skill 在 **change-dir** 查找输入文件、输出产出文件：
 
 **被评审文件缺失时的处理**：agent 只读取实际存在的文件；若因关键文件缺失导致某维度无法评审，在问题清单中标注为 HIGH 或 MEDIUM（如「design.md 缺失，无法评审 Requirement→Decision 一致性」）。
 
-### [3] 汇总计分
+### [3] 汇总 reviewer 判定
 
-主会话收集实际派遣的 agent 的评审结果，合并问题清单，去重后分别计算：
-- proposal.md 的缺陷总分（存在时）
-- specs/ 中每个 spec 文件的缺陷总分（存在时）
-- design.md 的缺陷总分（存在时）
+主会话收集实际派遣的 agent 的评审结果（问题清单 + 判定结论），执行纯机械汇总：
 
-跨文档一致性问题按 Location 归属到对应文档参与计分。
+1. **合并问题清单**：合并所有 reviewer 的问题清单并去重（按 Location + 问题描述判断重复）
+2. **汇总判定**：取所有 reviewer 对每个文档的判定中最严格的作为该文档判定；再取各文档判定中最严格的作为整体 AI 建议决策（严格度：REJECT > PASS WITH CONDITIONS > PASS）
+3. **汇总理由**：合并各 reviewer 的判定理由
 
-**缺陷密度计算公式**：
-```
-单文档缺陷密度 = 该文档的问题分数之和
-```
+**主会话不自行计算判定**。判定由 reviewer agent 独立给出，主会话只做合并和取最严格值的机械操作，不修改 reviewer 的判定结论。
 
-问题分值：**CRITICAL=10分, HIGH=3分, MEDIUM=1分, LOW=0.1分**
+### [4] AI 建议决策（由 reviewer 判定汇总得出）
 
-**示例**：
-- proposal.md：1 个 HIGH（3 分）+ 2 个 MEDIUM（2 分）= 5 分
-- spec1.md：1 个 CRITICAL（10 分）= 10 分
-- design.md：3 个 MEDIUM（3 分）= 3 分
+AI 建议决策直接取自步骤 [3] 的汇总结果。评审目标是**判定文档是否达到进入 tasks 阶段的最低质量标准**，而非穷举所有可改进点。
 
-### [4] AI 建议决策
-
-根据各文档缺陷密度、CRITICAL 问题数和 HIGH 问题数，给出 AI 建议。评审目标是**判定文档是否达到进入 tasks 阶段的最低质量标准**，而非穷举所有可改进点。
-
-**问题分级判定标准**（reviewer 必须按此归类）：
+**问题分级标准**（reviewer 按此归类问题级别）：
 - **CRITICAL**：存在事实错误、与上游文档直接矛盾、无法通过实现弥补的根本缺陷、或违反安全/合规等硬性约束。必须修复，否则不能 PASS。
 - **HIGH**：缺少关键信息或分析不足，显著影响质量。必须全部修复才能 PASS；带 1-2 个 HIGH 可 PASS WITH CONDITIONS。
 - **MEDIUM**：表述可更清晰、边界可更完整、建议补充的优化项。
 - **LOW**：格式、拼写、minor 文案。
 
-**AI 建议决策**：
-- **PASS**：无 CRITICAL 和 HIGH；单文档缺陷密度 ≤ 3.0
-- **PASS WITH CONDITIONS**：无 CRITICAL；单文档缺陷密度 > 3.0 但 ≤ 6.0（由 1-2 个 HIGH 或较多 MEDIUM/LOW 导致）
-- **REJECT**：存在 CRITICAL；或单文档缺陷密度 > 6.0
-
 ### [5] 写入 review.md
 
-主会话按 `../../openspec-schema/schemas/spec-driven-enhanced/templates/review.md` 的章节结构，将合并后的问题清单、缺陷密度、AI 建议决策组装写入 `review.md`。
+主会话按 `../../openspec-schema/schemas/spec-driven-enhanced/templates/review.md` 的章节结构，将合并后的问题清单、各 reviewer 的判定结论、汇总后的整体 AI 建议决策组装写入 `review.md`。
 
 - 不带 `autofix`：按模板写入单轮报告，「AI Review Rounds」下记录为 **Round 1**
 - 带 `autofix`（首轮）：同样写入 **Round 1**；后续循环中在此基础上追加 Round
@@ -223,7 +207,7 @@ skill 在 **change-dir** 查找输入文件、输出产出文件：
 
 #### 步骤 4：重新评审并追加 Round
 
-1. 重新执行「初次评审模式」的步骤 [1]–[4]，生成新一轮问题清单、缺陷密度和 AI 建议决策
+1. 重新执行「初次评审模式」的步骤 [1]–[4]，生成新一轮问题清单和 reviewer 判定
 2. 主会话读取当前 `review.md` 中 `## AI Review Rounds` 到 `## Review Conclusion` 之间的轻量结构，确定当前最大 Round 数 N
 3. 基于新一轮评审结果，按 template 格式组装 **Round N+1**（含 Issues Found 表格、Round Result），插入到 `## Review Conclusion` 之前
 4. 更新 `## Review Conclusion` 中的 AI 建议决策、建议理由和遗留问题
@@ -247,7 +231,7 @@ skill 在 **change-dir** 查找输入文件、输出产出文件：
 
 ## 评审标准
 
-以下维度清单用于主会话调度、状态跟踪和计分。**各维度不再追求“找出尽量多问题”，而是按「通过标准」判定：满足通过标准时，不在该维度提出问题；未满足时，按问题分级标准记录 CRITICAL / HIGH / MEDIUM / LOW。**
+以下维度清单用于主会话调度和状态跟踪，评审和判定由 reviewer agent 独立执行。**各维度不再追求“找出尽量多问题”，而是按「通过标准」判定：满足通过标准时，不在该维度提出问题；未满足时，按问题分级标准记录 CRITICAL / HIGH / MEDIUM / LOW。**
 
 ### 跨文档一致性与格式合规（由 `devforge:product-reviewer（cross-doc）` 统一评审）
 
@@ -384,8 +368,16 @@ skill 在 **change-dir** 查找输入文件、输出产出文件：
   - 通过标准：异常路径从业务语义出发；NFR 指标可量化、可验证并落地到 Requirement。
   - 触发问题：核心异常路径缺失、NFR 指标不可量化或与 Requirement 脱节。
 
+**判定参考**（用于给出最终判定，非硬性公式；复杂度、风险、上下文等因素也应纳入考量）：
+- 问题分值参考：CRITICAL=10分, HIGH=3分, MEDIUM=1分, LOW=0.1分
+- 单文档缺陷密度 = 该文档问题分数之和
+- PASS：无 CRITICAL 和 HIGH；缺陷密度 ≤ 3.0
+- PASS WITH CONDITIONS：无 CRITICAL；缺陷密度 > 3.0 但 ≤ 6.0
+- REJECT：存在 CRITICAL；或缺陷密度 > 6.0
+
 **输出**：
-问题清单（CRITICAL / HIGH / MEDIUM / LOW），每个问题标注 Location（文件:章节）。
+1. 问题清单（CRITICAL / HIGH / MEDIUM / LOW），每个问题标注 Location（文件:章节）
+2. 判定结论：对 proposal.md（如存在）和每个 spec 文件（如存在）分别给出 PASS / PASS WITH CONDITIONS / REJECT，附简短理由
 ```
 
 ### devforge:architect-reviewer agent
@@ -439,8 +431,16 @@ skill 在 **change-dir** 查找输入文件、输出产出文件：
   - 通过标准：关键路径延迟和吞吐量有量化分析；Upgrade Impact 识别升级流程风险并对应 spec NFR 目标。
   - 触发问题：关键性能指标无量化、升级风险未识别。
 
+**判定参考**（用于给出最终判定，非硬性公式；复杂度、风险、上下文等因素也应纳入考量）：
+- 问题分值参考：CRITICAL=10分, HIGH=3分, MEDIUM=1分, LOW=0.1分
+- 单文档缺陷密度 = 该文档问题分数之和
+- PASS：无 CRITICAL 和 HIGH；缺陷密度 ≤ 3.0
+- PASS WITH CONDITIONS：无 CRITICAL；缺陷密度 > 3.0 但 ≤ 6.0
+- REJECT：存在 CRITICAL；或缺陷密度 > 6.0
+
 **输出**：
-问题清单（CRITICAL / HIGH / MEDIUM / LOW），每个问题标注 Location（文件:章节）。
+1. 问题清单（CRITICAL / HIGH / MEDIUM / LOW），每个问题标注 Location（文件:章节）
+2. 判定结论：对 design.md（如存在）给出 PASS / PASS WITH CONDITIONS / REJECT，附简短理由
 ```
 
 ### devforge:product-reviewer agent（cross-doc）
@@ -489,8 +489,17 @@ skill 在 **change-dir** 查找输入文件、输出产出文件：
    - 通过标准：从外部调用方/用户视角描述可见行为；proposal/spec 只承载 **why** 和 **what**，design 承载 **how**；术语准确、长句可理解；文字本身能独立表达方案。
    - 触发问题：proposal/spec 中出现研发视角的内部架构、数据结构、算法、接口实现等 how 细节；关键段落歧义到影响理解、术语错误导致误解。
 
+**判定参考**（用于给出最终判定，非硬性公式；跨文档一致性问题难以按单文档计分，需综合判断）：
+- 问题分值参考：CRITICAL=10分, HIGH=3分, MEDIUM=1分, LOW=0.1分
+- 跨文档一致性问题按 Location 归属到对应文档后，参考各文档的缺陷密度阈值
+- 模板符合性问题影响对应文档的格式合规判定
+- PASS：无 CRITICAL 和 HIGH；各文档缺陷密度均 ≤ 3.0
+- PASS WITH CONDITIONS：无 CRITICAL；个别文档缺陷密度 > 3.0 但 ≤ 6.0
+- REJECT：存在 CRITICAL；或任一文档缺陷密度 > 6.0
+
 **输出**：
-问题清单（CRITICAL / HIGH / MEDIUM / LOW），每个问题标注 Location（文件:章节）。
+1. 问题清单（CRITICAL / HIGH / MEDIUM / LOW），每个问题标注 Location（文件:章节）
+2. 判定结论：对 proposal.md / specs/**/*.md / design.md（各文件如存在）分别给出格式合规判定（PASS / PASS WITH CONDITIONS / REJECT），并对跨文档一致性整体给出判定，附简短理由
 ```
 
 ---
