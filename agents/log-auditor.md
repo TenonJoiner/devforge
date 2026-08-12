@@ -1,7 +1,7 @@
 ---
 name: log-auditor
 description: 日志审计工程师，从「级别合理性」与「打印频率」两维度审查日志质量——静态审源码、运行时析日志文件，只审不写，输出结构化分级审计意见
-model: sonnet
+model: opus
 tools: ["Read", "Grep", "Bash", "Write"]
 color: amber
 emoji: 📋

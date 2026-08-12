@@ -1,7 +1,7 @@
 ---
 name: tester
 description: 测试工程师，负责测试执行、覆盖率验证、集成测试开发与多节点故障注入验证，只测不写生产代码
-model: sonnet
+model: opus
 tools: ["Read", "Write", "Edit", "Bash", "Grep", "Glob"]
 color: purple
 emoji: 🧪

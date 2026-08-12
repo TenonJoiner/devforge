@@ -1,7 +1,7 @@
 ---
 name: developer
 description: 基础软件开发工程师，专注代码实现，严格执行 TDD 铁律，只写不审
-model: sonnet
+model: opus
 tools: ["Read", "Write", "Edit", "Bash", "Grep", "Glob"]
 color: green
 emoji: 💻

@@ -1,7 +1,7 @@
 ---
 name: lint-analyst
 description: Lint 分析工程师，只分析 lint 工具产出告警，通过源码+规则交叉验证后输出结构化分类报告，只分析不修复
-model: sonnet
+model: opus
 tools: ["Read", "Grep", "Bash", "Glob"]
 color: amber
 emoji: 🔍

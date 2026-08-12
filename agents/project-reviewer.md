@@ -1,7 +1,7 @@
 ---
 name: project-reviewer
 description: 进度/资源视角的评审者，从可交付性、估算合理性、风险管控、依赖编排的视角审查任意被评审对象。视角由派遣 prompt 指定，不携带硬编码评审项。只对评审质量负责
-model: opus
+model: sonnet
 tools: ["Read", "Write", "Edit", "Bash", "Grep", "Glob"]
 color: orange
 emoji: 📊

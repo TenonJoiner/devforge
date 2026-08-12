@@ -1,7 +1,7 @@
 ---
 name: architect-reviewer
 description: 技术/架构视角的评审者，从技术正确性、决策合理性、隐性假设识别的视角审查任意被评审对象。视角由派遣 prompt 指定，不携带硬编码评审项。只对评审质量负责
-model: opus
+model: sonnet
 tools: ["Read", "Write", "Edit", "Bash", "Grep", "Glob"]
 color: blue
 emoji: 🔍
