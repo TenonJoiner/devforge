@@ -1,0 +1,11 @@
+{"seq": 1, "ts": "2026-08-25T10:00:00", "session": "selftest", "type": "tool_intent", "tool": "Bash", "input_summary": "ls", "_ts": 1724580000.0, "cid": "c1"}
+{"seq": 2, "ts": "2026-08-25T10:00:01", "session": "selftest", "type": "tool_call", "tool": "Bash", "input_summary": "ls", "duration_ms": 100, "result": {"status": "success"}, "cid": "c1"}
+{"seq": 3, "ts": "2026-08-25T10:00:02", "session": "selftest", "type": "tool_intent", "tool": "Skill", "input_summary": "devforge:devforge-spec-review", "_ts": 1724580002.0, "cid": "c2"}
+{"seq": 4, "ts": "2026-08-25T10:00:03", "session": "selftest", "type": "skill_invoke", "tool": "Skill", "input_summary": "devforge:devforge-spec-review", "duration_ms": 1000, "result": {"status": "success"}, "cid": "c2"}
+{"seq": 5, "ts": "2026-08-25T10:00:04", "session": "selftest", "type": "tool_intent", "tool": "Agent", "input_summary": "[product] 评审", "_ts": 1724580004.0, "cid": "c3"}
+{"seq": 6, "ts": "2026-08-25T10:00:05", "session": "selftest", "type": "agent_dispatch", "tool": "Agent", "agent_subtype": "product", "input_summary": "[product] 评审", "duration_ms": 2000, "result": {"status": "success"}, "cid": "c3"}
+{"seq": 7, "ts": "2026-08-25T10:00:06", "session": "selftest", "type": "tool_intent", "tool": "Read", "input_summary": "/etc/passwd", "_ts": 1724580006.0, "cid": "c4"}
+{"seq": 8, "ts": "2026-08-25T10:00:07", "session": "selftest", "type": "tool_intent", "tool": "Grep", "input_summary": "foo", "_ts": 1724580007.0, "cid": "c5"}
+{"seq": 9, "ts": "2026-08-25T10:00:08", "session": "selftest", "type": "tool_call", "tool": "Grep", "input_summary": "foo", "duration_ms": 50, "result": {"status": "success"}, "cid": "c5"}
+{"seq": 10, "ts": "2026-08-25T10:00:09", "session": "selftest", "type": "tool_intent", "tool": "Bash", "input_summary": "pwd", "_ts": 1724580009.0, "cid": "c6"}
+{"seq": 11, "ts": "2026-08-25T10:00:10", "session": "selftest", "type": "tool_call", "tool": "Bash", "input_summary": "pwd", "duration_ms": 50, "result": {"status": "success"}, "cid": "c6"}

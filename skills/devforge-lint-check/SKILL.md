@@ -1,7 +1,7 @@
 ---
 name: devforge-lint-check
 description: 编译检查与 Lint 分析——零 warning 验证
-allowed-tools: [Read, Bash, Grep, Glob, Edit]
+allowed-tools: [Read, Bash, Grep, Glob, Edit, Agent]
 parameters:
   - name: autofix
     description: 检测后自动修复问题（默认只检测不修复）

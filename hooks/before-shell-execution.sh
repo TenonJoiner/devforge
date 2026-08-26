@@ -66,7 +66,13 @@ elif parts[0] == 'rm':
                      '/opt', '/root', '/sbin', '/sys', '/usr', '/var'}
         for p in parts:
             for d in dangerous:
-                if p == d or p.startswith(d + '/'):
+                # /home 仅精确匹配（含末尾斜杠，放行 /home/<user>/... 子路径下的正常递归删除）
+                # 其他系统目录保持前缀匹配（任何子路径都拦）
+                if d == '/home':
+                    matched = (p == d or p == d + '/')
+                else:
+                    matched = (p == d or p.startswith(d + '/'))
+                if matched:
                     action = 'BLOCK'
                     msg = f'rm 递归删除危险目录被拦截: {p}'
                     break
@@ -102,10 +108,12 @@ elif len(parts) >= 2 and parts[0] == 'git' and parts[1] == 'clean':
         msg = 'git clean -x/-X 将删除忽略文件（含本地配置），请确认'
 
 if action == 'BLOCK':
-    print(f'[DevForge]  {msg}', file=sys.stderr)
-    sys.exit(1)
+    # exit 2 = blocking error，stderr 自动回传给 Claude
+    # exit 1 = non-blocking error，stderr 仅进 transcript，Claude 无法感知阻拦原因
+    print(f'[DevForge][BLOCK:dangerous-cmd] {msg}', file=sys.stderr)
+    sys.exit(2)
 elif action == 'WARN':
-    print(f'[DevForge]  {msg}', file=sys.stderr)
+    print(f'[DevForge][WARN:dangerous-cmd] {msg}', file=sys.stderr)
 
 sys.exit(0)
 " "$HOOK_JSON"

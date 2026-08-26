@@ -47,6 +47,9 @@ def parse_reports(report_dir):
             "skills": [],
             "skill_stats": {},
             "alignment_count": 0,
+            # 原始报告中是否提到「- 共 N 个对齐问题」（用于自检：若提到但解析为 0，说明解析失败）
+            "alignment_mentioned": bool(re.search(r"^-\s*共\s*\d+\s*个对齐问题", content, re.M)),
+            "is_ci": False,  # 在 session id 解析后判定
             "recovery": {},
             "components": {},
             "hook_blocks": 0,
@@ -69,6 +72,9 @@ def parse_reports(report_dir):
 
             if ls.startswith("- session:"):
                 s["session"] = ls.split(":", 1)[1].strip()
+                # CI 会话标记：session id 含 "-ci-" 段（格式 YYYYMMDD-HHMMSS-<user>-ci-<repo>-<anchor>）
+                if "-ci-" in s["session"]:
+                    s["is_ci"] = True
             elif ls.startswith("- duration:"):
                 m = re.search(r"duration:\s*(\d+)min\s*\|\s*events:\s*(\d+)", ls)
                 if m:
@@ -120,6 +126,13 @@ def parse_reports(report_dir):
                 current_section = None
                 continue
 
+            # L3 是列表行（非表格行），必须在下方表格行过滤之前特判
+            if current_section == "L3":
+                m = re.match(r"^-\s*共\s*(\d+)\s*个", ls)
+                if m:
+                    s["alignment_count"] = int(m.group(1))
+                continue
+
             if ls.startswith("|---") or ls.startswith("| --") or not ls.startswith("|"):
                 continue
 
@@ -145,12 +158,6 @@ def parse_reports(report_dir):
                         "retries": int(m.group(6)),
                         "error_rate_str": m.group(7),
                     }
-
-            elif current_section == "L3":
-                if ls.startswith("|- 共"):
-                    m = re.search(r"共\s*(\d+)\s*个", ls)
-                    if m:
-                        s["alignment_count"] = int(m.group(1))
 
             elif current_section == "L4":
                 m = recovery_row_re.match(ls)
@@ -298,6 +305,7 @@ def aggregate(sessions):
     check_data["total_alignment"] = total_alignment
     check_data["total_hook_blocks"] = total_hook_blocks
     check_data["component_count"] = len(component_hotspots)
+    check_data["alignment_mentioned_count"] = sum(1 for s in sessions if s.get("alignment_mentioned"))
     sessions_with_signals = sum(1 for s in sessions if s["components"])
     check_data["sessions_with_signals"] = sessions_with_signals
     non_zero_components = sum(1 for comp, data in component_hotspots.items() if data["total_signals"] > 0)
@@ -305,15 +313,41 @@ def aggregate(sessions):
 
     # === 输出聚合报告 ===
     lines = []
-    lines.append(f"""# Harness 诊断聚合报告
 
-## 概览
-- 分析 {total_sessions} 个会话
-- 平均摩擦评分: {avg_friction:.2f}（{'低摩擦' if avg_friction < 0.2 else '中摩擦' if avg_friction < 0.4 else '高摩擦'}）
-- 高摩擦会话: {len(high_friction)}/{total_sessions}（friction >= 0.3）
-- 执行对齐问题: {total_alignment} 次 (涉及 {alignment_sessions} 个会话)
-- Hook 总阻拦: {total_hook_blocks} 次（初期: {sum(s['hook_pos_early'] for s in sessions)}, 中期: {sum(s['hook_pos_mid'] for s in sessions)}, 末期: {sum(s['hook_pos_late'] for s in sessions)}）
-""")
+    # 按 CI / 交互 分桶（CI 会话 friction 特征与交互会话差异巨大，混算会污染指标）
+    interactive_sessions = [s for s in sessions if not s.get("is_ci")]
+    ci_sessions = [s for s in sessions if s.get("is_ci")]
+
+    def _bucket_stats(group):
+        fr = [s["friction_score"] for s in group if s["friction_score"] > 0]
+        avg = sum(fr) / len(fr) if fr else 0
+        high = sum(1 for s in group if s["friction_score"] >= 0.3)
+        label = "低摩擦" if avg < 0.2 else "中摩擦" if avg < 0.4 else "高摩擦"
+        return avg, high, label
+
+    inter_avg, inter_high, inter_label = _bucket_stats(interactive_sessions)
+    ci_avg, ci_high, ci_label = _bucket_stats(ci_sessions)
+
+    overview_lines = [
+        "# Harness 诊断聚合报告",
+        "",
+        "## 概览",
+        f"- 分析 {total_sessions} 个会话（交互: {len(interactive_sessions)}, CI: {len(ci_sessions)}）",
+    ]
+    if interactive_sessions:
+        overview_lines.append(
+            f"- **交互会话** ({len(interactive_sessions)} 个): 平均 friction {inter_avg:.2f} ({inter_label})，高摩擦 {inter_high}/{len(interactive_sessions)}"
+        )
+    if ci_sessions:
+        overview_lines.append(
+            f"- **CI 会话** ({len(ci_sessions)} 个): 平均 friction {ci_avg:.2f} ({ci_label})，高摩擦 {ci_high}/{len(ci_sessions)}（CI 环境与交互特征不同，单独参考）"
+        )
+    overview_lines.extend([
+        f"- 执行对齐问题: {total_alignment} 次 (涉及 {alignment_sessions} 个会话)",
+        f"- Hook 总阻拦: {total_hook_blocks} 次（初期: {sum(s['hook_pos_early'] for s in sessions)}, 中期: {sum(s['hook_pos_mid'] for s in sessions)}, 末期: {sum(s['hook_pos_late'] for s in sessions)}）",
+        "",
+    ])
+    lines.append("\n".join(overview_lines))
 
     hotspot_entries = [(comp, data) for comp, data in component_hotspots.items() if data["sessions"] >= 2 and data["total_weighted"] >= 1.0]
     if hotspot_entries:
@@ -455,8 +489,13 @@ def self_check(check_data, report_count):
     # 关键字段零值告警
     total_alignment = check_data.get("total_alignment", 0)
     total_hook_blocks = check_data.get("total_hook_blocks", 0)
+    alignment_mentioned = check_data.get("alignment_mentioned_count", 0)
     if total_alignment == 0 and total > 0:
-        lines.append(f"| 执行对齐总数 | >0 (来自输入) | 0 | WARN (可能解析失败或全部会话无对齐问题) |")
+        if alignment_mentioned > 0:
+            # 输入报告明确提到对齐问题数但解析为 0 → 解析失败，必须报错
+            lines.append(f"| 执行对齐总数 | >0 (来自 {alignment_mentioned} 份输入) | 0 | ERROR (解析失败：L3 格式与解析器不匹配) |")
+        else:
+            lines.append(f"| 执行对齐总数 | ≥0 | 0 | OK (输入报告均无对齐问题) |")
     if total_hook_blocks == 0 and total > 0:
         lines.append(f"| Hook 阻拦总数 | ≥0 | 0 | INFO (若输入确实无阻拦则为正常) |")
 

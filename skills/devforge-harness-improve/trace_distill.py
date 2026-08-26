@@ -51,6 +51,13 @@ CODE_EXTS = {".py", ".sh", ".go", ".rs", ".c", ".cpp", ".cc", ".h", ".hpp",
              ".php", ".scala", ".clj", ".ex", ".exs"}
 
 
+def normalize_skill_name(name):
+    """归一化 skill 名：剥离 devforge: 前缀，消除 "devforge-spec-review" 与 "devforge:devforge-spec-review" 双命名分裂"""
+    if name.startswith("devforge:"):
+        return name[len("devforge:"):]
+    return name
+
+
 def classify_read_file(file_path):
     parts = file_path.strip("/").split("/")
     for i, p in enumerate(parts):
@@ -182,10 +189,13 @@ def distill(events_file, transcript_file=""):
     error_events = [e for e in tool_calls if e.get("result", {}).get("status") == "error"]
 
     # === Hook 阻拦检测：优先 cid 精确匹配，回退到 FIFO tool name 匹配 ===
+    # 注意：Skill/Agent 的完成事件类型为 skill_invoke/agent_dispatch，而非 tool_call，
+    # 必须并入匹配池，否则所有 Skill/Agent intent 会被误判为被 Hook 阻拦
     completed_intent_seqs = set()
-    call_by_cid = {e["cid"]: e for e in tool_calls if e.get("cid")}
+    completed_events = tool_calls + skill_events + agent_events
+    call_by_cid = {e["cid"]: e for e in completed_events if e.get("cid")}
     intents_sorted = sorted(tool_intents, key=lambda x: x["seq"])
-    calls_sorted = sorted(tool_calls, key=lambda x: x["seq"])
+    calls_sorted = sorted(completed_events, key=lambda x: x["seq"])
     call_used = [False] * len(calls_sorted)
 
     for intent in intents_sorted:
@@ -242,7 +252,7 @@ def distill(events_file, transcript_file=""):
 
     # === Skill 列表与统计 ===
     skills_used = list(set(
-        (e.get("input_summary", "") or "").split()[0] or "unknown"
+        normalize_skill_name((e.get("input_summary", "") or "").split()[0] or "unknown")
         for e in skill_events
     ))
 
@@ -254,7 +264,7 @@ def distill(events_file, transcript_file=""):
 
     for j, start_idx in enumerate(skill_boundaries):
         end_idx = skill_boundaries[j+1] if j+1 < len(skill_boundaries) else len(events)
-        skill_name = (events[start_idx].get("input_summary", "") or "").split()[0] or "unknown"
+        skill_name = normalize_skill_name((events[start_idx].get("input_summary", "") or "").split()[0] or "unknown")
         skill_events_range = events[start_idx:end_idx]
         skill_tool_calls = [e for e in skill_events_range if e.get("type") == "tool_call"]
         skill_errors = [e for e in skill_tool_calls if e.get("result", {}).get("status") == "error"]
@@ -271,7 +281,7 @@ def distill(events_file, transcript_file=""):
     # 重试检测
     for j, start_idx in enumerate(skill_boundaries):
         end_idx = skill_boundaries[j+1] if j+1 < len(skill_boundaries) else len(events)
-        skill_name = (events[start_idx].get("input_summary", "") or "").split()[0] or "unknown"
+        skill_name = normalize_skill_name((events[start_idx].get("input_summary", "") or "").split()[0] or "unknown")
         skill_range = events[start_idx:end_idx]
         retries = 0
         prev_tool = ""

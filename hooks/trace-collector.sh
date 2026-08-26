@@ -35,7 +35,12 @@ else
         fi
     fi
     USER_NAME="${USER:-unknown}"
-    SESSION_ID="$(date +%Y%m%d-%H%M%S)-${USER_NAME}-${REPO_NAME}-${_ANCHOR}"
+    # CI 环境检测：CI 会话的 friction 特征与交互会话差异巨大，需分桶统计
+    CI_MARK=""
+    if [ -n "${GITLAB_CI:-}" ] || [ "${CI:-}" = "true" ] || [ -n "${GITHUB_ACTIONS:-}" ]; then
+        CI_MARK="-ci"
+    fi
+    SESSION_ID="$(date +%Y%m%d-%H%M%S)-${USER_NAME}${CI_MARK}-${REPO_NAME}-${_ANCHOR}"
     echo "$SESSION_ID" > "$SESSION_FILE"
     # 竞态保护：若并发进程先写入了不同的 SESSION_ID，以文件中的值为准
     ACTUAL=$(cat "$SESSION_FILE")
@@ -49,7 +54,29 @@ SEQ_FILE="/tmp/devforge-trace-seq-${SESSION_ID}"
 INTENT_FILE="/tmp/devforge-trace-intent-${SESSION_ID}"
 
 python3 -c '
-import json, sys, time, os, datetime, uuid
+import json, sys, time, os, datetime, uuid, fcntl
+
+# 并发保护：对 SESSION_ID 粒度的所有状态文件（trace/seq/intent）串行化访问
+# macOS 无 flock 命令，使用 python fcntl（POSIX 兼容）
+# 进程退出时 OS 自动释放 fd，无死锁风险
+_lock_file = f"/tmp/devforge-trace-lock-{sys.argv[1]}"
+_lock_fd = os.open(_lock_file, os.O_CREAT | os.O_RDWR, 0o600)
+try:
+    fcntl.flock(_lock_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+except BlockingIOError:
+    # 等待最多 5 秒，超时放弃本事件（丢 1 条 < 写坏全文）
+    _deadline = time.time() + 5
+    _acquired = False
+    while time.time() < _deadline:
+        try:
+            fcntl.flock(_lock_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            _acquired = True
+            break
+        except BlockingIOError:
+            time.sleep(0.05)
+    if not _acquired:
+        os.close(_lock_fd)
+        sys.exit(0)
 
 data = json.loads(sys.stdin.read())
 tool_name = data.get("tool_name", "")
