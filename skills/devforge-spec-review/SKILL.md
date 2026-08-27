@@ -27,7 +27,7 @@ parameters:
 
 **核心原则**：
 1. **判定达标而非穷举问题**：每个维度有明确「通过标准」，满足即不提出问题，只在未满足时记录问题
-2. **19 项核心维度**：跨文档一致性（6 项）+ Proposal 质量（2 项）+ Specs 质量（4 项）+ Design 质量（7 项）
+2. **21 项核心维度**：跨文档一致性（6 项）+ Proposal 质量（2 项）+ Specs 质量（4 项）+ Design 质量（9 项）
 3. **只做报告，不执行门径**：AI 建议决策写入报告，最终人工决策由 OpenSpec 流程控制
 
 ---
@@ -240,8 +240,8 @@ AI 建议决策直接取自步骤 [3] 的汇总结果。评审目标是**判定�
    - 触发问题：关键必填项缺失、章节顺序严重错乱、未按模板自检清单执行。
 
 2. **内部一致性**
-   - 通过标准：Capability、Requirement、Design/Decisions 之间无矛盾；Interface Changes 覆盖 proposal Impact 中识别的接口/协议/数据格式影响方向；Risks / Upgrade Impact 覆盖 specs 中 NFR 的关键风险。
-   - 触发问题：同一 Requirement 在 design 中未被覆盖、Impact 与 Interface Changes 范围矛盾、NFR 风险无对应处理。
+   - 通过标准：Capability、Requirement、Design/Decisions 之间无矛盾；Contracts 覆盖 proposal Impact 中识别的接口/协议/数据格式影响方向；Risks / Upgrade Impact 覆盖 specs 中 NFR 的关键风险。
+   - 触发问题：同一 Requirement 在 design 中未被覆盖、Impact 与 Contracts 范围矛盾、NFR 风险无对应处理。
 
 3. **同一外部行为一致性**
    - 通过标准：同一 Capability / Requirement 对应的外部可见行为在三类文档中的描述一致（正常路径、异常路径、边界条件）。
@@ -310,12 +310,20 @@ AI 建议决策直接取自步骤 [3] 的汇总结果。评审目标是**判定�
     - 触发问题：关键路径无失败模式分析、无降级策略、复杂度明显过度。
 
 18. **决策备选方案**
-    - 通过标准：有选择空间的决策有备选方案和 trade-off 分析。
-    - 触发问题：重大决策无备选方案、无选择理由。
+    - 通过标准：有选择空间的决策有备选方案和 trade-off 分析。【Standard 档额外要求】每个 Decision 的结论部分有锁定声明（"实现必须按 X"而非"推荐 X"）+ 显式否决理由（"不选 Y 因为 Z"）+ 量化约束（如适用）。
+    - 触发问题：重大决策无备选方案、无选择理由；【Standard 档】Decision 只有"推荐 X"无锁定声明；被否决方案无理由；无量化约束且明显可量化。
 
 19. **性能与升级影响评估**
     - 通过标准：关键路径延迟和吞吐量有量化分析；Upgrade Impact 识别升级流程风险并对应 spec NFR 目标。
     - 触发问题：关键性能指标无量化、升级风险未识别。
+
+20. **决策密度充分性**（仅 Standard 档启用，Light 档跳过）
+    - 通过标准：本特性涉及的每个关键实现决策（数据结构选型、算法、并发模型、状态机、资源管理、错误处理与重试、兼容性等）均已被识别为 Decision，并在 `## Decisions` / `## Contracts` 章节显式化锁定；未涉及的类别无须出现；`## Contracts` 覆盖特性内核心抽象（新增 trait / 错误码 / 核心 schema）。
+    - 触发问题：本特性涉及的某类决策未被识别为 Decision；Standard 档下 `## Contracts` 或 `## Implementation Constraints` 章节缺失，或留空但无"本特性不涉及"的说明。
+
+21. **档位匹配性**
+    - 通过标准：design.md 头部声明的 Complexity 档位（light | standard）与实际复杂度匹配；Standard 档必填章节无缺失、Light 档可选章节留空有合理理由。
+    - 触发问题：声明 light 但实际满足 standard 判定条件（跨模块 / 有对外接口 / 关键决策 ≥3 个 / 有生命周期对象 / 涉及升级迁移）；声明 standard 但缺失必填章节（Contracts / Implementation Constraints / Decisions）。
 
 ---
 
@@ -425,11 +433,17 @@ AI 建议决策直接取自步骤 [3] 的汇总结果。评审目标是**判定�
   - 通过标准：复杂度合理、不过度工程化；关键路径的失败模式、降级策略、恢复机制充分。
   - 触发问题：关键路径无失败模式分析、无降级策略、复杂度明显过度。
 - **决策备选方案**
-  - 通过标准：有选择空间的决策有备选方案和 trade-off 分析。
-  - 触发问题：重大决策无备选方案、无选择理由。
+  - 通过标准：有选择空间的决策有备选方案和 trade-off 分析。【Standard 档额外要求】每个 Decision 的结论部分有锁定声明（"实现必须按 X"而非"推荐 X"）+ 显式否决理由（"不选 Y 因为 Z"）+ 量化约束（如适用）。
+  - 触发问题：重大决策无备选方案、无选择理由；【Standard 档】Decision 只有"推荐 X"无锁定声明；被否决方案无理由；无量化约束且明显可量化。
 - **性能与升级影响评估**
   - 通过标准：关键路径延迟和吞吐量有量化分析；Upgrade Impact 识别升级流程风险并对应 spec NFR 目标。
   - 触发问题：关键性能指标无量化、升级风险未识别。
+- **决策密度充分性**（仅 Standard 档启用，Light 档跳过）
+  - 通过标准：本特性涉及的每个关键实现决策（数据结构选型、算法、并发模型、状态机、资源管理、错误处理与重试、兼容性等）均已被识别为 Decision，并在 `## Decisions` / `## Contracts` 章节显式化锁定；未涉及的类别无须出现；`## Contracts` 覆盖特性内核心抽象（新增 trait / 错误码 / 核心 schema）。
+  - 触发问题：本特性涉及的某类决策未被识别为 Decision；Standard 档下 `## Contracts` 或 `## Implementation Constraints` 章节缺失，或留空但无"本特性不涉及"的说明。
+- **档位匹配性**
+  - 通过标准：design.md 头部声明的 Complexity 档位（light | standard）与实际复杂度匹配；Standard 档必填章节无缺失、Light 档可选章节留空有合理理由。
+  - 触发问题：声明 light 但实际满足 standard 判定条件（跨模块 / 有对外接口 / 关键决策 ≥3 个 / 有生命周期对象 / 涉及升级迁移）；声明 standard 但缺失必填章节（Contracts / Implementation Constraints / Decisions）。
 
 **判定参考**（用于给出最终判定，非硬性公式；复杂度、风险、上下文等因素也应纳入考量）：
 - 问题分值参考：CRITICAL=10分, HIGH=3分, MEDIUM=1分, LOW=0.1分
@@ -474,8 +488,8 @@ AI 建议决策直接取自步骤 [3] 的汇总结果。评审目标是**判定�
    - 通过标准：proposal/specs/design 分别遵循对应模板的章节结构、必填项和自检清单；缺失章节有合理说明或标注 N/A。
    - 触发问题：关键必填项缺失、章节顺序严重错乱、未按模板自检清单执行。
 2. **内部一致性**
-   - 通过标准：Capability、Requirement、Design/Decisions 之间无矛盾；Interface Changes 覆盖 proposal Impact 中识别的接口/协议/数据格式影响方向；Risks / Upgrade Impact 覆盖 specs 中 NFR 的关键风险。
-   - 触发问题：同一 Requirement 在 design 中未被覆盖、Impact 与 Interface Changes 范围矛盾、NFR 风险无对应处理。
+   - 通过标准：Capability、Requirement、Design/Decisions 之间无矛盾；Contracts 覆盖 proposal Impact 中识别的接口/协议/数据格式影响方向；Risks / Upgrade Impact 覆盖 specs 中 NFR 的关键风险。
+   - 触发问题：同一 Requirement 在 design 中未被覆盖、Impact 与 Contracts 范围矛盾、NFR 风险无对应处理。
 3. **同一外部行为一致性**
    - 通过标准：同一 Capability / Requirement 对应的外部可见行为在三类文档中的描述一致（正常路径、异常路径、边界条件）。
    - 触发问题：正常/异常/边界行为在不同文档中描述冲突或遗漏。
