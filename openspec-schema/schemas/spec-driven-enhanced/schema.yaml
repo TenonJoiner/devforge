@@ -263,57 +263,68 @@ artifacts:
 
       ### 步骤 2：基线化归档
 
-      Tech Leader 决策通过后，MUST 调用 `/df:baseline --change <change-name>` skill 对本次 change 的交付件文档（proposal.md、design.md、specs/）进行基线化归档。
-      - `--change` 取当前 change 目录名
-      - `--version` 和 `--repo-url` 可省略：首次运行时 skill 会交互询问并持久化到 `~/.local/share/devforge/baseline-config.yaml`，后续自动读取
-      - `/df:baseline` 内部已处理重复归档检测（目标目录已存在时自动提示并停止），无需主会话预先判断是否已归档
-      - 归档成功 → 继续创建 tasks
-      - 归档失败 → 报告错误但**不阻塞**，继续创建 tasks（归档失败不应阻断开发流程）
+      Tech Leader 决策通过后，MUST 调用 `/df:baseline --change <change-name>` skill 对本次 change 的交付件文档（proposal.md、design.md、specs/）进行基线化归档；`--change` 取当前 change 目录名。归档失败**不阻塞** tasks 创建。
 
       ## 任务推导
 
       任务清单的**主要输入是 specs**，design 辅助提供实现路径和顺序。
       OpenSpec 两层结构：`##` = 任务组（对应一条 Requirement 或 QA 闸口），
       `- [ ]` = 任务（apply phase 跟踪的最小单元）。
-      本工作流将每个 Scenario 映射为一个完整的 TDD 任务（RED → GREEN → REFACTOR），
-      并在每个 Requirement 任务组末尾追加 LINT 和 REVIEW 任务，
+      每个 Scenario 映射为一个完整的 TDD 任务（RED → GREEN → REFACTOR），
+      每个 Requirement 任务组末尾追加 LINT 和 REVIEW 任务，
       所有 Requirement 任务组之后追加一个 QA 任务组作为 feature 级闸口。
 
       ### 从 specs 推导任务
 
       - **Requirement → 任务组**：每条 Requirement 对应一个任务组（`## N. <Requirement 名称>`）
-      - **Scenario → 一个 TDD 任务**：每个 Scenario（正常路径或异常路径）对应一个 checkbox，
+      - **Scenario → 一个 TDD 任务**：每个 Scenario（正常或异常路径）对应一个 checkbox，
         一次 `/df:tdd` 调用完成完整的 RED → GREEN → REFACTOR 循环
-      - **Scenario 粒度原则**：每个 Scenario 只描述一个具体的、可验证的行为。一次 `/df:tdd` 调用
-        应在几分钟到十几分钟内完成。如果某个 Scenario 的实现需要多轮 RED-GREEN-REFACTOR
-        才能覆盖，说明该 Scenario 定义过粗，应在 specs 层面拆分为多个更细的 Scenario
-      - **异常 Scenario 独立成任务**：异常路径不合并到正常路径任务中，独立列出避免遗漏
-      - **追溯标注**：每个任务描述末尾标注对应的 Requirement/Scenario 标识，便于核对覆盖
+      - **Scenario 粒度原则**：每个 Scenario 只描述一个具体的、可验证的行为；一次 `/df:tdd` 应在几分钟到十几分钟内完成；
+        需多轮 RED-GREEN-REFACTOR 才能覆盖的 Scenario 应在 specs 层拆分
+      - **异常 Scenario 独立成任务**：不合并到正常路径任务中
+      - **追溯标注（机器可校验）**：任务描述末尾 MUST 标注来源
+        - Scenario 任务：`[trace: <capability>/<requirement>/<scenario>]`
+        - NFR 验证任务：`[trace: <capability>/nfr/<category>]`
+        - CHORE 任务：`[trace: chore/<slug>]`
 
       ### 从 design 获取实现路径
 
       design 不定义任务边界，但告知每个 GREEN 任务**在哪里实现、按什么顺序实现**：
-      - design 的模块分层和接口定义 → 确定 GREEN 任务的目标文件和函数签名
-      - design 的模块依赖关系 → 确定任务的执行顺序（被依赖的模块先实现）
-      - design 的 Interface Changes → 接口定义先于实现任务执行
-      - 基础设施（公共类型、工具函数、配置）→ 被多个 Requirement 依赖，优先编排
+      - 模块分层和接口定义 → GREEN 任务的目标文件和函数签名
+      - 模块依赖关系 → 任务执行顺序（被依赖的模块先实现）
+      - Interface Changes → 接口定义先于实现任务
+      - 基础设施（公共类型、工具、配置）→ 被多 Requirement 依赖，优先编排
 
-      ### 任务组编排
+      ## 任务组编排
 
       - 按 Requirement 分组（每个 ## 组对应一条 Requirement）
-      - 同一 Requirement 横跨多个模块时，按模块拆分子组（如 ## 1a. Requirement X - storage 侧）
-      - **多仓场景**：任务组标题下可标注 `**Component**: <组件名>`；若同一任务组内的任务需要落在不同仓库，再按仓库拆分子组（如 `### 1a. storage 侧` / `### 1b. meta 侧`），每个任务描述末尾标注 `[repo: <repo-name>]`。
-      - 禁止按 TDD 步骤类型做分组（如「## RED 阶段」）
+      - 同一 Requirement 横跨多模块时按模块拆分子组（如 `## 1a. Requirement X - storage 侧`）
+      - **多仓场景**：任务组标题下标注 `**Component**: <组件名>`；同组跨仓时再按仓库拆子组，任务末尾标注 `[repo: <repo-name>]`
+      - 禁止按 TDD 步骤类型分组（如「## RED 阶段」）
+
+      ### 顺序推导原则（优先级从高到低）
+
+      1. 测试基建（fixture/helper/mock 框架）
+      2. design Interface Changes 对应接口契约任务
+      3. 公共基础设施（共享类型/工具/配置）
+      4. 被依赖模块实现 → 依赖方模块实现
+      5. 集成任务
+
+      ### 依赖标记格式
+
+      任务组标题下方 MUST 标注：
+      - `**DependsOn**: [1, 2]` 或 `**Independent**: true`（未标注默认 Independent）
+      - QA 任务组永远 `**DependsOn**: [all]`
 
       ### 任务组末尾固定任务（强制）
 
       每个 Requirement 任务组的末尾必须追加：
-      - **LINT 任务**：调用 `/df:lint autofix` 进行静态检查并自动修复
-      - **REVIEW 任务**：调用 `/df:code-review autofix` 进行代码评审并按 CRITICAL → HIGH 顺序自动修复
+      - **LINT 任务**：调用 `/df:lint autofix` 静态检查并自动修复
+      - **REVIEW 任务**：调用 `/df:code-review autofix` 评审并按 CRITICAL → HIGH 顺序自动修复
 
       ### 末尾 QA 任务组（强制）
 
-      所有 Requirement 任务组之后，必须追加一个独立的 QA 任务组作为 feature 级闸口：
+      所有 Requirement 任务组之后必须追加：
 
       ```
       ## QA. 质量保障
@@ -324,14 +335,19 @@ artifacts:
       - [ ] QA.5 INTEGRATION-TEST: 开发 feature 级别集成测试用例，运行并验证通过
       ```
 
-      **多仓场景追加**（仅当检测到 `repo-map.yaml` 时生成）：
+      **多仓场景追加**（仅当检测到 `repo-map.yaml` 时）：
 
       ```
-      - [ ] QA.6 CROSS-REPO-INTEGRATION: 触发跨仓库集成测试或最小端到端验证，确保各仓库变更协同工作
-      - [ ] QA.7 CROSS-REPO-COMMIT-ORDER: 确认各仓库 commit 顺序与接口契约匹配，避免部分提交导致中间状态不可用
+      - [ ] QA.6 CROSS-REPO-INTEGRATION: 触发跨仓库集成测试或最小端到端验证
+      - [ ] QA.7 CROSS-REPO-COMMIT-ORDER: 确认各仓库 commit 顺序与接口契约匹配
       ```
 
-      QA 任务组与所有 Requirement 任务组都是 depends-on 关系（最后执行）。
+      ## 写后审计（MUST 执行）
+
+      - **覆盖审计**：列出 specs 所有 Requirement/Scenario，逐项映射到任务编号；未映射项补任务或说明理由
+      - **顺序审计**：逐任务检查依赖的符号/接口/基建是否由编号更小的任务提供；逆序 MUST 调整
+      - **design 遵循审计**：模块划分、Interface Changes 顺序、关键技术决策与 design 一致；偏差说明理由
+      - **NFR 覆盖审计**：specs 七类 NFR 每类要么有对应验证任务，要么标注「本 change 不涉及：<原因>」
 
       ## 格式要求（IMPORTANT：apply phase 依赖此格式跟踪进度）
 
@@ -355,11 +371,11 @@ artifacts:
 
       ## Mock 纪律
 
-      - **先真实后 mock**：写测试时先用真实实现运行，确认测试对真实代码失败后，才在正确层级添加最小 mock
+      - **先真实后 mock**：先用真实实现运行，确认测试对真实代码失败后，才在正确层级添加最小 mock
       - **只 mock 慢/不可控的部分**：优先使用轻量级真实替代（内存数据库、临时文件）
       - **不测试 mock 行为**：断言必须针对被测系统的真实行为
-      - **完整 mock**：mock 的数据结构必须完整镜像真实 API 的全部字段
-      - **Mock 太复杂时重构**：如果 mock 设置占测试 >50%，应重构解耦
+      - **完整 mock**：mock 数据结构必须完整镜像真实 API 的全部字段
+      - **Mock 太复杂时重构**：mock 设置占测试 >50% 应重构解耦
 
       ## Parallel
 
@@ -375,6 +391,10 @@ artifacts:
       - 🚩 缺少末尾 QA 任务组
       - 🚩 specs 中的某个 Requirement/Scenario 在 tasks 中没有对应任务
       - 🚩 按 TDD 类型做分组而非按 Requirement 分组
+      - 🚩 追溯标注缺失或不符 `[trace: ...]` 格式
+      - 🚩 任务组未标注 DependsOn/Independent
+      - 🚩 单任务 GREEN 实现预计 >200 行而未拆分
+      - 🚩 specs NFR 类别既无任务也未标注"不涉及"
     requires:
       - review
 
