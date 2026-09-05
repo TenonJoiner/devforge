@@ -423,6 +423,20 @@ apply:
     | UNIT-COVERAGE | developer agent | 运行测试套件，验收覆盖率达标 |
     | INTEGRATION-TEST | developer agent | feature 级别集成测试编写与验证 |
 
+    ## 契约文档注入（派遣 SCENARIO 任务前 MUST 执行）
+
+    主会话派遣 developer agent 执行 SCENARIO 任务前，MUST 完成模块契约注入。契约文档路径由源码路径按命名权威规则派生。
+
+    1. **收集候选源文件路径**：从任务描述中提取所有相关源文件路径（tasks 模板要求列出源文件路径；跨模块调用时还需包含被调用方文件路径）
+    2. **向上回溯推断契约**：对每个源文件路径，逐级向上检查每级目录对应的契约文档直到 `docs/contracts/` 根；每个候选路径用 Glob 检查是否存在；多个源文件的推断结果取并集去重
+
+       示例——源文件 `src/storage/engine/xxx.c` 依次检查：
+       - `docs/contracts/storage/engine/xxx.md`（编译单元级，若 xxx.c 是职责独立单元）
+       - `docs/contracts/storage/engine.md`（目录级）
+       - `docs/contracts/storage.md`（上级目录级）
+    3. **检查全局契约**：用 Glob 检查 `docs/contracts/` 下下划线前缀的特殊契约文件（如 `_global.md`、`_concurrency.md`），无论任务涉及哪个模块都注入
+    4. **注入派遣 prompt**：若发现任何契约文件，在派遣 prompt 中显式列出「本任务涉及模块的契约文档：<路径列表>，写代码前 MUST 阅读并遵循其中的接口契约 / 不变式 / 边界约定」；均未发现则无需动作
+
     ## Commit 策略
 
     - **粒度**：每个 Requirement 任务组完成后整理为一个正式 commit
