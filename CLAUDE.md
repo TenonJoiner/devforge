@@ -2,10 +2,9 @@
 
 ## 项目定位
 
-DevForge 是一个 **Claude Code Plugin**，面向复杂基础软件（分布式存储、数据库、操作系统内核、编译器、虚拟化平台等）提供三层 TeamSkills 开发框架：
+DevForge 是一个 **Claude Code Plugin**，面向复杂基础软件（分布式存储、数据库、操作系统内核、编译器、虚拟化平台等）提供两层 TeamSkills 开发框架：
 
-- **产品级**：架构探索、需求定义、迭代规划、测试策略（`/df:product-design`、`/df:product-define`、`/df:plan`、`/df:test-design`）
-- **特性级**：规范驱动开发——DevForge 提供 artifact 生成、评审与归档能力（`/df:research`、`/df:define`、`/df:design`、`/df:spec-review`、`/df:baseline`）
+- **特性级**：规范驱动开发——DevForge 提供 artifact 生成、评审与归档能力（`/df:research`、`/df:spec-review`、`/df:baseline`）
 - **代码级**：TDD 工作流、代码评审、简化重构、调试、编译检查、Worktree 隔离（`/df:tdd`、`/df:code-review`、`/df:simplify`、`/df:debug`、`/df:lint`、`/df:switch-worktree`、`/df:finish-worktree`）
 
 ### 核心设计理念
@@ -23,7 +22,7 @@ DevForge 是一个 **Claude Code Plugin**，面向复杂基础软件（分布式
 |------|------|
 | `.claude-plugin/plugin.json` | Plugin manifest（name / version / author / repository） |
 | `agents/` | 12 个预定义专业化 agent（architect、product、developer、tester、code-reviewer、harness-engineer 等） |
-| `skills/` | 21 个 DevForge skill（`devforge-*`） |
+| `skills/` | 19 个 DevForge skill（`devforge-*`） |
 | `commands/df/` | DevForge 用户命令（`/df:*`） |
 | `templates/` | 文档模板（产品级需求 / 架构 / 迭代计划 / 评审报告 / domain-config 占位符等） |
 | `hooks/hooks.json` + `hooks/*.sh` | 自动化守护 hooks（PostEdit 格式化、PreCommit lint） |
@@ -40,9 +39,7 @@ DevForge 是一个 **Claude Code Plugin**，面向复杂基础软件（分布式
 ### 用户安装后的运行时产出（在用户项目中）
 
 由 skill 在用户项目中按需生成，**不在本仓库管理**：
-- `.claude/domain-config.yaml` — 由 `/df:product-design`、`/df:product-define` 通过交互式调研生成
 - `.claude/worktrees/` — 由 `/df:switch-worktree` 创建
-- `docs/architecture/`、`docs/requirements/`、`docs/iteration-plan/` — 产品级 skill 产出
 
 ---
 

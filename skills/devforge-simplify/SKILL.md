@@ -12,7 +12,7 @@ allowed-tools: [Read, Bash, Grep, Glob, Agent]
 
 ## 何时使用
 
-- 批量变更后的深度重构（QA.2 FULL-REVIEW 完成后，对整个 feature 的完整 diff 执行）
+- 批量变更后的深度重构（对整个 feature 的完整 diff 执行）
 - archive 前最终整理
 - 独立使用：一批变更累积较大（>200 行）且代码评审后仍有明显异味
 
