@@ -319,8 +319,7 @@ artifacts:
       ### 任务组末尾固定任务（强制）
 
       每个 Requirement 任务组的末尾必须追加：
-      - **LINT 任务**：调用 `/df:lint autofix` 静态检查并自动修复
-      - **REVIEW 任务**：调用 `/df:code-review autofix` 评审并按 CRITICAL → HIGH 顺序自动修复
+      - **REVIEW 任务**：调用 `devforge-code-review --autofix` 评审并按 CRITICAL → HIGH 顺序自动修复
 
       ### 末尾 QA 任务组（强制）
 
@@ -328,18 +327,19 @@ artifacts:
 
       ```
       ## QA. 质量保障
-      - [ ] QA.1 FULL-LINT: 调用 /df:lint autofix 全量检查（编译 + 静态分析），修复所有 error/warning
-      - [ ] QA.2 FULL-REVIEW: 调用 /df:code-review autofix 全量评审并修复 CRITICAL/HIGH
-      - [ ] QA.3 DEEP-REFACTOR: 调用 /df:simplify 深度简化重构
-      - [ ] QA.4 UNIT-COVERAGE: 重新执行单元测试，验收覆盖率达标
-      - [ ] QA.5 INTEGRATION-TEST: 开发 feature 级别集成测试用例，运行并验证通过
+      - [ ] QA.1 LINT: 调用 devforge-lint-check --autofix 编译检查与静态分析，修复 CRITICAL/HIGH
+      - [ ] QA.2 LOG-AUDIT: 调用 devforge-log-audit --autofix 审计日志级别与频率，修复 CRITICAL/HIGH
+      - [ ] QA.3 REVIEW: 调用 devforge-code-review --autofix 评审并修复 CRITICAL/HIGH
+      - [ ] QA.4 DEEP-REFACTOR: 调用 devforge-simplify 深度简化重构
+      - [ ] QA.5 UNIT-COVERAGE: 调用 devforge-unit-coverage --autofix 补充完善单元测试，覆盖率达标
+      - [ ] QA.6 INTEGRATION-TEST: 开发 feature 级别集成测试用例，运行并验证通过
       ```
 
       **多仓场景追加**（仅当检测到 `repo-map.yaml` 时）：
 
       ```
-      - [ ] QA.6 CROSS-REPO-INTEGRATION: 触发跨仓库集成测试或最小端到端验证
-      - [ ] QA.7 CROSS-REPO-COMMIT-ORDER: 确认各仓库 commit 顺序与接口契约匹配
+      - [ ] QA.7 CROSS-REPO-INTEGRATION: 触发跨仓库集成测试或最小端到端验证，确保各仓库变更协同工作
+      - [ ] QA.8 CROSS-REPO-COMMIT-ORDER: 确认各仓库 commit 顺序与接口契约匹配，避免部分提交导致中间状态不可用
       ```
 
       ## 写后审计（MUST 执行）
@@ -355,7 +355,7 @@ artifacts:
       - 每个任务必须是 checkbox：`- [ ] N.M <类型>: <描述>`
       - 任务类型枚举：
         - Requirement 任务组内：SCENARIO / LINT / REVIEW / CHORE / INTEGRATION-TEST
-        - QA 任务组内：FULL-LINT / FULL-REVIEW / DEEP-REFACTOR / INTEGRATION-TEST / UNIT-COVERAGE
+        - QA 任务组内：LINT / LOG-AUDIT / REVIEW / DEEP-REFACTOR / UNIT-COVERAGE / INTEGRATION-TEST
       - 未使用 `- [ ]` 的任务不会被 apply phase 跟踪
       - 按依赖顺序排列（先做的排前面）
       - 每个任务必须可验证——完成时能明确判断"做完了"
@@ -433,14 +433,13 @@ apply:
 
     | 任务类型 | 执行者 | 调用方式 |
     |---------|--------|---------|
-    | SCENARIO | developer agent | `/df:tdd` skill（RED → GREEN → REFACTOR） |
+    | SCENARIO | developer agent | `devforge-tdd-workflow` skill（RED → GREEN → REFACTOR） |
     | CHORE | developer agent | 直接处理，无 skill |
-    | LINT | developer agent | `/df:lint autofix` 编译+静态分析 → developer 修复 |
-    | REVIEW | code-reviewer agent → developer agent | `/df:code-review autofix` 评审 → developer 修复 |
-    | DEEP-REFACTOR | developer agent + code-reviewer subagents | `/df:simplify` skill（三维度并行评审 → developer 汇总修复） |
-    | FULL-REVIEW | code-reviewer agent → developer agent | `/df:code-review autofix` 全量评审 → developer 修复 |
-    | FULL-LINT | developer agent | `/df:lint autofix` 全量编译+静态分析 → developer 修复 |
-    | UNIT-COVERAGE | developer agent | 运行测试套件，验收覆盖率达标 |
+    | LINT | developer agent | `devforge-lint-check --autofix` 编译+静态分析 → developer 修复 |
+    | LOG-AUDIT | log-auditor agent → developer agent | `devforge-log-audit --autofix` 日志级别与频率审计 → developer 修复 |
+    | REVIEW | code-reviewer agent → developer agent | `devforge-code-review --autofix` 评审 → developer 修复 |
+    | DEEP-REFACTOR | developer agent + code-reviewer subagents | `devforge-simplify` skill（三维度并行评审 → developer 汇总修复） |
+    | UNIT-COVERAGE | tester agent（解析覆盖率数据）→ developer agent（补测） | `devforge-unit-coverage --autofix` 补充完善单元测试，覆盖率达标 |
     | INTEGRATION-TEST | developer agent | feature 级别集成测试编写与验证 |
 
     ## 契约文档注入（派遣 SCENARIO 任务前 MUST 执行）

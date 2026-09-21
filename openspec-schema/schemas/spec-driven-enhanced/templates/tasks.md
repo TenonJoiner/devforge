@@ -26,7 +26,7 @@
 - [ ] QA.2 LOG-AUDIT: 调用 devforge-log-audit --autofix 审计日志级别与频率，修复 CRITICAL/HIGH
 - [ ] QA.3 REVIEW: 调用 devforge-code-review --autofix 评审并修复 CRITICAL/HIGH
 - [ ] QA.4 DEEP-REFACTOR: 调用 devforge-simplify 深度简化重构
-- [ ] QA.5 UNIT-COVERAGE: 重新执行单元测试，验收覆盖率达标
+- [ ] QA.5 UNIT-COVERAGE: 调用 devforge-unit-coverage --autofix 补充完善单元测试，覆盖率达标
 - [ ] QA.6 INTEGRATION-TEST: 开发 feature 级别集成测试用例，运行并验证通过
 
 <!-- 多仓场景追加（单仓不生成）：
