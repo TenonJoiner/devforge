@@ -67,6 +67,28 @@ parameters:
 
 **范围铁律**：评审只针对本次变更范围内的代码。发现范围外的问题时，记录为LOW变体分析发现，不阻塞本次合并。
 
+## Change 参考文档定位
+
+代码评审需要变更规范（OpenSpec change）提供设计意图上下文——reviewer 发现疑似缺陷时先查 change 文档判断是否为**故意行为**（spec 明确要求 / design 已决策权衡），是则排除该发现以抑制误报，否则保留。skill 在派遣 `devforge:code-reviewer` 前尝试定位 change，并将结果通过 `change_path` 字段注入。
+
+**定位规则**：Glob `openspec/changes/*/proposal.md`（不递归 `archive/`）列出候选 change，以本次 diff 涉及的文件为线索，对照各候选 change 的内容（`tasks.md` 任务条目、`specs/*.md` 能力描述）推断归属。**候选个数不参与判定**——唯一候选同样需要与 diff 匹配才可关联。
+
+- **能唯一匹配到某个候选** → 关联该 change，报告头部标注 change-id
+- **无法唯一确定归属**（无候选、候选与 diff 均不匹配、或多个候选均匹配）→ `change_path` 置空，降级：D1「功能对齐」降级为代码自洽性检查，报告摘要显式标注「无 spec 依据」
+
+**定位纯推断、不产生交互**：不做环境判定，不询问用户，不引入参数。
+
+**参考文档清单**（`change_path` 非空时）：
+
+| 文档 | 用途 | 抑制误报的场景 |
+|------|------|---------------|
+| `specs/*.md` | Requirement + Scenario | 疑似缺陷是 spec 明确要求的行为 → 排除 |
+| `design.md` | change 级实现方案与权衡决策 | 疑似缺陷是 design 已明确决策的取舍 → 排除 |
+
+`proposal.md` 与 `tasks.md` 在定位阶段用于推断归属，**不作为评审阶段的证伪依据**——前者只描述动机与目标，无法回答"该缺陷是否故意"；后者是工作分解，未完成的 task 对应代码不在 diff 内，reviewer 不会对其产生发现。
+
+**读取位置**：change 文档从 **CWD** 读取，与 CLAUDE.md / 架构文档 / coding-style 规则来源一致；`worktree_path` 仅用于拼接源码绝对路径，不影响 change 文档定位。
+
 ## 评审流程
 
 ### 评审维度
@@ -75,7 +97,7 @@ parameters:
 
 | 检查项 | 通过标准 |
 |--------|----------|
-| **功能对齐** | 代码是否做了 spec/task 要求做的事 |
+| **功能对齐** | `change_path` 非空时：发现疑似功能缺陷先查 `change_path/specs/*.md` / `design.md`——若该行为是 spec 明确要求或 design 明确决策的，**排除该发现以抑制误报**；无法证伪则保留。`change_path` 为空时只能依据代码自身推断意图，报告中显式标注「无 spec 依据」 |
 | **边界情况** | null、空值、边界值、错误路径是否处理 |
 | **测试验证** | 测试是否验证了行为？是否在测试正确的东西？（不只是检查返回值） |
 | **竞态条件** | 并发场景下的状态一致性、off-by-one、时序问题 |
@@ -128,7 +150,7 @@ parameters:
 | **向后兼容** | 变更是否破坏现有接口或行为，有无迁移路径或版本协商机制 |
 | **可观测性** | 关键路径是否暴露指标、日志、追踪 hook，错误路径是否有足够上下文 |
 | **扩展性** | 变更是否预留合理扩展点，或引入了不必要的扩展复杂度 |
-| **架构契约** | 对照 `docs/architecture/<subsystem>/design.md` 检查子系统边界是否被破坏 |
+| **架构契约** | 对照 `docs/architecture/<subsystem>/design.md` 检查子系统边界是否被破坏；`change_path` 非空时，疑似架构缺陷先查 `change_path/design.md` 核对是否为 change 级设计已明确决策的权衡（接口签名、数据结构、并发模型约定等）——是则排除该发现以抑制误报 |
 
 **Red Flag**：
 - 跨子系统直接访问私有数据结构或内部函数（绕过公开接口）
@@ -226,6 +248,7 @@ Correctness 和 Security 维度中的部分检查项引用 `coding-style-<lang>.
 | `subagent_dimension` | 深度评审多实例时，每个 subagent 负责的单一维度 | `D4-Security` |
 | `draft_report_path` | 误报审核模式下，待复核的初评草稿路径 | `/tmp/code-review-<ts>-draft.md` |
 | `worktree_path` | worktree 根目录，**仅用于**拼接源码文件绝对路径；CLAUDE.md、架构文档、规则文件等从 **CWD** 读取。为空则 CWD 同时作为源码和基础设施来源 | `/tmp/pr-review-worktree-<id>` / 空 |
+| `change_path` | 关联 OpenSpec change 文档目录的绝对路径（含 proposal.md / specs/ / design.md / tasks.md），从 CWD 读取；未定位到时为空 | `/abs/path/openspec/changes/add-xyz` / 空 |
 
 ## 评审执行与报告汇总
 
