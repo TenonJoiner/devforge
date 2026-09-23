@@ -19,6 +19,8 @@
 
 ## 调用方式
 
+调用 Skill 工具加载 `devforge-arch-extract-subsystem`：
+
 ```
 /df:arch-extract-subsystem --target=<子系统名> [--doc=<社区文档目录>]
 ```

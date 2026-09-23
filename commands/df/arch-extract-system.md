@@ -23,6 +23,8 @@
 
 ## 调用方式
 
+调用 Skill 工具加载 `devforge-arch-extract-system`：
+
 ```
 /df:arch-extract-system
 ```

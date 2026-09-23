@@ -19,6 +19,8 @@
 
 ## 调用方式
 
+调用 Skill 工具加载 `devforge-arch-extract-topic`：
+
 ```
 /df:arch-extract-topic --target=<主题名> [--topic-catalog=<catalog路径>] [--src=<源码目录>] [--ref-doc=<社区文档目录>] [--output-docs=<输出目录>]
 ```

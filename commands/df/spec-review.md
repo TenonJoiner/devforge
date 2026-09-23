@@ -14,6 +14,8 @@
 
 ## 调用方式
 
+调用 Skill 工具加载 `devforge-spec-review`：
+
 ```
 /df:spec-review [--autofix] [--change-dir <path>]
 ```
