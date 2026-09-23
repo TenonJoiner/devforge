@@ -23,7 +23,7 @@ parameters:
 - **MR 元数据检查**：大小、描述、标题等 MR 自身属性
 - **代码评审入口**：调用 `devforge-code-review` 完成 diff 级代码评审
 - **Lint 检查入口**：调用 `devforge-lint-check` 完成编译检查与 lint 分析
-- **日志审计入口**：调用 `devforge-log-audit` 完成 diff 级日志审计（级别合理性 + 打印频率）
+- **日志审计入口**：调用 `devforge-log-audit` 完成 diff 级日志审计（级别合理性 + 日志覆盖 + 打印频率）
 - **MR 级结论合成**：结合元数据、代码评审、lint 检查和日志审计结果，输出最终结论
 
 **快速调试**：`--only` 参数可指定仅运行 code-review / lint / log-audit 之一或组合（逗号分隔），跳过其余下游检查以加速调试。默认空表示全部运行。
@@ -35,7 +35,7 @@ parameters:
 **与下游 skill 的关系**：
 - `devforge-code-review` 是通用代码评审 skill，负责代码/脚本/配置文件的五维度评审。
 - `devforge-lint-check` 是编译检查与 lint 分析 skill，负责编译通过验证与 lint 告警分析。
-- `devforge-log-audit` 是日志审计 skill，负责 diff 内日志语句的级别合理性与打印频率两维度审计。
+- `devforge-log-audit` 是日志审计 skill，负责 diff 内日志语句的级别合理性、日志覆盖与打印频率三维度审计。
 - `devforge-pr-review` 是 MR 入口 skill，负责平台交互、MR 上下文准备、MR 元数据检查、文件类型分流：
   - 含代码类文件时并行调用 `devforge-code-review`、`devforge-lint-check` 和 `devforge-log-audit`
   - 纯文档变更时派遣 `devforge:product-reviewer` agent（不跑 code-review、lint 和日志审计）
@@ -172,13 +172,13 @@ git worktree add --detach "$WORKTREE_PATH" "origin/<head_branch>"
 
 **步骤 5c：调用 `devforge-log-audit` skill（与 5a、5b 并行）**（`--only` 未提供或包含 `log-audit` 时执行）
 
-对本次 diff 范围内的日志语句执行两维度审计。使用已计算的 diff 范围调用 `devforge-log-audit`，将审计报告写入独立路径：
+对本次 diff 范围内的日志语句与失败路径执行三维度审计。使用已计算的 diff 范围调用 `devforge-log-audit`，将审计报告写入独立路径：
 
 ```
 /df:log-audit --diff-range "git diff origin/<base_branch>...<head_branch>" --report-output-path /tmp/log-audit-<mr_number>.md --worktree-path "$WORKTREE_PATH"
 ```
 
-主会话通过 Skill 工具调用 `devforge-log-audit`。**严禁使用 Agent 工具直接派发 agent 替代 Skill 工具调用**。无需 `--log-dir`——CI 场景下频率维度自动跳过，仅审级别合理性。pr-review 不干预 `devforge-log-audit` 的内部 agent 调度。
+主会话通过 Skill 工具调用 `devforge-log-audit`。**严禁使用 Agent 工具直接派发 agent 替代 Skill 工具调用**。无需 `--log-dir`——CI 场景下频率维度自动跳过，级别合理性与日志覆盖两维度照常执行。pr-review 不干预 `devforge-log-audit` 的内部 agent 调度。
 
 #### 分支 B：纯文档变更评审
 
