@@ -221,27 +221,21 @@ artifacts:
 
   - id: review
     generates: review.md
-    description: 设计评审报告——AI 单轮扫描，产出供 Tech Leader 人工决策门禁使用的 review.md
+    description: 设计评审报告——AI 单轮扫描，产出评审问题清单与 AI 建议决策的 review.md
     template: review.md
     instruction: |
       调用 `devforge-spec-review --change-dir <change-dir>` skill 生成 review.md。
       skill 读取 proposal.md、specs/*.md、design.md。
 
-      review.md 结构：
-      1. AI 评审报告：按 CRITICAL/HIGH/MEDIUM/LOW 分级的问题清单 + AI 建议决策
-      2. Tech Leader 最终决策区：留空，由 Tech Leader 人工填写
+      review.md 结构：AI 评审报告——按 CRITICAL/HIGH/MEDIUM/LOW 分级的问题清单 + AI 建议决策。
 
       **格式约束**：
       - `## Review Conclusion` 是单例章节，全文仅出现一次。多轮 autofix 时更新（覆盖）本节内容，禁止每轮追加新的 Review Conclusion。
       - 每轮评审记录只需追加 `### Round N` 到 `## AI Review Rounds` 下。
 
-      **skill 职责边界**：devforge-spec-review 只负责生成评审报告，不执行人工决策门禁。门禁由 OpenSpec 流程控制（见下游 tasks 节点的前置检查）。
-
       生成 review.md 后 STOP，提示检查 AI 建议决策：
       - 如 AI 建议为 **REJECT**，由人修复对应 artifact（proposal.md / specs/*.md / design.md）后重新执行 review 步骤
-      - 如 AI 建议为 **PASS** 或 **PASS WITH CONDITIONS**，将交付件及 review.md 提交 Tech Leader 评审
-
-      Tech Leader 在「Tech Leader 最终决策区」填写 PASS / PASS WITH CONDITIONS / REJECT 后，才允许进入 tasks 阶段。
+      - 如 AI 建议为 **PASS** 或 **PASS WITH CONDITIONS**，可进入 tasks 阶段
     requires:
       - specs
       - design
@@ -255,15 +249,7 @@ artifacts:
 
       ## 前置检查（MUST）
 
-      ### 步骤 1：检查 Tech Leader 决策
-
-      创建 tasks 前 MUST 读取 review.md，检查「Tech Leader 最终决策」区域：
-      - 决策为 PASS 或 PASS WITH CONDITIONS → 继续步骤 2
-      - 决策为 REJECT 或决策区域为空/未填写 → **禁止创建 tasks**，提示：「review.md 中 Tech Leader 最终决策未填写或为 REJECT，请先完成交叉评审并由 Tech Leader 确认后再继续」
-
-      ### 步骤 2：基线化归档
-
-      Tech Leader 决策通过后，MUST 调用 `/df:baseline --change <change-name>` skill 对本次 change 的交付件文档（proposal.md、design.md、specs/）进行基线化归档；`--change` 取当前 change 目录名。归档失败**不阻塞** tasks 创建。
+      创建 tasks 前 MUST 调用 `/df:baseline --change <change-name>` skill 对本次 change 的交付件文档（proposal.md、design.md、specs/）进行基线化归档；`--change` 取当前 change 目录名。归档失败**不阻塞** tasks 创建。
 
       ## 任务推导
 
@@ -402,7 +388,7 @@ apply:
   requires: [tasks]
   tracks: tasks.md
   instruction: |
-    读取前序 artifact（proposal.md、specs/*.md、design.md）了解需求和设计方案；读取 review.md 检查 Tech Leader 最终决策是否允许进入实现阶段。
+    读取前序 artifact（proposal.md、specs/*.md、design.md）了解需求和设计方案；读取 review.md 了解评审遗留问题。
 
     ## 多仓检测（仅影响有 repo-map.yaml 的项目）
 
