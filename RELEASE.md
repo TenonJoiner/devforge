@@ -1,3 +1,30 @@
+## 0.1.7 - 2026.09.23
+
+1. 新增 contract-distill 模块级契约蒸馏 skill，生成代码如不符合预期，经过多轮调整后，在同会话中执行本 skill，把代码调整中暴露的「预期 vs 生成之差」反推为模块级契约，沉淀到 `docs/contracts/`
+   使用：/df:contract-distill               # 提取当前分支代码调整涉及的模块契约
+         /df:contract-distill --base <ref>  # 指定本次调整范围的 git 基点
+
+2. 新增 unit-coverage skill，执行单测并统计覆盖率，未达标时定位遗漏分支自动补测；需在项目上下文中声明覆盖率命令与数据路径
+   使用：/df:unit-coverage            # 统计分支 diff 覆盖率，只检测不补测
+         /df:unit-coverage --autofix   # 未达标自动补测并回归
+         /df:unit-coverage --full      # 统计全仓覆盖率
+
+3. log-audit 新增日志覆盖维度：能查出错误被静默吞掉、失败路径上没留任何日志这类「事后查不到原因」的问题，定位信息更完整
+
+4. code-review 会先读本次变更的 specs 和 design 再评审，减少「设计上本就如此、却被当成缺陷」的误报
+
+5. proposal / specs / design 三份文档更易读：术语一律白话直述，禁止生造复合词，圈内黑话要么译成白话要么不用，评审时也会检查这一点
+
+6. design 文档更贴合变更规模：简单变更不必硬凑章节，复杂变更必须把关键决策写明确——说清选哪个、为什么否决其他方案、量化约束是什么；原 `Interface Changes` 扩展为 `Contracts`，并新增「实现约束」章节，进一步明确实现层面的方案，避免生成代码时自由发挥；评审时会核对声明的档位与实际复杂度是否匹配
+
+7. tasks 任务清单质量提升：任务按依赖关系自动排序，不会做到中途才发现缺前置模块；开工前多一道独立校验，核对清单是否覆盖 specs 全部场景与 NFR、执行顺序是否成立，有问题先修清单再开工
+
+8. plugin 精简：6 个暂未维护的 skill（product-define、product-design、feature-define、feature-design、plan、test-design）及其 `/df:*` 命令移出 plugin，这些命令不再可用
+
+9. arch-extract 系列（子系统 / 系统 / 技术主题的逆向提取）产出更可靠：结论会回溯源码核验而非凭推测、术语按项目词汇表统一、图能正常渲染、篇幅受控不注水
+
+10. 模型分配调整：写代码的 agent 与做评审的 agent 使用不同模型交叉验证，减少「自己写自己审」导致的漏审；执行类任务改用能力更强的模型
+
 ## 0.1.6 - 2026.08.06
 
 1. 新增 log-audit skill，审计日志级别合理性与打印频率，支持 `--autofix` 自动修复，已集成到 pr-review 作为并行门禁
