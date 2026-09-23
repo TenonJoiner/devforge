@@ -1,6 +1,5 @@
 ## 1. <!-- Requirement 名称 -->
 
-**Parallel**: <!-- independent / depends-on:X.Y，仅在任务组粒度标注 -->
 **Component**: <!-- 组件名，多仓场景使用；单仓可省略 -->
 
 <!-- 多仓场景：若同一 Requirement 跨多个仓库，按仓库拆分子组，如 ### 1a. storage 侧 / ### 1b. meta 侧 -->
@@ -13,7 +12,6 @@
 
 ## 2. <!-- Requirement 名称 -->
 
-**Parallel**: <!-- independent / depends-on:X.Y -->
 **Component**: <!-- 组件名，多仓场景使用；单仓可省略 -->
 
 - [ ] 2.1 SCENARIO: <!-- Scenario 描述 --> [repo: <!-- 目标仓库名，多仓场景使用；单仓可省略 -->]

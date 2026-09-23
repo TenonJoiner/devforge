@@ -194,6 +194,8 @@ artifacts:
       - 安全、性能或迁移复杂度
       - 技术决策有助于消除歧义时
 
+      **复杂度档位（MUST 在文档头声明）**：`Complexity: light | standard`。满足任一条件即为 standard：变更范围跨模块/子系统、有对外接口变更、关键决策 ≥3 个、涉及生命周期对象或并发模型、涉及兼容性/迁移。档位决定各章节的必填/可选约束——Standard 档下 Decisions、Contracts、Implementation Constraints 均为必填，且 Decisions 结论必须包含锁定声明、显式否决理由与量化约束（如适用）。
+
       各章节（按模板章节顺序）：
       - **Context**：背景、现状、约束
       - **Goals / Non-Goals**：本设计达成什么、明确排除什么
@@ -201,7 +203,8 @@ artifacts:
 
         **多仓场景**：若本次变更涉及多个并列仓库，按**子系统**分二级章节（如 `### 子系统: replication`），在每个子系统章节内说明：该子系统涉及哪些仓库、各仓库在本特性中的职责、跨仓库接口/数据流边界。子系统不等于仓库；一个子系统可跨多个仓库，一个仓库也可包含多个子系统。
       - **Decisions**：记录本特性设计中的关键决策，每个决策列出 2-3 个候选方案，每个方案用 2-3 句话言简意赅地概括核心优缺点，不做大段展开；结论说明最终选择及相应取舍代价；已被架构约束确定的直接引用；design 章节已有的内容避免冗余阐述，直接引用
-      - **Interface Changes**：如涉及跨子系统接口：先在此用 1 段说明整体影响范围，再逐条接口列变更类型、定义；系统级兼容性问题在 ## Upgrade Impact 中统一说明
+      - **Contracts**：定义本特性的关键契约，此处允许且要求细到函数签名级别（与 Design 章节的「叙述要粗」形成分层）。覆盖范围：跨子系统接口变更（先用 1 段说明整体影响范围，再逐条列变更类型与定义）、特性内核心抽象（新增 trait / interface / 抽象类）、核心数据结构的 schema、错误码 / 异常类型、对外可见配置项；系统级兼容性问题在 ## Upgrade Impact 中统一说明
+      - **Implementation Constraints**：实现层的硬约束与明确排除的实现方式，用于压缩实现自由度；与 Goals / Non-Goals 的区别是后者管特性范围，本节管实现方式
       - **Upgrade Impact**：说明本设计对系统升级的具体影响，对应 spec.md 中 Compatibility NFR 的升级兼容性量化目标；无影响时可写「不涉及」
       - **Risks / Trade-offs**：每个风险必须有缓解措施；格式：[风险] → [缓解措施]
       - **Open Questions**：待解决的决策或未知项
@@ -215,7 +218,7 @@ artifacts:
 
       好的设计文档解释技术决策背后的"为什么"。
 
-      **篇幅引导**：design.md 建议 200~500 行；复杂设计（涉及多模块协作、重大数据模型变更、升级迁移等）可适当扩展。避免大段复制 spec 内容，将篇幅留给方案与决策本身。
+      **篇幅引导**：Light 档 ≤6000 字符（约 4~5 页）；Standard 档 ≤20000 字符（约 14 页），复杂设计可适当扩展。避免大段复制 spec 内容，将篇幅留给方案与决策本身。
     requires:
       - specs
 
@@ -257,7 +260,7 @@ artifacts:
       OpenSpec 两层结构：`##` = 任务组（对应一条 Requirement 或 QA 闸口），
       `- [ ]` = 任务（apply phase 跟踪的最小单元）。
       每个 Scenario 映射为一个完整的 TDD 任务（RED → GREEN → REFACTOR），
-      每个 Requirement 任务组末尾追加 LINT 和 REVIEW 任务，
+      每个 Requirement 任务组末尾追加 REVIEW 任务，
       所有 Requirement 任务组之后追加一个 QA 任务组作为 feature 级闸口。
 
       ### 从 specs 推导任务
@@ -268,17 +271,13 @@ artifacts:
       - **Scenario 粒度原则**：每个 Scenario 只描述一个具体的、可验证的行为；一次 `/df:tdd` 应在几分钟到十几分钟内完成；
         需多轮 RED-GREEN-REFACTOR 才能覆盖的 Scenario 应在 specs 层拆分
       - **异常 Scenario 独立成任务**：不合并到正常路径任务中
-      - **追溯标注（机器可校验）**：任务描述末尾 MUST 标注来源
-        - Scenario 任务：`[trace: <capability>/<requirement>/<scenario>]`
-        - NFR 验证任务：`[trace: <capability>/nfr/<category>]`
-        - CHORE 任务：`[trace: chore/<slug>]`
 
       ### 从 design 获取实现路径
 
       design 不定义任务边界，但告知每个 GREEN 任务**在哪里实现、按什么顺序实现**：
       - 模块分层和接口定义 → GREEN 任务的目标文件和函数签名
       - 模块依赖关系 → 任务执行顺序（被依赖的模块先实现）
-      - Interface Changes → 接口定义先于实现任务
+      - Contracts → 接口/抽象定义先于实现任务
       - 基础设施（公共类型、工具、配置）→ 被多 Requirement 依赖，优先编排
 
       ## 任务组编排
@@ -291,16 +290,10 @@ artifacts:
       ### 顺序推导原则（优先级从高到低）
 
       1. 测试基建（fixture/helper/mock 框架）
-      2. design Interface Changes 对应接口契约任务
+      2. design Contracts 对应接口契约任务
       3. 公共基础设施（共享类型/工具/配置）
       4. 被依赖模块实现 → 依赖方模块实现
       5. 集成任务
-
-      ### 依赖标记格式
-
-      任务组标题下方 MUST 标注：
-      - `**DependsOn**: [1, 2]` 或 `**Independent**: true`（未标注默认 Independent）
-      - QA 任务组永远 `**DependsOn**: [all]`
 
       ### 任务组末尾固定任务（强制）
 
@@ -330,9 +323,8 @@ artifacts:
 
       ## 写后审计（MUST 执行）
 
-      - **覆盖审计**：列出 specs 所有 Requirement/Scenario，逐项映射到任务编号；未映射项补任务或说明理由
       - **顺序审计**：逐任务检查依赖的符号/接口/基建是否由编号更小的任务提供；逆序 MUST 调整
-      - **design 遵循审计**：模块划分、Interface Changes 顺序、关键技术决策与 design 一致；偏差说明理由
+      - **design 遵循审计**：模块划分、Contracts 顺序、关键技术决策与 design 一致；偏差说明理由
       - **NFR 覆盖审计**：specs 七类 NFR 每类要么有对应验证任务，要么标注「本 change 不涉及：<原因>」
 
       ## 格式要求（IMPORTANT：apply phase 依赖此格式跟踪进度）
@@ -363,22 +355,19 @@ artifacts:
       - **完整 mock**：mock 数据结构必须完整镜像真实 API 的全部字段
       - **Mock 太复杂时重构**：mock 设置占测试 >50% 应重构解耦
 
-      ## Parallel
+      ## 执行顺序
 
-      并行调度的粒度是**任务组**（`## N.`），不是单个任务：
+      - 任务组按编号顺序串行执行——顺序推导原则已保证被依赖的任务组排在前面
       - 同一任务组内的任务严格串行
-      - 不同 Requirement 任务组之间根据模块依赖标记 independent 或 depends-on
-      - QA 任务组永远 depends-on 所有 Requirement 任务组
+      - QA 任务组永远排在所有 Requirement 任务组之后，最后执行
 
       ## 反模式检查
       - 🚩 任务描述无具体文件路径和函数名
       - 🚩 Scenario 任务未写明测试文件路径、测试函数名、源文件路径和函数签名
-      - 🚩 Requirement 任务组末尾缺少 LINT 和 REVIEW 任务
+      - 🚩 Requirement 任务组末尾缺少 REVIEW 任务
       - 🚩 缺少末尾 QA 任务组
       - 🚩 specs 中的某个 Requirement/Scenario 在 tasks 中没有对应任务
       - 🚩 按 TDD 类型做分组而非按 Requirement 分组
-      - 🚩 追溯标注缺失或不符 `[trace: ...]` 格式
-      - 🚩 任务组未标注 DependsOn/Independent
       - 🚩 单任务 GREEN 实现预计 >200 行而未拆分
       - 🚩 specs NFR 类别既无任务也未标注"不涉及"
     requires:
@@ -390,6 +379,16 @@ apply:
   instruction: |
     读取前序 artifact（proposal.md、specs/*.md、design.md）了解需求和设计方案；读取 review.md 了解评审遗留问题。
 
+    ## 前置校验（MUST，通过后方可开始执行任务）
+
+    派遣 `devforge:project-reviewer` 校验 `tasks.md` 相对 specs / design 的派生保真度，三个轴：
+
+    - **覆盖**：specs 的每条 Requirement / Scenario 均能在任务清单中找到承接；未承接项逐条列出
+    - **NFR**：specs 七类 NFR 每类要么有对应验证任务，要么显式标注「本 change 不涉及：<原因>」
+    - **顺序**：每个任务依赖的符号 / 接口 / 基建由编号更小的任务提供；存在逆序即不通过
+
+    校验不通过 → 列出问题清单并停止，提示修正 `tasks.md` 后重新执行；不要带着已知缺口开始实现。
+
     ## 多仓检测（仅影响有 repo-map.yaml 的项目）
 
     1. 在 change 所属仓库根目录的 `.claude/repo-map.yaml` 中读取多仓映射。
@@ -400,9 +399,9 @@ apply:
 
     ## 调度模型
 
-    - 任务组（`## N.` 组）粒度调度：independent 任务组可并行，depends-on 按依赖顺序串行
+    - 任务组（`## N.` 组）按编号顺序串行执行
     - 任务组内任务（`- [ ]`）严格串行执行
-    - QA 任务组（`## QA.`）depends-on 所有 Requirement 任务组，最后执行
+    - QA 任务组（`## QA.`）永远最后执行
     - 完成每个任务后立即标记 checkbox
 
     ## 多仓模式下的任务路由
