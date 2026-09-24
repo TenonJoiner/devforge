@@ -26,13 +26,20 @@ JSON schema：
   ]
 }
 
+约束：
+- hlink 只能连接**同一行内自左向右相邻**的两个 box——跳过中间 box 的连线会横穿它
+- vlink 的 to 必须是 from 的**下一行**中的 box——同行连接用该行的 hlinks，
+  跨多行的折线其横段会横穿中间行的 box
+违反上述约束时 render() 报错退出，不输出破损图。
+
 布局规则：
 - rows 自上而下排列；每行内 boxes 自左向右排列
-- 若两 box 间有 hlink，间距 = max(HGAP_MIN, label 宽度 + 4)；否则 HGAP_MIN
+- 若两 box 间有 hlink，间距 = max(HGAP_MIN, label 宽度 + 6)；否则 HGAP_MIN
 - row 高度 = 该行最高 box 的高度；行间垂直间距 VGAP（留位给 vlink）
 - hlink label 写在连线中段同行，覆盖该段连线字符（"── label ──▶" 形式）
-- vlink 支持直线（两 box 水平中点对齐）和 L 型折线（不对齐时先竖后横再竖）
-- 同一 from box 的多个 vlink 自动错开起点（from_cx ± 偏移），避免重叠
+- vlink 支持直线（两 box 水平中点对齐）和 L 型折线（不对齐时先竖后横再竖）；
+  L 型折线的横段走在**源 row 所有 box 的下方**，避免横穿同行更高的 box
+- 同一 from box 的多个 vlink 自动错开起点（from_cx ± 偏移），偏移收敛在 box 宽度内
 - vlink label 写在竖段 1 第二行右侧（from_cx + 2, from_y + 1）
 
 输出：ASCII Art 写入 stdout。调用方（主会话/agent）将其嵌入 markdown 代码块。
@@ -110,11 +117,20 @@ class Canvas:
 
 
 def layout(spec):
-    """计算所有 box 的 (x, y, w, h)。返回 (boxes_map, box_renders, canvas_w, canvas_h)"""
+    """计算所有 box 的 (x, y, w, h)。返回 (boxes_map, box_renders, box_rows, canvas_w, canvas_h)。
+
+    结构非法（空 row / box id 重复）时抛 ValueError——id 重复会让后一个盒体覆盖前一个。
+    """
     box_renders = {}
-    for row in spec['rows']:
+    box_rows = {}
+    for row_idx, row in enumerate(spec['rows']):
+        if not row['boxes']:
+            raise ValueError(f"rows[{row_idx}] 的 boxes 为空——每个 row 至少要有一个 box")
         for box in row['boxes']:
+            if box['id'] in box_renders:
+                raise ValueError(f"box id 重复：{box['id']}——id 是连线端点与布局的唯一标识")
             box_renders[box['id']] = render_box(box['lines'])
+            box_rows[box['id']] = row_idx
 
     boxes_map = {}
     y = 0
@@ -141,14 +157,51 @@ def layout(spec):
 
     canvas_w = max((x + w for x, y, w, h in boxes_map.values()), default=0) + 20
     canvas_h = max((y + h for x, y, w, h in boxes_map.values()), default=0)
-    return boxes_map, box_renders, canvas_w, canvas_h
+    return boxes_map, box_renders, box_rows, canvas_w, canvas_h
+
+
+def row_bottoms(spec, boxes_map):
+    """每行所有 box 的底边 y——L 型折线的横段必须走在这条线以下。"""
+    return {row_idx: max(boxes_map[b['id']][1] + boxes_map[b['id']][3] for b in row['boxes'])
+            for row_idx, row in enumerate(spec['rows'])}
+
+
+def validate_links(spec, boxes_map, box_rows):
+    """连线拓扑校验：hlink 限同行相邻、vlink 限相邻两行。违反时抛 ValueError。"""
+    for link in spec.get('vlinks', []):
+        fr, to = link['from'], link['to']
+        if fr not in boxes_map or to not in boxes_map:
+            raise ValueError(f"vlink 引用了不存在的 box id：{fr} → {to}")
+        if box_rows[to] == box_rows[fr]:
+            raise ValueError(
+                f"同行 box 之间不能用 vlink（{fr} → {to}）：同行相邻请改用 hlinks，"
+                f"不相邻的同行 box 之间无法直连——请拆成多段或调整 rows"
+            )
+        if box_rows[to] != box_rows[fr] + 1:
+            raise ValueError(
+                f"vlink 跨越了 {abs(box_rows[to] - box_rows[fr])} 行（{fr} → {to}）："
+                f"折线的横段会横穿中间行的 box——请拆成相邻行间的多段 vlink，或重排 rows"
+            )
+    for row in spec['rows']:
+        for link in row.get('hlinks', []):
+            fr, to = link['from'], link['to']
+            if fr not in boxes_map or to not in boxes_map:
+                raise ValueError(f"hlink 引用了不存在的 box id：{fr} → {to}")
+            if box_rows[fr] != box_rows[to]:
+                raise ValueError(f"hlink 只能连接同一行内的 box（{fr} → {to}）：跨行连接请用 vlinks")
+            ids = [b['id'] for b in spec['rows'][box_rows[fr]]['boxes']]
+            if ids.index(to) != ids.index(fr) + 1:
+                raise ValueError(
+                    f"hlink 只能连接同行内自左向右相邻的两个 box（{fr} → {to}）："
+                    f"跳过中间 box 的连线会横穿它"
+                )
 
 
 def draw_hlink(canvas, boxes_map, link):
     """同行两 box 间绘制横向连线。label 覆盖连线中段，同行显示。"""
     fx, fy, fw, fh = boxes_map[link['from']]
     tx, ty, tw, th = boxes_map[link['to']]
-    y = fy + fh // 2
+    y = fy + min(fh, th) // 2  # 取两盒较矮者的垂直中点，箭头才落在目标盒的侧边上
     x1 = fx + fw
     x2 = tx
     label = link.get('label', '')
@@ -169,7 +222,7 @@ def draw_hlink(canvas, boxes_map, link):
         canvas.put(x2 - 1, y, CH['arrow_r'])
 
 
-def draw_vlink(canvas, boxes_map, link, from_cx):
+def draw_vlink(canvas, boxes_map, link, from_cx, from_row_bottom):
     """纵向连线：from box 底部 from_cx → to box 顶部中点。不对齐画 L 型。
 
     布局约定（VGAP=4）：
@@ -192,7 +245,8 @@ def draw_vlink(canvas, boxes_map, link, from_cx):
         if label:
             canvas.put(from_cx + 2, from_y + 1, label)
     else:
-        mid_y = (from_y + to_y) // 2
+        # 横段走源 row 全部 box 的下方，否则会横穿同行更高的 box
+        mid_y = max((from_y + to_y) // 2, from_row_bottom + 1)
         for y in range(from_y, mid_y + 1):
             canvas.put(from_cx, y, CH['v'])
         x_start, x_end = min(from_cx, to_cx), max(from_cx, to_cx)
@@ -209,7 +263,9 @@ def draw_vlink(canvas, boxes_map, link, from_cx):
 
 
 def render(spec):
-    boxes_map, box_renders, canvas_w, canvas_h = layout(spec)
+    boxes_map, box_renders, box_rows, canvas_w, canvas_h = layout(spec)
+    validate_links(spec, boxes_map, box_rows)
+    bottoms = row_bottoms(spec, boxes_map)
     canvas = Canvas(canvas_w, canvas_h)
     for box_id, (x, y, w, h) in boxes_map.items():
         lines, _, _ = box_renders[box_id]
@@ -227,7 +283,9 @@ def render(spec):
         n = len(links)
         offsets = [0] if n == 1 else [(i - (n - 1) / 2) * 4 for i in range(n)]
         for link, off in zip(links, offsets):
-            draw_vlink(canvas, boxes_map, link, from_cx=int(base_cx + off))
+            start_cx = min(max(int(base_cx + off), fx), fx + fw - 1)  # 收敛在 box 宽度内
+            draw_vlink(canvas, boxes_map, link, from_cx=start_cx,
+                       from_row_bottom=bottoms[box_rows[from_id]])
     return canvas.render()
 
 
@@ -237,7 +295,11 @@ def main():
         sys.exit(2)
     with open(sys.argv[1]) as f:
         spec = json.load(f)
-    print(render(spec))
+    try:
+        print(render(spec))
+    except ValueError as e:
+        print(f"渲染失败：{e}", file=sys.stderr)
+        sys.exit(2)
 
 
 if __name__ == '__main__':

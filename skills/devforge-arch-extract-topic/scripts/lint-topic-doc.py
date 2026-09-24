@@ -8,11 +8,11 @@ reviewer 的 token 留给判断类问题；lint 报告里的违规项视为已�
     python3 lint-topic-doc.py <doc.md>
 
 退出码：0 无违规；1 有违规；2 用法错误。
-输出：stdout，每行一条违规 `[RULE] line N: 描述`。
+输出：stdout，每行一条违规 `[RULE] line N: 描述`，末行 `N violation(s)` 为计数。
 
 检查项：
   SIZE       行数 ≤500，Unicode 字符数 ≤30000
-  ASCII      无语言标记代码块（视为 ASCII Art）内每行显示宽度一致（误差 ≤2）
+  ASCII      含框角字符的文本代码块内，同一框的边框行显示宽度一致
   MERMAID    Mermaid 语法规则（别名方向 / 消息引号 / 禁用语法 / 箭头标签保留字符）
   BANNED     禁用词（声明编号 C\\d+、catalog 编号 E-\\d+、"第 N 阶段"/"步骤 N"、
              临时文件路径 /tmp/arch-extract-topic-*、模板引用块残留）
@@ -24,7 +24,11 @@ import unicodedata
 
 MAX_LINES = 500
 MAX_CHARS = 30000
-ASCII_WIDTH_TOLERANCE = 2
+
+BOX_CORNERS = '┌┐├┤└┘'   # 含任一者才认定为组件拓扑图（纯文本清单 / 目录树无这些字符）
+BOX_BORDER_HEAD = '┌├└'  # 框体边框行的首字符
+BOX_BORDER_TAIL = '┐┤┘'  # 框体边框行的末字符
+BOX_VERT = '│'           # 竖直连线行首字符：归入同一框体组，但宽度不参与比较
 
 
 def dw(text):
@@ -66,26 +70,62 @@ def check_size(lines, text, violations):
         violations.append(f"[SIZE] line -: 字符数 {len(text)} 超过 {MAX_CHARS}")
 
 
+def border_corner_count(line):
+    """边框行返回其框角字符数（同行并排 N 个框即 2N 个），非边框行返回 0。
+
+    分组比较只按框角数相同者配对：并排整排的上下边框（框角数相同）能互相校验，
+    而「整排顶边框 vs 某个较矮框单独的底边框」框角数不同，不会误配。
+    """
+    s = line.rstrip()
+    if len(s) < 2 or s[0] not in BOX_BORDER_HEAD or s[-1] not in BOX_BORDER_TAIL:
+        return 0
+    return sum(s.count(c) for c in BOX_CORNERS)
+
+
+def check_box_run(block_start, run, violations):
+    """同一框（或同一排框）的边框行必须等宽——拓扑图对齐的实质判据。
+
+    连线行（│）、箭头行（▼）、label 行天然比框体窄，不参与比较：分层图必然含这些行，
+    按「整块等宽」判定会稳定误报且无法通过重渲染收敛。
+    """
+    groups = {}
+    for i, line in run:
+        n = border_corner_count(line)
+        if n:
+            groups.setdefault(n, []).append((i, line))
+    for borders in groups.values():
+        if len(borders) < 2:
+            continue
+        ref_i, ref_w = borders[0][0], dw(borders[0][1])
+        for i, line in borders[1:]:
+            w = dw(line)
+            if w != ref_w:
+                violations.append(
+                    f"[ASCII] line {block_start + i + 1}: 边框行宽 {w} 与同组首行（line {block_start + ref_i + 1}）{ref_w} 不一致——框体左右边界未对齐"
+                )
+
+
 def check_ascii_alignment(lines, body_start, violations):
-    """无语言标记的代码块视为 ASCII Art，检查每行显示宽度一致。"""
+    """组件拓扑图对齐检查：先以框角字符判定是否为拓扑图，再逐框比较边框行宽度。"""
     for block_start, lang, block_lines in iter_code_blocks(lines, body_start):
         if lang and lang not in ('text', 'plain'):
             continue
         if len(block_lines) < 3:
-            continue  # 太短非 ASCII Art
-        # 排除空行后检查
-        non_empty = [(i, l) for i, l in enumerate(block_lines) if l.strip()]
-        if not non_empty:
-            continue
-        widths = [(i, dw(l)) for i, l in non_empty]
-        max_w = max(w for _, w in widths)
-        min_w = min(w for _, w in widths)
-        if max_w - min_w > ASCII_WIDTH_TOLERANCE:
-            for i, w in widths:
-                if w < max_w - ASCII_WIDTH_TOLERANCE:
-                    violations.append(
-                        f"[ASCII] line {block_start + i + 1}: 行宽 {w} 与块内最大宽度 {max_w} 差 {max_w - w}，超过容差 {ASCII_WIDTH_TOLERANCE}"
-                    )
+            continue  # 太短非拓扑图
+        if not any(c in line for line in block_lines for c in BOX_CORNERS):
+            continue  # 无框角字符：纯文本清单 / 目录树 / 代码，不是拓扑图
+        run = []
+        for i, line in enumerate(block_lines):
+            head = line[:1]
+            if head not in BOX_BORDER_HEAD and head != BOX_VERT:
+                check_box_run(block_start, run, violations)
+                run = []
+                continue
+            if head == '┌' and run and run[-1][1][:1] == '└':
+                check_box_run(block_start, run, violations)  # 上下两框紧邻，分属两组
+                run = []
+            run.append((i, line))
+        check_box_run(block_start, run, violations)
 
 
 def check_mermaid(lines, body_start, violations):
@@ -199,7 +239,7 @@ def main():
 
     for v in violations:
         print(v)
-    print(f"\n{len(violations)} violation(s)", file=sys.stderr)
+    print(f"{len(violations)} violation(s)")
     sys.exit(1 if violations else 0)
 
 

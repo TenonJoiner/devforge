@@ -29,7 +29,7 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent, AskUserQuestion]
 - **输出**：`--output-docs=<dir>`（默认：`docs`），实际路径为 `<output-docs>/architecture/<subsystem>/<topic>.md`
 - **模板**：`skills/devforge-arch-extract-topic/templates/arch-reverse-topic.md`
 - **脚本**：
-  - `skills/devforge-arch-extract-topic/scripts/ascii-art-render.py` —— ASCII Art 组件拓扑图渲染器。agent 只输出 JSON 结构描述（boxes + rows + links），由主会话调用本脚本渲染为对齐的 ASCII Art（中文按双宽计算，East Asian Width = W/F 计 2）。禁止 agent 手写 ASCII Art——自回归生成无法维持跨行列对齐
+  - `skills/devforge-arch-extract-topic/scripts/ascii-art-render.py` —— ASCII Art 组件拓扑图渲染器。agent 只输出 JSON 结构描述（schema 见该脚本 docstring：`rows[boxes/hlinks]` + `vlinks`；vlink 只能连接相邻两行，同行用 hlink），由主会话调用本脚本渲染为对齐的 ASCII Art（中文按双宽计算，East Asian Width = W/F 计 2）。**渲染失败**（退出码 2，如 vlink 跨行/同行、hlink 跳过中间 box）时按错误提示修正 JSON 的连线拓扑后重渲染——不得手写补图。禁止 agent 手写 ASCII Art——自回归生成无法维持跨行列对齐
   - `skills/devforge-arch-extract-topic/scripts/lint-topic-doc.py` —— 客观项 lint（篇幅 / ASCII 对齐 / Mermaid 语法 / 禁用词 / 行号泄漏）。**调用方式**：`python3 skills/devforge-arch-extract-topic/scripts/lint-topic-doc.py <草稿路径> > /tmp/arch-extract-topic-lint-<ts>.txt`；**调用时机**：阶段 7 合并完成后、阶段 8 评审前、每轮修正后。lint 报告中的违规视为已确认问题，直接计入修正清单，不再由 reviewer 复核
 - **临时文件**：所有中间产出写入 `/tmp/arch-extract-topic-*-<ts>.md`，其中 `<ts>` = `$(date +%s)$$`（秒级时间戳 + PID，保证并发安全）
 
@@ -429,6 +429,9 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent, AskUserQuestion]
 
 派遣 3 个 devforge:architect agent 并行（按章切分），然后 1 个 devforge:architect agent 合并。
 
+**合并前主会话工作**（三个 writer 返回后、派遣合并 agent 前必须完成）：
+- **章节稿内嵌图渲染**：扫描 sec1/sec2 草稿中的 JSON 结构描述块（Agent B 写作指引要求输出的强空间结构图），用 `python3 skills/devforge-arch-extract-topic/scripts/ascii-art-render.py <结构.json>` 逐个渲染，把渲染结果和它在稿中的位置一并注入合并 agent 的 prompt
+
 **共享输入**（三个 writer 均注入）：
 - 阶段 4 全部分析（A1/A2/B/C/D）
 - 阶段 4 验证结果（若有）
@@ -551,11 +554,13 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent, AskUserQuestion]
 - `/tmp/arch-extract-topic-sec2-<ts>.md`
 - `/tmp/arch-extract-topic-sec3-<ts>.md`
 - 内容归属矩阵（主会话传入）
+- 章节稿内嵌 ASCII Art：主会话渲染好的图 + 它在 sec1/sec2 草稿中的位置
 - 模板：skills/devforge-arch-extract-topic/templates/arch-reverse-topic.md（参照自检清单）
 
 **输出**（写入 `/tmp/arch-extract-topic-draft-<ts>.md`）：
 - 完整的 topic 文档（≤500 行且 ≤30000 字符，`wc -m` 为准）
 - 删除模板脚手架残留——引用块（> 开头段落）、自检清单节（## 自检清单）等模板写作指引一律不进入最终文档
+- 把章节稿中的 JSON 结构描述块替换为主会话渲染好的 ASCII Art（JSON 原文不保留）
 - 去掉章节间的重复内容（同一概念在多个章节出现时，保留首次出现的完整描述，后续章节仅引用）
 - 术语统一（全文同一概念使用同一术语）；同一机制在多章节出现时检查描述是否语义一致（不只是术语相同）
 - **关键论断清单**：合并前主动列出全文出现 ≥2 次的机制论断（如回调边界、追加条件、冲突方向、并发安全前提、容量上限），逐条比对各处表述的事实是否一致——多轮修正容易在不同章节引入矛盾（如"整体思路说全部经回调"与"某阶段说走回调"），被动的语义扫描难以发现。总称枚举（"全部来源 / 四缺口 / 两类原因"类）必须与其他章节的具体枚举对照，确保数量、内容一致
@@ -565,7 +570,7 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent, AskUserQuestion]
 - **客观项不自检**：Mermaid 语法、ASCII Art 对齐、禁用词、行号泄漏等客观项由主会话用 `scripts/lint-topic-doc.py` 统一检查——合并 agent 不做这部分自检，输出后由主会话跑 lint，违规项进入修正清单
 ```
 
-**质量门禁**：所有必填章节均已覆盖，归属矩阵无 MISSING 项，文档 ≤500 行且 ≤30000 字符（`wc -m`）。合并后主会话跑 lint，违规项进入阶段 8 修正清单。
+**质量门禁**：三份章节稿（sec1/sec2/sec3）均已落盘——缺文件说明 writer 未按输出约定写入，重新派遣该 writer。所有必填章节均已覆盖，归属矩阵无 MISSING 项，文档 ≤500 行且 ≤30000 字符（`wc -m`）。合并后主会话跑 lint，违规项进入阶段 8 修正清单。
 
 ### 第 8 阶段：评审
 
@@ -599,7 +604,7 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent, AskUserQuestion]
   **参考**（按需查阅）：
   - `/tmp/arch-extract-topic-locate-<ts>.md`（阶段 1 定位结果——定位源文件用）
   - `/tmp/arch-extract-topic-arch-<ts>.md` / `dataflow` / `data` / `concur` / `iface`（阶段 4 五份产出，清点类对照用）
-**review_output_path**：`/tmp/arch-extract-topic-review-tech-<ts>.md`
+**review_output_path**：`/tmp/arch-extract-topic-review-tech-<ts>.md`（**必须**用 Write 写入该文件，返回消息只作摘要）
 ```
 
 **Agent B — 内容完整性**：
@@ -617,7 +622,7 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent, AskUserQuestion]
   - 阶段 4 验证结果（若有）
   - 阶段 4 全部分析产出（A1/A2/B/C/D）
   - 阶段 5 架构推断
-**review_output_path**：`/tmp/arch-extract-topic-review-comp-<ts>.md`
+**review_output_path**：`/tmp/arch-extract-topic-review-comp-<ts>.md`（**必须**用 Write 写入该文件，返回消息只作摘要）
 ```
 
 **Agent C — 表达质量**：
@@ -634,14 +639,14 @@ allowed-tools: [Read, Write, Edit, Bash, Grep, Glob, Agent, AskUserQuestion]
 **客观项免责**：篇幅、Mermaid 语法、ASCII 对齐、禁用词、行号泄漏已由 `scripts/lint-topic-doc.py` 检查——不在你的评审范围。禁止用目测报告 ASCII Art 对齐问题或给出具体列号。
 
 **被评审对象**：`/tmp/arch-extract-topic-draft-<ts>.md`
-**review_output_path**：`/tmp/arch-extract-topic-review-expr-<ts>.md`
+**review_output_path**：`/tmp/arch-extract-topic-review-expr-<ts>.md`（**必须**用 Write 写入该文件，返回消息只作摘要）
 ```
 
 **评审修正循环**：
 1. 汇总 3 个 agent 的问题清单
 2. 存在任何 CRITICAL 问题 → **直接判定不通过**（CRITICAL 一票否决，不受缺陷密度阈值豁免）
 3. 无 CRITICAL 且缺陷密度 ≤ 2.0 → 通过，进入第 9 阶段
-4. 否则 → 主会话汇总三份评审报告，合并为修正清单（每条问题附所属评审报告路径），注入 1 个 devforge:architect agent 的派遣 prompt。修正前主会话将当前草稿复制为备份（`draft-r<N>.md`，N 为本轮序号）。修正 agent 按清单逐项修正后，经逐轮 diff 门禁校验，回到本阶段重新评审
+4. 否则 → 主会话汇总三份评审报告，合并为修正清单（每条问题附所属评审报告路径；某份报告的 `review_output_path` 文件缺失时，以该 reviewer 返回消息中的问题清单为准），注入 1 个 devforge:architect agent 的派遣 prompt。修正前主会话将当前草稿复制为备份（`draft-r<N>.md`，N 为本轮序号）。修正 agent 按清单逐项修正后，经逐轮 diff 门禁校验，回到本阶段重新评审
 5. 最多 5 轮。3 轮后仍未通过 → 标注残留问题，进入第 9 阶段
 
 **修正方式约束**（主会话注入修正 agent prompt）：
